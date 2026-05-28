@@ -7,63 +7,17 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header id="hud">
-    <div class="hud-item"><span class="hud-label">Kredity</span><span id="hud-credits">0</span></div>
-    <div class="hud-item"><span class="hud-label">Příjem/s</span><span id="hud-income">0</span></div>
-    <div class="hud-item"><span class="hud-label">Vlna/s</span><span id="hud-wool">0</span></div>
-    <div class="hud-item"><span class="hud-label">Maso/s</span><span id="hud-meat">0</span></div>
-    <div class="hud-item"><span class="hud-label">Stádo</span><span id="hud-pop">0 / 0</span></div>
-    <div class="hud-item"><span class="hud-label">♂ / ♀</span><span id="hud-sex">0 / 0</span></div>
-    <div class="hud-item"><span class="hud-label">Dítě/Dosp/Starý</span><span id="hud-stages">0 / 0 / 0</span></div>
-  </header>
+  <div id="app"></div>
 
-  <main id="game">
-    <section id="canvas-wrap">
-      <canvas id="pen"></canvas>
-      <div id="welcome" class="hidden"></div>
-    </section>
-
-    <aside id="controls">
-      <div class="panel">
-        <h3>Stádo</h3>
-        <div id="buy-section"></div>
-        <label class="cull-toggle"><input type="checkbox" id="cull-mode" /> Klikni na ovci pro porážku</label>
-      </div>
-
-      <div class="panel">
-        <h3>Vylepšení</h3>
-        <div id="upgrade-section"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Ohrádka</h3>
-        <div id="pen-section"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Auto-porážka</h3>
-        <div id="auto-section"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Genetika (průměr stáda)</h3>
-        <div id="genes-section"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Uložení</h3>
-        <div id="save-section">
-          <textarea id="save-string" placeholder="Sem vlož save string a klikni Načíst…" rows="3"></textarea>
-          <div class="save-buttons">
-            <button id="btn-export">Export</button>
-            <button id="btn-import">Načíst</button>
-            <button id="btn-reset" class="danger">Reset</button>
-          </div>
-          <span id="save-msg" class="save-msg"></span>
-        </div>
-      </div>
-    </aside>
-  </main>
+  <footer id="footer">
+    <button id="btn-export">Export</button>
+    <button id="btn-import">Načíst</button>
+    <input id="save-string" placeholder="save string…" />
+    <button id="btn-reset" class="danger">Reset hry</button>
+    <span id="save-msg"></span>
+    <span class="spacer"></span>
+    <a href="lore/README.md" target="_blank" rel="noopener">Bible Farmářova</a>
+  </footer>
 
   <script type="module" src="src/main.js"></script>
 </body>
