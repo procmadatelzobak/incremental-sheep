@@ -96,25 +96,24 @@ export const BALANCE = {
   cullPeriod: 20,           // herních sekund mezi aplikacemi selekce
   maxCutFrac: 0.85,
   sigmaFloorMut: 0.6,       // σ-floor = sigmaFloorMut * mut (drží šlechtění "živé")
-  // porody / kapacita
-  baseCap: 12,
-  capPerLevel: 10,
+  // kapacita: rozloha × hustota × modifikátory × baseCap
+  baseCap: 12,              // kapacita na jednotku rozlohy
   birthCapDamp: 0.5,
   // ceny (base, growth)
   cost: {
-    addSheep:   { base: 50,   growth: 1.5  },   // přidá malé stádo na aktivní lokaci
-    expand:     { base: 200,  growth: 1.75 },   // +kapacita lokace
-    density:    { base: 400,  growth: 1.9  },   // +hustota (víc ovcí na metr)
-    newPasture: { base: 5e3,  growth: 2.0  },   // nová lokace (fáze 2+)
-    warehouse:  { base: 1e5,  growth: 1.8  },   // +strop skladu (fáze 6)
-    oxygen:     { base: 8e4,  growth: 1.8  },   // +kyslík (fáze 6)
-    builder:    { base: 1e7,  growth: 1.18 },   // stavitel sféry (fáze 7)
-    laser:      { base: 5e6,  growth: 1.6  },   // laser (fáze 8)
-    station:    { base: 1e8,  growth: 2.4  },   // nová planetární stanice (fáze 6)
+    addSheep:  { base: 50,   growth: 1.5  },   // přidá malé stádo
+    land:      { base: 60,   growth: 1.28 },   // koupě parcely aktuálního tieru (× costMult světa)
+    density:   { base: 1e3,  growth: 5    },   // globální hustota pastvy (track)
+    areaMod:   { base: 4e3,  growth: 7    },   // globální modifikátory rozlohy
+    warehouse: { base: 1e5,  growth: 1.8  },   // +strop skladu (fáze 6)
+    oxygen:    { base: 8e4,  growth: 1.7  },   // +kyslíková kapacita (fáze 6)
+    builder:   { base: 1e7,  growth: 1.18 },   // stavitel sféry (fáze 7)
+    laser:     { base: 5e6,  growth: 1.6  },   // laser (fáze 8)
   },
-  density: { per: 0.35, max: 25 },              // každá úroveň hustoty +35 % kapacity
-  warehouse: { capInc: 5000 },                  // +strop za úroveň skladu
-  oxygenPerLevel: 60,
+  landUnlockReq: 3,         // kolik parcel tieru pro odemčení dalšího
+  tierUnlockMult: 12,       // odemčení dalšího tieru = cena parcely × tato hodnota
+  warehouse: { capInc: 5000 },
+  oxygenPerLevel: 5e8,      // kyslíková kapacita (v jednotkách rozlohy) za úroveň
   // zpracování (fáze 3+): poměr raw → processed
   processing: { wool: { to: 'cloth', ratio: 1 }, milk: { to: 'cheese', ratio: 1 } },
   // projekty
@@ -126,22 +125,58 @@ export const BALANCE = {
     thresholdGrowth: 1.3,   // mírný růst stropu každý reset
     // odměna roste s počtem běhů (+ log z velikosti běhu) → ~8 smyček k singularitě
     award: (cw, base, runs) => Math.max(1, Math.floor(8 * (runs + 1) + 4 * Math.log10(Math.max(10, cw / (base / 100))))),
-    singularityKnowledge: 200, // kumulativní Vědění pro odemčení singularity
+    singularityKnowledge: 750, // kumulativní Vědění pro odemčení singularity
   },
   // ceny extrémních genů: strop genu × ceilingMult (fáze 5 + perky)
   ceiling: { phase5: 3, perPerk: 1 },
 };
 
-// --- DEFINICE LOKACÍ (druhy) -----------------------------------------------
-// env modifikátory; capMult = násobič kapacity; phase = kdy lze stavět.
-export const LOCATION_KINDS = {
-  meadow:   { label: 'Louka',    phase: 1, capMult: 1.0, env: {} },
-  pasture:  { label: 'Pastvina', phase: 2, capMult: 1.6, env: {} },
-  moon:     { label: 'Měsíc',    phase: 6, capMult: 2.2, env: { oxygenRequired: true, woolMult: 1.1 } },
-  mars:     { label: 'Mars',     phase: 6, capMult: 2.6, env: { light: 0.6, woolMult: 0.8, milkMult: 0.9 } },
-  jupiter:  { label: 'Jupiter',  phase: 6, capMult: 3.5, env: { gravity: 2.0, birthMult: 0.6, meatMult: 1.4 } },
-  sphere:   { label: 'Dysonova sféra', phase: 7, capMult: 50, env: { woolMult: 1.5, milkMult: 1.5, meatMult: 1.5 } },
+// --- SVĚTY (per-svět žebříček rozlohy; sdílí globální hustotu) --------------
+// env = produkční modifikátory (vážený průměr dle podílu rozlohy). costMult škáluje
+// cenu parcel. fromProject: sféra se "kupuje" jen dokončováním Dysonova projektu.
+export const WORLDS = {
+  earth: {
+    label: 'Země', icon: '🌍', phase: 1, costMult: 1, env: {},
+    tiers: [
+      { label: 'Zahrada', area: 1 }, { label: 'Pastvina u domu', area: 4 }, { label: 'Sousední pastviny', area: 12 },
+      { label: 'Okolí vesnice', area: 80 }, { label: 'Okolí města', area: 800 }, { label: 'Celý kraj', area: 1.2e4 },
+      { label: 'Kontinent', area: 2e6 }, { label: 'Planeta Země', area: 1e9 },
+    ],
+  },
+  moon: {
+    label: 'Měsíc', icon: '🌕', phase: 6, costMult: 2e3, env: { oxygenRequired: true, woolMult: 1.1 },
+    tiers: [{ label: 'Regolitové skleníky', area: 5e8 }, { label: 'Kráterové farmy', area: 4e9 }, { label: 'Lávové tunely', area: 3e10 }, { label: 'Kupolová města', area: 2e11 }],
+  },
+  mars: {
+    label: 'Mars', icon: '🔴', phase: 6, costMult: 8e3, env: { woolMult: 0.8, milkMult: 0.9 },
+    tiers: [{ label: 'Kopule', area: 8e8 }, { label: 'Terraformované údolí', area: 6e9 }, { label: 'Polární skleníky', area: 5e10 }, { label: 'Atmosférické pastviny', area: 4e11 }],
+  },
+  jupiter: {
+    label: 'Jupiter', icon: '🪐', phase: 6, costMult: 3e4, env: { meatMult: 1.4, birthMult: 0.6 },
+    tiers: [{ label: 'Orbitální stanice', area: 2e9 }, { label: 'Plovoucí farmy', area: 2e10 }, { label: 'Bouřkové pastviny', area: 2e11 }, { label: 'Měsíční prstenec', area: 2e12 }],
+  },
+  sphere: {
+    label: 'Dysonova sféra', icon: '☀️', phase: 7, costMult: 0, fromProject: true, env: { woolMult: 1.5, milkMult: 1.5, meatMult: 1.5 },
+    tiers: [{ label: 'Solární prstence', area: 1e12 }, { label: 'Vnitřní pastviny', area: 1e13 }, { label: 'Sférové vrstvy', area: 1e14 }, { label: 'Hvězdná vlna', area: 1e15 }],
+  },
 };
+export const WORLD_ORDER = ['earth', 'moon', 'mars', 'jupiter', 'sphere'];
 
-// pořadí planet pro fázi 6 (Exodus)
-export const PLANET_ORDER = ['moon', 'mars', 'jupiter'];
+// --- GLOBÁLNÍ HUSTOTA PASTVY (násobič kapacity všech pozemků) ---------------
+export const DENSITY_TIERS = [
+  { label: 'Obyčejný trávník', mult: 1, icon: '🌱' }, { label: 'Slušný trávník', mult: 4, icon: '🌿' },
+  { label: 'Nejlepší trávník', mult: 16, icon: '🍀' }, { label: 'Hydroponické nádrže', mult: 64, icon: '💧' },
+  { label: 'Vícepatrové farmy', mult: 256, icon: '🏢' }, { label: 'Podzemní farmy', mult: 1024, icon: '⛏️' },
+  { label: 'Oceánské farmy', mult: 4096, icon: '🌊' }, { label: 'Hlubinné farmy', mult: 16384, icon: '🌌' },
+  { label: 'Orbitální farmy', mult: 65536, icon: '🛰️' },
+];
+
+// --- MODIFIKÁTORY ROZLOHY (globální % bonus k efektivní rozloze) ------------
+export const AREA_MODS = [
+  { key: 'rocks', label: 'Pěstování na skalách', bonus: 0.30, icon: '🪨', phase: 1 },
+  { key: 'forest', label: 'Lesní pastva', bonus: 0.20, icon: '🌲', phase: 2 },
+  { key: 'desert', label: 'Pouštní zavlažování', bonus: 0.40, icon: '🏜️', phase: 3 },
+  { key: 'sea', label: 'Mořské plošiny', bonus: 0.80, icon: '🌊', phase: 5 },
+  { key: 'underground', label: 'Podzemní haly', bonus: 1.5, icon: '⛏️', phase: 6 },
+  { key: 'orbital', label: 'Orbitální prstence', bonus: 3.0, icon: '🛰️', phase: 7 },
+];

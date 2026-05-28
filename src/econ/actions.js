@@ -2,14 +2,15 @@
 //  Hráčské akce — jediné API, které volá UI. Každá vrací true/false (úspěch).
 //  Nákupy za kredity vyprázdní obchodovatelný sklad (pravidlo lore §9).
 // ===========================================================================
-import { BALANCE, LOCATION_KINDS, PLANET_ORDER, UPGRADES, PERKS } from '../config.js';
+import { BALANCE, UPGRADES, PERKS, WORLDS, WORLD_ORDER, AREA_MODS } from '../config.js';
 import { fmt } from '../format.js';
 import { costOf, upgradeCost, perkCost } from './economy.js';
 import { emptyStorage } from './storage.js';
-import { locationById, groupById, activeLocation } from '../io/state.js';
+import { groupById } from '../io/state.js';
 import { createGroup, splitGroup } from '../sim/groups.js';
 import { claimSphere, sphereReady } from '../content/projects.js';
 import { igniteBlackHole, triggerSingularity, canIgnite, singularityAvailable } from '../content/prestige.js';
+import { landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost, densityMaxLevel, worldsColonized } from '../content/locations.js';
 
 const credits = (s) => s.resources.credits || 0;
 function spend(state, amount) {
@@ -19,15 +20,11 @@ function spend(state, amount) {
   return true;
 }
 
-// --- ceny pro UI -----------------------------------------------------------
-export function costFor(state, kind, ref) {
+// --- ceny pro UI (jednoduché úrovňové; rozloha/hustota mají vlastní fce) ----
+export function costFor(state, kind) {
   const voyage = Math.max(0.3, 1 - 0.15 * ((state.prestige.perks && state.prestige.perks.voyage) || 0));
   switch (kind) {
     case 'addSheep':   return costOf(BALANCE.cost.addSheep, state.buys.addSheep);
-    case 'expand':     return costOf(BALANCE.cost.expand, ref ? ref.level : 0);
-    case 'density':    return costOf(BALANCE.cost.density, ref ? ref.density : 0);
-    case 'newPasture': return costOf(BALANCE.cost.newPasture, state.buys.newPasture);
-    case 'station':    return Math.floor(costOf(BALANCE.cost.station, state.buys.station) * voyage);
     case 'warehouse':  return costOf(BALANCE.cost.warehouse, state.buys.warehouse);
     case 'oxygen':     return costOf(BALANCE.cost.oxygen, state.buys.oxygen);
     case 'builder':    return Math.floor(costOf(BALANCE.cost.builder, state.projects.dyson.builders) * voyage);
@@ -37,41 +34,44 @@ export function costFor(state, kind, ref) {
   }
 }
 
-// --- stáda / lokace --------------------------------------------------------
+// --- stáda -----------------------------------------------------------------
 export function buyAddSheep(state) {
-  const cost = costFor(state, 'addSheep');
-  if (!spend(state, cost)) return false;
+  if (!spend(state, costFor(state, 'addSheep'))) return false;
   const g = groupById(state, state.activeGroupId) || state.groups[0];
   g.counts.M.adult += 3; g.counts.F.adult += 3;
   state.buys.addSheep++;
   return true;
 }
-export function buyExpand(state, locId) {
-  const loc = locationById(state, locId) || activeLocation(state);
-  if (!spend(state, costFor(state, 'expand', loc))) return false;
-  loc.level++;
+
+// --- pozemky: rozloha (per svět), hustota (globální), modifikátory ----------
+export function buyLand(state, wk) {
+  const w = WORLDS[wk];
+  if (!w || w.phase > state.phase || w.fromProject) return false;
+  if (!spend(state, landParcelCost(state, wk))) return false;
+  const t = state.land.worlds[wk];
+  t.counts[t.tier] = (t.counts[t.tier] || 0) + 1;
   return true;
 }
-export function buyDensity(state, locId) {
-  const loc = locationById(state, locId) || activeLocation(state);
-  if (loc.density >= BALANCE.density.max) return false;
-  if (!spend(state, costFor(state, 'density', loc))) return false;
-  loc.density++;
+export function unlockTier(state, wk) {
+  const w = WORLDS[wk];
+  if (!w || w.fromProject || !canUnlockTier(state, wk)) return false;
+  if (!spend(state, tierUnlockCost(state, wk))) return false;
+  const t = state.land.worlds[wk];
+  t.tier++;
+  t.counts[t.tier] = (t.counts[t.tier] || 0) + 1;   // první parcela nového tieru
   return true;
 }
-export function buyNewPasture(state) {
-  if (state.phase < 2) return false;
-  if (!spend(state, costFor(state, 'newPasture'))) return false;
-  state.locations.push({ id: state.nextLocationId++, kind: 'pasture', name: 'Pastvina ' + (state.buys.newPasture + 1), level: 0, density: 0 });
-  state.buys.newPasture++;
+export function buyDensity(state) {
+  if (state.land.density >= densityMaxLevel()) return false;
+  if (!spend(state, densityCost(state))) return false;
+  state.land.density++;
   return true;
 }
-export function buyStation(state) {
-  if (state.phase < 6) return false;
-  const kind = PLANET_ORDER[state.buys.station % PLANET_ORDER.length];
-  if (!spend(state, costFor(state, 'station'))) return false;
-  state.locations.push({ id: state.nextLocationId++, kind, name: LOCATION_KINDS[kind].label + ' ' + (state.buys.station + 1), level: 0, density: 0 });
-  state.buys.station++;
+export function buyAreaMod(state, key) {
+  const mod = AREA_MODS.find(m => m.key === key);
+  if (!mod || mod.phase > state.phase || state.land.mods[key]) return false;
+  if (!spend(state, areaModCost(state, key))) return false;
+  state.land.mods[key] = true;
   return true;
 }
 
@@ -131,7 +131,7 @@ export function craftImmortality(state) {
 // --- fáze 9: manažer skupin ------------------------------------------------
 export function addGroup(state) {
   if (state.phase < 9) return false;
-  return !!createGroup(state, state.activeLocationId);
+  return !!createGroup(state);
 }
 export function doSplitGroup(state, groupId) {
   if (state.phase < 9) return false;
@@ -191,16 +191,15 @@ export function runAutobuy(state) {
     const opts = [];
     if (ab.sheep) opts.push([costFor(state, 'addSheep'), () => buyAddSheep(state)]);
     if (ab.land) {
-      for (const loc of state.locations) {
-        opts.push([costFor(state, 'expand', loc), () => buyExpand(state, loc.id)]);
-        if (loc.density < BALANCE.density.max) opts.push([costFor(state, 'density', loc), () => buyDensity(state, loc.id)]);
+      for (const wk of WORLD_ORDER) {
+        if (WORLDS[wk].phase <= state.phase && !WORLDS[wk].fromProject) {
+          opts.push([landParcelCost(state, wk), () => buyLand(state, wk)]);
+          if (canUnlockTier(state, wk)) opts.push([tierUnlockCost(state, wk), () => unlockTier(state, wk)]);
+        }
       }
-      if (state.phase >= 2) opts.push([costFor(state, 'newPasture'), () => buyNewPasture(state)]);
-      if (state.phase >= 6) {
-        opts.push([costFor(state, 'station'), () => buyStation(state)]);
-        opts.push([costFor(state, 'warehouse'), () => buyWarehouse(state)]);
-        opts.push([costFor(state, 'oxygen'), () => buyOxygen(state)]);
-      }
+      if (state.land.density < densityMaxLevel()) opts.push([densityCost(state), () => buyDensity(state)]);
+      for (const m of AREA_MODS) if (m.phase <= state.phase && !state.land.mods[m.key]) opts.push([areaModCost(state, m.key), () => buyAreaMod(state, m.key)]);
+      if (state.phase >= 6) { opts.push([costFor(state, 'warehouse'), () => buyWarehouse(state)]); opts.push([costFor(state, 'oxygen'), () => buyOxygen(state)]); }
     }
     if (ab.upgrades) for (const k in UPGRADES) if (UPGRADES[k].phase <= state.phase) opts.push([upgradeCost(state, k), () => buyUpgrade(state, k)]);
     if (ab.sphere && state.phase >= 7) opts.push([costFor(state, 'builder'), () => buyBuilder(state)]);
@@ -217,12 +216,9 @@ export function runAutobuy(state) {
 function cheapestUseful(s) {
   const opts = [];
   for (const k in UPGRADES) if (UPGRADES[k].phase <= s.phase) opts.push({ label: UPGRADES[k].label, cost: upgradeCost(s, k) });
-  for (const loc of s.locations) {
-    opts.push({ label: 'Rozšířit ' + loc.name, cost: costFor(s, 'expand', loc) });
-    if (loc.density < BALANCE.density.max) opts.push({ label: 'Hustota ' + loc.name, cost: costFor(s, 'density', loc) });
-  }
+  for (const wk of WORLD_ORDER) if (WORLDS[wk].phase <= s.phase && !WORLDS[wk].fromProject) opts.push({ label: 'Rozloha: ' + WORLDS[wk].label, cost: landParcelCost(s, wk) });
+  if (s.land.density < densityMaxLevel()) opts.push({ label: 'Hustota pastvy', cost: densityCost(s) });
   opts.push({ label: 'Ovce', cost: costFor(s, 'addSheep') });
-  if (s.phase >= 2) opts.push({ label: 'Pastvina', cost: costFor(s, 'newPasture') });
   let best = null;
   for (const o of opts) if (!best || o.cost < best.cost) best = o;
   return best;
@@ -240,12 +236,9 @@ export function suggestStep(s) {
     const c = costFor(s, 'immortality');
     return cr >= c ? 'Vyrob nápoj nesmrtelnosti (Stáda)' : `Našetři ${fmt(c)} na nesmrtelnost`;
   }
-  if (s.phase === 6 && s.buys.station < 3) {
-    const c = costFor(s, 'station');
-    return cr >= c ? `Postav stanici (zbývají ${3 - s.buys.station})` : `Našetři ${fmt(c)} na stanici (Stanice)`;
-  }
-  if (s.phase === 7 && s.projects.dyson.count < 1) return sphereReady(s) ? 'Dokonči Dysonovu sféru! (Stanice)' : 'Kupuj stavitele sféry (Stanice)';
-  if (s.phase === 8 && s.projects.dyson.count < 5) return sphereReady(s) ? 'Dokonči další sféru! (Stanice)' : 'Stav další sféry — stavitelé/laser (Stanice)';
+  if (s.phase === 6 && worldsColonized(s) < 3) return 'Kolonizuj Měsíc, Mars a Jupiter (Pozemky)';
+  if (s.phase === 7 && s.projects.dyson.count < 1) return sphereReady(s) ? 'Dokonči Dysonovu sféru! (Pozemky)' : 'Kupuj stavitele sféry (Pozemky)';
+  if (s.phase === 8 && s.projects.dyson.count < 5) return sphereReady(s) ? 'Dokonči další sféru! (Pozemky)' : 'Stav další sféry — stavitelé/laser (Pozemky)';
   const best = cheapestUseful(s);
   if (!best) return 'Nech stádo růst a šlechti (Stáda)';
   return cr >= best.cost ? `Kup: ${best.label} (${fmt(best.cost)})` : `Našetři na ${best.label} (${fmt(best.cost)})`;

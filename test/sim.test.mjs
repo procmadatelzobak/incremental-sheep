@@ -1,9 +1,9 @@
 import { newGame, activeGroup, prestigeCarry } from '../src/io/state.js';
 import { step } from '../src/sim/simulation.js';
 import { totalCount, totalPopulation } from '../src/sim/cohort.js';
-import { herdCapacity, locationCap } from '../src/content/locations.js';
+import { herdCapacity, totalArea } from '../src/content/locations.js';
 import { serialize, deserialize, applyOffline } from '../src/io/save.js';
-import { runAutobuy, setAutobuy, suggestStep, costFor, setProtect } from '../src/econ/actions.js';
+import { runAutobuy, setAutobuy, suggestStep, costFor, setProtect, buyLand } from '../src/econ/actions.js';
 import { checkAchievements, updateRecords } from '../src/content/achievements.js';
 import { getMults } from '../src/econ/economy.js';
 import { applySelectionCull } from '../src/sim/groups.js';
@@ -24,20 +24,18 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   check('no NaN credits', isFinite(s.resources.credits));
 }
 
-// 1b) kapacita je sdílená přes pozemky (oprava: pastviny se započítají)
+// 1b) kapacita = rozloha × hustota; koupě území zvedne strop a stádo roste dál
 {
   const s = newGame();
-  const meadowCap = locationCap(s.locations[0]);
-  // přidej 2 pastviny (jako v hlášeném save)
-  s.locations.push({ id: 2, kind: 'pasture', name: 'P1', level: 0, density: 0 });
-  s.locations.push({ id: 3, kind: 'pasture', name: 'P2', level: 0, density: 0 });
-  const cap = herdCapacity(s);
-  check('celková kapacita = součet pozemků', cap > meadowCap * 2);
-  check('pastviny přidávají kapacitu', cap === s.locations.reduce((t, l) => t + locationCap(l), 0));
-  // stádo na louce poroste nad kapacitu samotné louky (do pastvin)
+  s.resources.credits = 1e6;
+  const cap0 = herdCapacity(s);
+  buyLand(s, 'earth'); buyLand(s, 'earth');     // pár parcel Země
+  check('koupě území zvedne kapacitu', herdCapacity(s) > cap0);
+  check('rozloha roste', totalArea(s) > 1);
+  s.resources.credits = 0;
   run(s, 600);
-  check('populace přeroste kapacitu jedné louky', totalPopulation(s) > meadowCap + 1);
-  check('populace nepřekročí celkovou kapacitu', totalPopulation(s) <= cap + 5);
+  check('populace roste k nové kapacitě', totalPopulation(s) > cap0);
+  check('populace nepřekročí kapacitu', totalPopulation(s) <= herdCapacity(s) + 5);
 }
 
 // 1c) autobuyer: zapnuté kategorie nakupují; při nasávání černé díry je pozastaven
@@ -45,10 +43,10 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   const s = newGame();
   s.resources.credits = 1e6;
   setAutobuy(s, 'land', true);
-  const cr0 = s.resources.credits, lvl0 = s.locations[0].level;
+  const cr0 = s.resources.credits, area0 = totalArea(s);
   runAutobuy(s);
   check('autobuy pozemků utratil kredity', s.resources.credits < cr0);
-  check('autobuy pozemků něco koupil', s.locations[0].level > lvl0 || s.locations.length > 1);
+  check('autobuy pozemků zvětšil rozlohu/hustotu', totalArea(s) > area0 || s.land.density > 0);
 
   const s2 = newGame(); s2.resources.credits = 1e6; setAutobuy(s2, 'upgrades', true);
   runAutobuy(s2);
@@ -188,27 +186,13 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 }
 
 // jednoduchý auto-hráč pro test postupu
-import { buyAddSheep, buyExpand, buyDensity, buyNewPasture, buyUpgrade, buyStation, buyWarehouse, buyOxygen, buyBuilder, doClaimSphere, craftImmortality } from '../src/econ/actions.js';
-import { UPGRADES } from '../src/config.js';
+import { craftImmortality } from '../src/econ/actions.js';
 function autoPlayer() {
   return (s) => {
-    // selekce zapnutá na všech skupinách (zlepšuje produkci)
     for (const g of s.groups) if (!g.policy.cull.enabled) { g.policy.cull.enabled = true; g.policy.cull.gene = 'breedingScore'; g.policy.cull.cutFrac = 0.25; }
-    craftImmortality(s);
-    doClaimSphere(s);
-    // koupit nejlevnější dostupné vylepšení/expanzi, pokud je levné vůči kreditům
-    let acted = true, guard = 0;
-    while (acted && guard++ < 40) {
-      acted = false;
-      for (const k in UPGRADES) if (UPGRADES[k].phase <= s.phase && buyUpgrade(s, k)) acted = true;
-      const loc = s.locations[0];
-      if (buyExpand(s, loc.id)) acted = true;
-      if (buyDensity(s, loc.id)) acted = true;
-      if (buyAddSheep(s)) acted = true;
-      if (s.phase >= 2 && buyNewPasture(s)) acted = true;
-      if (s.phase >= 6) { buyStation(s); buyWarehouse(s); buyOxygen(s); }
-      if (s.phase >= 7) buyBuilder(s);
-    }
+    s.settings.autobuy = { sheep: true, land: true, upgrades: true, sphere: true };
+    if (s.phase === 4 && !s.flags.immortal) { craftImmortality(s); return; }
+    runAutobuy(s);
   };
 }
 

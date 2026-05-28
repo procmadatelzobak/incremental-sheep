@@ -26,6 +26,7 @@ export function claimSphere(state) {
   const d = state.projects.dyson;
   d.count++;
   d.progress = 0;
-  state.locations.push({ id: state.nextLocationId++, kind: 'sphere', name: 'Sféra ' + d.count, level: 0, density: 0 });
+  const sw = state.land.worlds.sphere;
+  sw.counts[sw.tier] = (sw.counts[sw.tier] || 0) + 1;   // dokončená sféra = parcela sférového světa
   return true;
 }

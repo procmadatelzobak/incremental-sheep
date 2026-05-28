@@ -46,17 +46,17 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
 
 // --- rozšíření lokace ---
 {
-  clickTab('Stanice');
-  const b = buttonsByText(panel(), 'Rozšířit')[0];
-  check('tlačítko Rozšířit existuje', !!b);
-  const lvl0 = s.locations[0].level;
-  b.click();
-  check('Rozšířit zvýší úroveň lokace', s.locations[0].level === lvl0 + 1);
+  clickTab('Pozemky');
+  const b = buttonsByText(panel(), 'Zahrada')[0];
+  check('tlačítko koupě území existuje', !!b);
+  const n0 = s.land.worlds.earth.counts[0] || 0;
+  if (b) b.click();
+  check('koupě území přidá parcelu', (s.land.worlds.earth.counts[0] || 0) === n0 + 1);
 }
 
 // --- všechny dostupné záložky se vykreslí a tlačítka jdou klikat bez chyby ---
 {
-  const labels = ['Stáda', 'Vylepšení', 'Stanice', 'Staty'];
+  const labels = ['Stáda', 'Vylepšení', 'Pozemky', 'Staty'];
   let ok = true;
   for (const L of labels) {
     try {
@@ -85,7 +85,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   s2.world.ceilingMult = 3;
   initUI(s2, 'app', () => {});
   let ok = true;
-  for (const L of ['Stáda', 'Sklad', 'Manažer', 'Prestiž', 'Stanice']) {
+  for (const L of ['Stáda', 'Sklad', 'Manažer', 'Prestiž', 'Pozemky']) {
     try { clickTab(L); for (const b of allButtons(panel())) { if (!b.disabled) b.click(); } }
     catch (e) { ok = false; console.error('  chyba v fázi 10', L, e.message); }
   }
@@ -105,9 +105,9 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('panel se nepřekresluje bez strukturální změny (= žádné blikání)', btnBefore && btnBefore === btnAfter);
   check('struktura panelu zůstává stejná', wrapBefore === panel().children[0]);
   // při strukturální změně (nová lokace) se panel překreslí
-  clickTab('Stanice');
+  clickTab('Pozemky');
   const before = panel().children[0];
-  s3.locations.push({ id: 999, kind: 'pasture', name: 'Test', level: 0, density: 0 });
+  s3.land.density += 1;
   updateUI(s3);
   check('panel se překreslí při strukturální změně', before !== panel().children[0]);
 }
@@ -122,7 +122,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   try {
     loaded.resources.credits = 1e6;
     initUI(loaded, 'app', () => {});
-    for (const L of ['Stáda', 'Vylepšení', 'Stanice']) { clickTab(L); updateUI(loaded); }
+    for (const L of ['Stáda', 'Vylepšení', 'Pozemky']) { clickTab(L); updateUI(loaded); }
   } catch (e) { ok = false; console.error('  pád UI na starém save:', e.message); }
   check('UI se starým save nespadne (zamrznutí opraveno)', ok);
 }

@@ -7,11 +7,10 @@ import { applyProduced } from '../econ/storage.js';
 import { aging, births, totalCount } from './cohort.js';
 import { produce } from './production.js';
 import { applyPolicyKills, applySelectionCull } from './groups.js';
-import { herdCapacity, locEnv } from '../content/locations.js';
+import { herdCapacity, worldEnv } from '../content/locations.js';
 import { stepProjects } from '../content/projects.js';
 import { checkPhase } from '../content/phases.js';
 import { updateRecords, checkAchievements } from '../content/achievements.js';
-import { locationById } from '../io/state.js';
 
 function addInto(dst, src) { for (const k in src) dst[k] = (dst[k] || 0) + src[k]; }
 
@@ -20,28 +19,26 @@ export function step(state, dt) {
   state.meta.gameTime += dt;
   state.meta.totalGameTime += dt;
   const ctx = getMults(state);
+  ctx.env = worldEnv(state);            // produkční prostředí (vážený průměr světů)
   const produced = {};
   const cap = herdCapacity(state);
 
   // 1) stárnutí všech stád
   for (const g of state.groups) aging(g, dt);
 
-  // 2) porody ze SDÍLENÉ kapacity (víc pozemků = víc místa)
+  // 2) porody ze SDÍLENÉ kapacity (rozloha × hustota × modifikátory)
   let pop = 0;
   for (const g of state.groups) pop += totalCount(g);
+  const bctx = (ctx.env.birthMult && ctx.env.birthMult !== 1) ? Object.assign({}, ctx, { birthMult: ctx.birthMult * ctx.env.birthMult }) : ctx;
   for (const g of state.groups) {
-    const loc = locationById(state, g.locationId);
-    const env = loc ? locEnv(loc) : {};
-    const bctx = env.birthMult ? Object.assign({}, ctx, { birthMult: ctx.birthMult * env.birthMult }) : ctx;
     const headroom = Math.max(0, cap - pop);
     pop += births(g, headroom, dt, bctx);
   }
 
   // 3) automatika (porážky) + produkce
   for (const g of state.groups) {
-    const loc = locationById(state, g.locationId);
     addInto(produced, applyPolicyKills(g, ctx, state));
-    addInto(produced, produce(g, loc, dt, ctx, state));
+    addInto(produced, produce(g, dt, ctx, state));
   }
 
   // 4) selekční cyklus (každých cullPeriod s)

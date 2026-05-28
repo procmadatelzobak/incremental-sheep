@@ -4,6 +4,7 @@
 //  (maxSheep, maxCredits, nejlepší geny…) se drží ve state.world.
 // ===========================================================================
 import { totalCount } from '../sim/cohort.js';
+import { worldsColonized } from './locations.js';
 
 // Aktualizuj perzistentní rekordy (volá se každý tik). Levné.
 export function updateRecords(state) {
@@ -19,8 +20,8 @@ export function updateRecords(state) {
   w.bestWoolQ = bWoolQ;
   w.bestIntel = bIntel;
   w.maxSpheres = Math.max(w.maxSpheres || 0, state.projects.dyson.count);
-  w.maxStations = Math.max(w.maxStations || 0, state.buys.station || 0);
-  if (!w.everPasture && state.locations.some(l => l.kind === 'pasture')) w.everPasture = true;
+  w.maxStations = Math.max(w.maxStations || 0, worldsColonized(state));
+  if (!w.everPasture && state.land.worlds.earth.tier >= 1) w.everPasture = true;
 }
 
 // id, name, desc, test(state), bonus? (přičte se násobič 1+bonus), title?
@@ -37,8 +38,8 @@ export const ACHIEVEMENTS = [
   { id: 'cred1t',   name: 'Bilionář',          desc: '1 bilion kreditů',        test: s => s.world.maxCredits >= 1e12, bonus: 0.05 },
   { id: 'wool',     name: 'Dokonalá vlna',     desc: 'Vyšlechti kvalitu vlny k vrcholu', test: s => s.world.bestWoolQ >= 3.5, bonus: 0.05 },
   { id: 'smart',    name: 'Myslící ovce',      desc: 'Inteligence ovce nad 5',  test: s => s.world.bestIntel >= 5, bonus: 0.05 },
-  { id: 'pasture',  name: 'Soused prodal',     desc: 'Kup první pastvinu',      test: s => !!s.world.everPasture },
-  { id: 'station',  name: 'Vzhůru ke hvězdám', desc: 'Postav první stanici',    test: s => (s.world.maxStations || 0) >= 1, bonus: 0.05 },
+  { id: 'pasture',  name: 'Soused prodal',     desc: 'Rozšiř pozemky za zahradu', test: s => !!s.world.everPasture },
+  { id: 'station',  name: 'Vzhůru ke hvězdám', desc: 'Kolonizuj první planetu',  test: s => (s.world.maxStations || 0) >= 1, bonus: 0.05 },
   { id: 'sphere',   name: 'Obejmout slunce',   desc: 'Dokonči první Dysonovu sféru', test: s => (s.world.maxSpheres || 0) >= 1, bonus: 0.10, title: 'Pán Stád' },
   { id: 'immortal', name: 'Nesmrtelný',        desc: 'Vypij nápoj nesmrtelnosti', test: s => !!s.flags.immortal, title: 'Pastýř' },
   { id: 'blackhole',name: 'Návrat v čase',     desc: 'Zažehni první černou díru', test: s => s.prestige.runs >= 1, bonus: 0.10, title: 'Ten, Jenž Střihá' },

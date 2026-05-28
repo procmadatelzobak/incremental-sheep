@@ -1,11 +1,11 @@
 // ===========================================================================
 //  Produkce skupiny za tik: vlna, mléko, výpočet (z μ genů a počtů).
 //  Maso a části vznikají jen z porážky (viz groups.js).
+//  ctx.env = produkční prostředí (vážený průměr světů dle podílu rozlohy).
 // ===========================================================================
-import { locEnv } from '../content/locations.js';
 
-export function produce(group, loc, dt, ctx, state) {
-  const g = group.genes, c = group.counts, env = locEnv(loc);
+export function produce(group, dt, ctx, state) {
+  const g = group.genes, c = group.counts, env = ctx.env || {};
   const adults = c.M.adult + c.F.adult;
   const olds = c.M.old + c.F.old;
   const out = {};

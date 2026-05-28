@@ -2,7 +2,6 @@
 //  Skupiny: porážkové výnosy, automatická pravidla, selekční cyklus, CRUD.
 // ===========================================================================
 import { BALANCE } from '../config.js';
-import { locEnv } from '../content/locations.js';
 import { selectGene, selectScore, seedGroupGenes } from './genetics.js';
 import { emptyCounts } from './cohort.js';
 
@@ -12,7 +11,7 @@ function addInto(dst, src) { for (const k in src) dst[k] = (dst[k] || 0) + src[k
 
 // Výnosy z porážky n ovcí daného stádia (maso vždy; části od fáze 5).
 export function slaughterYields(group, n, stage, ctx, state) {
-  const env = locEnv(locOf(group, state));
+  const env = ctx.env || {};
   const sizeMu = group.genes.size.mu;
   const out = { meat: n * sizeMu * STAGE_MEAT[stage] * ctx.meatMult * (env.meatMult || 1) };
   if (state.phase >= 5) {
@@ -22,7 +21,6 @@ export function slaughterYields(group, n, stage, ctx, state) {
   }
   return out;
 }
-function locOf(group, state) { return state.locations.find(l => l.id === group.locationId) || state.locations[0]; }
 
 // Automatická pravidla (každý tik): poraž staré / samce-děti / přebytek samců.
 export function applyPolicyKills(group, ctx, state) {
@@ -77,10 +75,10 @@ export function applySelectionCull(group, ctx, state) {
 }
 
 // --- CRUD skupin (fáze 9 manažer) -----------------------------------------
-export function createGroup(state, locationId, name) {
+export function createGroup(state, name) {
   const g = {
     id: state.nextGroupId++, name: name || ('Stádo ' + String.fromCharCode(64 + state.nextGroupId)),
-    species: 'base', locationId: locationId || state.activeLocationId,
+    species: 'base',
     genes: seedGroupGenes(0, 1), counts: emptyCounts(), bredFracF: 0,
     policy: { killOld: false, killMaleChildren: false, maxMales: 0, cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2, stage: 'adult' }, protect: { enabled: true, minF: 8, minM: 2 } },
   };
@@ -92,7 +90,7 @@ export function createGroup(state, locationId, name) {
 export function splitGroup(state, groupId) {
   const src = state.groups.find(g => g.id === groupId);
   if (!src) return null;
-  const dst = createGroup(state, src.locationId, src.name + '′');
+  const dst = createGroup(state, src.name + '′');
   dst.genes = JSON.parse(JSON.stringify(src.genes));
   dst.bredFracF = src.bredFracF;
   for (const s of ['M', 'F']) for (const st of ['child', 'adult', 'old']) {

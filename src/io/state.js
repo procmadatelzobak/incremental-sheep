@@ -26,7 +26,7 @@ export function newGame(carry = null) {
   const ceilingMult = 1 + (carry?.perks?.genetics ? 0 : 0); // ceiling se zvedá ve hře
   const startQuality = Math.min(0.8, 0.1 * (carry?.perks?.legacy || 0));
   const group = {
-    id: 1, name: 'Stádo A', species: 'base', locationId: 1,
+    id: 1, name: 'Stádo A', species: 'base',
     genes: seedGroupGenes(startQuality, 1),
     counts: emptyCounts(),
     bredFracF: 0,
@@ -50,14 +50,22 @@ export function newGame(carry = null) {
     groups: [group],
     nextGroupId: 2,
     activeGroupId: 1,
-    locations: [{ id: 1, kind: 'meadow', name: 'První louka', level: 0, density: 0 }],
-    nextLocationId: 2,
-    activeLocationId: 1,
+    land: {
+      density: 0,
+      mods: {},
+      worlds: {
+        earth: { tier: 0, counts: { 0: 1 } },
+        moon: { tier: 0, counts: {} },
+        mars: { tier: 0, counts: {} },
+        jupiter: { tier: 0, counts: {} },
+        sphere: { tier: 0, counts: {} },
+      },
+    },
     resources: { credits: startCreditsFor(carry) },
     rates: {},
     storage: { warehouseLevel: 0, autotrade: {}, stockpile: {} },
     upgrades: {},
-    buys: { addSheep: 0, newPasture: 0, station: 0, warehouse: 0, oxygen: 0 },
+    buys: { addSheep: 0, warehouse: 0, oxygen: 0 },
     projects: {
       dyson: { progress: 0, count: 0, builders: 0 },
       laser: { level: 0 },
@@ -101,9 +109,7 @@ export function newGame(carry = null) {
 // --- pomocné dotazy --------------------------------------------------------
 export const unlocked = (state, resKey) => (RESOURCES[resKey]?.phase || 99) <= state.phase;
 export const groupById = (state, id) => state.groups.find(g => g.id === id);
-export const locationById = (state, id) => state.locations.find(l => l.id === id);
 export const activeGroup = (state) => groupById(state, state.activeGroupId) || state.groups[0];
-export const activeLocation = (state) => locationById(state, state.activeLocationId) || state.locations[0];
 
 // carry objekt pro reset (co přežije černou díru)
 export function prestigeCarry(state) {

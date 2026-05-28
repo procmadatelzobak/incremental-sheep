@@ -7,9 +7,9 @@
 import { fmt } from '../format.js';
 import * as A from '../econ/actions.js';
 import { upgradeCost, perkCost } from '../econ/economy.js';
-import { UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE } from '../config.js';
+import { UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
-import { locationCap, locKind, herdCapacity } from '../content/locations.js';
+import { herdCapacity, totalArea, densityMult, densityMaxLevel, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
 import { phaseName, phaseHint, PHASE_INFO, PHASES } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax } from '../sim/genetics.js';
 import { selectTruncate } from '../sim/distribution.js';
@@ -150,7 +150,7 @@ function updateHud(s) {
 const TABS = [
   { id: 'herds', label: ICONS.sheep + ' Stáda', avail: () => true, render: renderHerds },
   { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
-  { id: 'stations', label: ICONS.station + ' Stanice', avail: () => true, render: renderStations },
+  { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: () => true, render: renderStations },
   { id: 'storage', label: ICONS.storage + ' Sklad', avail: s => s.phase >= 6, render: renderStorage },
   { id: 'manager', label: ICONS.manager + ' Manažer', avail: s => s.phase >= 9, render: renderManager },
   { id: 'prestige', label: ICONS.prestige + ' Prestiž', avail: s => s.phase >= 7 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
@@ -174,7 +174,6 @@ function section(title, ...kids) { return h('div', { class: 'sect' }, h('h3', { 
 function renderHerds(s) {
   const g = group();
   const wrap = h('div', {});
-  const loc = s.locations.find(l => l.id === g.locationId) || s.locations[0];
 
   if (s.groups.length > 1) {
     wrap.appendChild(section('Stádo',
@@ -187,7 +186,7 @@ function renderHerds(s) {
   reg(cv, (el) => drawHerd(el, group()));
   const sheepBtn = cBtn(`${ICONS.sheep} + Ovce`, () => A.costFor(s, 'addSheep'), () => A.buyAddSheep(s));
   sheepBtn.addEventListener('click', () => flashEl(herdCanvasEl));
-  wrap.appendChild(section(`${g.name} — ${loc.name}`,
+  wrap.appendChild(section(g.name,
     cv,
     h('div', { class: 'stat-row' },
       liveSpan(() => `Ovce: ${fmt(totalPopulation(s))} / ${fmt(herdCapacity(s))}`),
@@ -283,32 +282,64 @@ function renderUpgrades(s) {
 
 function renderStations(s) {
   const wrap = h('div', {});
-  const list = h('div', { class: 'list' });
-  for (const loc of s.locations) {
-    list.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: (KIND_ICONS[loc.kind] || '') + ' ' + loc.name }), h('span', { class: 'dim', text: locKind(loc).label })),
-      liveSpan(() => `Kapacita +${fmt(locationCap(loc))} · úroveň ${loc.level} · hustota ${loc.density}`, 'dim small'),
-      h('div', { class: 'btn-row' },
-        cBtn('Rozšířit', () => A.costFor(s, 'expand', loc), () => A.buyExpand(s, loc.id)),
-        loc.density < BALANCE.density.max ? cBtn('Hustota', () => A.costFor(s, 'density', loc), () => A.buyDensity(s, loc.id)) : h('span', { class: 'dim', text: 'hustota max' }))));
-  }
-  wrap.appendChild(section('Lokace',
-    liveSpan(() => `Celková kapacita: ${fmt(totalPopulation(s))} / ${fmt(herdCapacity(s))} ovcí`, 'dim'),
-    list));
 
-  const buys = h('div', { class: 'btn-row' });
-  if (s.phase >= 2) buys.appendChild(cBtn(`${ICONS.pasture} + Pastvina`, () => A.costFor(s, 'newPasture'), () => A.buyNewPasture(s)));
+  // přehled kapacity = rozloha × hustota × modifikátory
+  wrap.appendChild(section('🌍 Pozemky',
+    liveSpan(() => `Kapacita: ${fmt(totalPopulation(s))} / ${fmt(herdCapacity(s))} ovcí`, 'dim'),
+    liveSpan(() => `Rozloha ${fmt(totalArea(s))} · hustota ×${fmt(densityMult(s))} · modifikátory ×${areaModMult(s).toFixed(2)}`, 'dim small'),
+    autobuyToggle('Automaticky rozšiřovat pozemky a hustotu', 'land')));
+
+  // ROZLOHA: per-svět žebříček
+  const worldsBox = h('div', { class: 'list' });
+  for (const wk of WORLD_ORDER) {
+    const w = WORLDS[wk];
+    if (w.phase > s.phase) continue;
+    const t = s.land.worlds[wk];
+    const item = h('div', { class: 'item' },
+      h('div', { class: 'item-h' }, h('b', { text: `${w.icon} ${w.label}` }), h('span', { class: 'dim', text: w.tiers[t.tier].label })),
+      liveSpan(() => `Rozloha ${fmt(worldArea(s, wk))} · parcel ${parcelsInWorld(s, wk)}`, 'dim small'));
+    if (w.fromProject) {
+      item.appendChild(h('div', { class: 'dim small', text: 'Roste dokončováním Dysonových sfér (níže).' }));
+    } else {
+      item.appendChild(h('div', { class: 'btn-row' },
+        cBtn(`+ ${w.tiers[t.tier].label}`, () => landParcelCost(s, wk), () => A.buyLand(s, wk)),
+        canUnlockTier(s, wk) ? cBtn(`⤴ Odemknout: ${w.tiers[t.tier + 1].label}`, () => tierUnlockCost(s, wk), () => A.unlockTier(s, wk)) : null));
+    }
+    worldsBox.appendChild(item);
+  }
+  wrap.appendChild(section('Rozloha — kup území nebo odemkni větší kategorii', worldsBox));
+
+  // HUSTOTA: globální track
+  const dmax = densityMaxLevel();
+  wrap.appendChild(section('Hustota / technologie pastvy (globální násobič)',
+    liveSpan(() => `${DENSITY_TIERS[s.land.density].icon} ${DENSITY_TIERS[s.land.density].label} (×${fmt(densityMult(s))})`, 'dim'),
+    s.land.density < dmax
+      ? cBtn(`Vylepšit → ${DENSITY_TIERS[s.land.density + 1].label} (×${DENSITY_TIERS[s.land.density + 1].mult})`, () => densityCost(s), () => A.buyDensity(s))
+      : h('div', { class: 'dim', text: 'Maximální hustota.' })));
+
+  // MODIFIKÁTORY ROZLOHY
+  const modsBox = h('div', { class: 'btn-row' });
+  let anyMod = false;
+  for (const m of AREA_MODS) {
+    if (m.phase > s.phase) continue;
+    anyMod = true;
+    if (s.land.mods[m.key]) modsBox.appendChild(h('span', { class: 'dim', text: `${m.icon} ${m.label} ✓` }));
+    else modsBox.appendChild(cBtn(`${m.icon} ${m.label} (+${Math.round(m.bonus * 100)} %)`, () => areaModCost(s, m.key), () => A.buyAreaMod(s, m.key)));
+  }
+  if (anyMod) wrap.appendChild(section('Modifikátory rozlohy (globální % bonus)', modsBox));
+
+  // SKLAD + KYSLÍK (fáze 6+)
   if (s.phase >= 6) {
-    buys.appendChild(cBtn(`${ICONS.station} + Stanice`, () => A.costFor(s, 'station'), () => A.buyStation(s)));
-    buys.appendChild(cBtn(`${ICONS.storage} + Sklad`, () => A.costFor(s, 'warehouse'), () => A.buyWarehouse(s)));
-    buys.appendChild(cBtn(`${ICONS.oxygen} + Kyslík`, () => A.costFor(s, 'oxygen'), () => A.buyOxygen(s)));
+    wrap.appendChild(section('Sklad a kyslík',
+      h('div', { class: 'btn-row' },
+        cBtn(`${ICONS.storage} + Sklad`, () => A.costFor(s, 'warehouse'), () => A.buyWarehouse(s)),
+        cBtn(`${ICONS.oxygen} + Kyslík`, () => A.costFor(s, 'oxygen'), () => A.buyOxygen(s))),
+      liveSpan(() => `Kyslíková kapacita: ${fmt(s.buys.oxygen * BALANCE.oxygenPerLevel)} rozlohy (násobí plochu Měsíce).`, 'dim small')));
   }
-  wrap.appendChild(section('Expanze', buys,
-    autobuyToggle('Automaticky rozšiřovat pozemky' + (s.phase >= 6 ? ' (+ stanice, sklad, kyslík)' : ' (louky, pastviny, hustota)'), 'land'),
-    s.phase >= 6 ? liveSpan(() => `Kyslíková kapacita: ${fmt(s.buys.oxygen * BALANCE.oxygenPerLevel)} (pro Měsíc).`, 'dim small') : null));
 
+  // DYSONOVA SFÉRA (fáze 7+)
   if (s.phase >= 7) {
-    wrap.appendChild(section('Dysonova sféra',
+    wrap.appendChild(section(`${ICONS.sphere} Dysonova sféra`,
       liveBar(() => s.projects.dyson.progress / dysonTarget(s), () => `${fmt(s.projects.dyson.progress)} / ${fmt(dysonTarget(s))}`, '#c9a227'),
       liveSpan(() => `Hotových sfér: ${s.projects.dyson.count} · stavitelů: ${s.projects.dyson.builders} · energie: ${fmt(s.resources.energy || 0)}`, 'dim small'),
       autobuyToggle('Automaticky stavět (stavitelé + dokončovat sféry)', 'sphere'),
@@ -343,10 +374,9 @@ function renderManager(s) {
   const wrap = h('div', {});
   const list = h('div', { class: 'list' });
   for (const g of s.groups) {
-    const loc = s.locations.find(l => l.id === g.locationId);
     list.appendChild(h('div', { class: 'item' },
       h('div', { class: 'item-h' }, h('b', { text: g.name }), liveSpan(() => `${fmt(totalCount(g))} ovcí`, 'dim')),
-      liveSpan(() => `${loc ? loc.name : '?'} · skóre ${(breedingScore(g.genes, s.world.ceilingMult) * 100).toFixed(0)} %`, 'dim small'),
+      liveSpan(() => `skóre ${(breedingScore(g.genes, s.world.ceilingMult) * 100).toFixed(0)} % · ${g.policy.cull.enabled ? 'selekce: ' + (GENES[g.policy.cull.gene] ? GENES[g.policy.cull.gene].label : 'skóre') : 'bez selekce'}`, 'dim small'),
       h('div', { class: 'btn-row' },
         aBtn('Vybrat', () => s.activeGroupId !== g.id, () => { s.activeGroupId = g.id; activeTab = 'herds'; buildTabs(); }),
         aBtn('Rozdělit', () => totalCount(g) > 4, () => A.doSplitGroup(s, g.id)))));
@@ -436,7 +466,8 @@ function renderKronika(s) {
 
 // --- jádro: build vs in-place refresh --------------------------------------
 function structSigOf(s) {
-  return [activeTab, s.phase, s.groups.length, s.locations.length, s.activeGroupId,
+  const land = WORLD_ORDER.map(wk => s.land.worlds[wk].tier).join(',') + ':' + s.land.density + ':' + Object.keys(s.land.mods).length;
+  return [activeTab, s.phase, s.groups.length, land, s.activeGroupId,
     storageEnabled(s) ? 1 : 0, s.flags.immortal ? 1 : 0, sphereReady(s) ? 1 : 0,
     singularityAvailable(s) ? 1 : 0, s.phase >= 10 ? 1 : 0].join('|');
 }

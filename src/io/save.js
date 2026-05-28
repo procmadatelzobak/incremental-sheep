@@ -35,6 +35,13 @@ function hydrate(data) {
   state.settings.autobuy = Object.assign({}, defaults.settings.autobuy, (data.settings || {}).autobuy || {});
   state.world = Object.assign({}, defaults.world, data.world || {});
   state.achievements = data.achievements || {};
+  // pozemky: doplň nový model (staré savy měly locations → začnou s default rozlohou)
+  const dl = (data.land && typeof data.land === 'object') ? data.land : {};
+  state.land = {
+    density: typeof dl.density === 'number' ? dl.density : 0,
+    mods: dl.mods || {},
+    worlds: Object.assign({}, JSON.parse(JSON.stringify(defaults.land.worlds)), dl.worlds || {}),
+  };
   state.rates = {};
   if (typeof state._cullAcc !== 'number') state._cullAcc = 0;
   return state;
