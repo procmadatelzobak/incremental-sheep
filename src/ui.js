@@ -176,8 +176,16 @@ export function updateUI(state) {
 
   let rows = '<table>';
   for (const k in GENES) {
-    const v = st.hasHerd ? st.avg[k].toFixed(GENES[k].dec) : '—';
-    rows += `<tr><td class="gname">${GENES[k].label}</td><td>${v}</td></tr>`;
+    if (!st.hasHerd) {
+      rows += `<tr><td class="gname">${GENES[k].label}</td><td class="mid">—</td></tr>`;
+      continue;
+    }
+    const spec = GENES[k];
+    const val = st.avg[k];
+    const mid = (spec.min + spec.max) / 2;
+    const isBetter = spec.lowerBetter ? val < mid : val > mid;
+    const cls = isBetter ? 'up' : 'down';
+    rows += `<tr><td class="gname">${spec.label}</td><td class="${cls}">${val.toFixed(spec.dec)}</td></tr>`;
   }
   rows += '</table>';
   el.genes.innerHTML = rows;

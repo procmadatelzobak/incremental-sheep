@@ -93,9 +93,27 @@ button .lvl { color: var(--muted); font-size: 11px; }
 .cull-toggle { display: flex; align-items: center; gap: 8px; margin-top: 4px; color: var(--muted); cursor: pointer; }
 
 #genes-section table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-#genes-section td { padding: 2px 0; }
-#genes-section td:last-child { text-align: right; color: var(--accent); }
+#genes-section td { padding: 2px 0; font-size: 12px; }
+#genes-section td:last-child { text-align: right; }
 #genes-section td.gname { color: var(--muted); }
+#genes-section td.up   { color: #7bc47f; }
+#genes-section td.down { color: #c07b4f; }
+#genes-section td.mid  { color: var(--accent); }
+
+/* Tooltip cursor hint */
+#pen { cursor: crosshair; }
+#cull-mode:checked ~ canvas, .cull-active canvas { cursor: crosshair; }
+
+/* Scrollbar styling */
+#controls::-webkit-scrollbar { width: 6px; }
+#controls::-webkit-scrollbar-track { background: transparent; }
+#controls::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Responsive: narrow screen stacks vertically */
+@media (max-width: 700px) {
+  #game { flex-direction: column; }
+  #controls { width: 100%; max-height: 50vh; border-left: none; border-top: 1px solid var(--border); }
+}
 
 textarea {
   width: 100%; background: var(--bg); color: var(--text);

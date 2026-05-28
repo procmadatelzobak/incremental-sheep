@@ -20,8 +20,8 @@ const cullMode = document.getElementById('cull-mode');
 const welcome = document.getElementById('welcome');
 
 function resize() {
-  canvas.width = wrap.clientWidth - 24;   // minus padding
-  canvas.height = wrap.clientHeight - 24;
+  canvas.width = Math.max(100, wrap.clientWidth - 24);
+  canvas.height = Math.max(100, wrap.clientHeight - 24);
 }
 window.addEventListener('resize', resize);
 resize();
@@ -29,6 +29,16 @@ resize();
 function herdCount() {
   return state.aggregate ? aggCount(state.aggregate) : state.sheep.length;
 }
+
+// Mouse tracking for hover tooltip.
+let mousePos = null;
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  mousePos = { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+});
+canvas.addEventListener('mouseleave', () => { mousePos = null; });
 
 const actions = {
   buyStarter() {
@@ -100,25 +110,27 @@ initUI(state, actions);
 canvas.addEventListener('click', (e) => {
   if (!cullMode.checked || state.aggregate) return;
   const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
   for (let i = state.sheep.length - 1; i >= 0; i--) {
     const s = state.sheep[i];
     if (s._sx == null) continue;
     const dx = mx - s._sx, dy = my - s._sy;
-    if (dx * dx + dy * dy <= (s._sr + 2) * (s._sr + 2)) {
+    if (dx * dx + dy * dy <= (s._sr + 2) ** 2) {
       slaughter(state, s.id);
       break;
     }
   }
 });
 
-// Offline catch-up on load (drives the "welcome back" banner).
-const offlineSecs = (Date.now() - state.lastSaved) / 1000 * TIME_SCALE;
+// Offline catch-up on load.
+const offlineSecs = Math.min(MAX_OFFLINE_SECONDS, ((Date.now() - state.lastSaved) / 1000) * TIME_SCALE);
 if (offlineSecs > 60) {
   const earned = applyOffline(state);
   if (earned > 0) {
-    welcome.textContent = `Vítej zpět! Za ${fmt(Math.min(offlineSecs, MAX_OFFLINE_SECONDS))} s offline jsi vydělal ${fmt(earned)} kreditů.`;
+    welcome.textContent = `Vítej zpět! Za ${fmt(offlineSecs)} s offline jsi vydělal ${fmt(earned)} kreditů.`;
     welcome.classList.remove('hidden');
     setTimeout(() => welcome.classList.add('hidden'), 8000);
   }
@@ -129,15 +141,19 @@ setInterval(() => saveLocal(state), AUTOSAVE_MS);
 window.addEventListener('beforeunload', () => saveLocal(state));
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveLocal(state); });
 
-// Main loop: wall-clock driven so foreground, background-return and reload all catch up.
+// Drift constants: normalized units/s; sheep wander gently.
+const DRIFT_SPD = 0.018;
+const DRIFT_CHANGE = 0.025; // probability of changing direction per second
+
 let simClock = Date.now();
 let accCred = 0, accWool = 0, accMeat = 0, accWall = 0;
 let prevNow = performance.now();
 
 function frame(now) {
-  const realDt = (now - prevNow) / 1000;
+  const realDt = Math.min((now - prevNow) / 1000, 0.1); // cap at 100 ms for tab switch
   prevNow = now;
 
+  // Simulation (wall-clock based, catches up after tab sleep).
   let dt = ((Date.now() - simClock) / 1000) * TIME_SCALE;
   simClock = Date.now();
   if (dt > MAX_OFFLINE_SECONDS) dt = MAX_OFFLINE_SECONDS;
@@ -151,6 +167,7 @@ function frame(now) {
     }
   }
 
+  // Smooth income display (0.5 s window).
   accWall += realDt;
   if (accWall >= 0.5) {
     state.income.credits = accCred / accWall;
@@ -159,7 +176,29 @@ function frame(now) {
     accCred = accWool = accMeat = accWall = 0;
   }
 
-  render(ctx, state);
+  // Gentle sheep drift (cosmetic, not simulated, not saved — uses _ prefix).
+  if (!state.aggregate) {
+    for (const s of state.sheep) {
+      if (s._vx == null) {
+        const angle = Math.random() * Math.PI * 2;
+        s._vx = Math.cos(angle) * DRIFT_SPD;
+        s._vy = Math.sin(angle) * DRIFT_SPD;
+      }
+      if (Math.random() < DRIFT_CHANGE * realDt) {
+        const angle = Math.random() * Math.PI * 2;
+        s._vx = Math.cos(angle) * DRIFT_SPD;
+        s._vy = Math.sin(angle) * DRIFT_SPD;
+      }
+      s.x += s._vx * realDt;
+      s.y += s._vy * realDt;
+      if (s.x < 0.01) { s.x = 0.01; s._vx = Math.abs(s._vx); }
+      if (s.x > 0.99) { s.x = 0.99; s._vx = -Math.abs(s._vx); }
+      if (s.y < 0.01) { s.y = 0.01; s._vy = Math.abs(s._vy); }
+      if (s.y > 0.99) { s.y = 0.99; s._vy = -Math.abs(s._vy); }
+    }
+  }
+
+  render(ctx, state, mousePos);
   updateUI(state);
   requestAnimationFrame(frame);
 }
