@@ -65,6 +65,7 @@ button.act:disabled { opacity: .42; cursor: not-allowed; }
 .stat-row { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0; font-variant-numeric: tabular-nums; }
 .dim { color: var(--muted); }
 .small { font-size: 12px; }
+.note { color: var(--gold); }
 
 /* Bars */
 .bar { position: relative; height: 18px; background: #11151b; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin: 6px 0; }

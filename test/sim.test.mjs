@@ -32,8 +32,10 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   buyLand(s, 'earth'); buyLand(s, 'earth');     // pár parcel Země
   check('koupě území zvedne kapacitu', herdCapacity(s) > cap0);
   check('rozloha roste', totalArea(s) > 1);
+  // chovný základ (jako by hráč zprvních pár ovcí nakoupil — množení je zprvu pomalé, #29)
+  s.groups[0].counts.F.adult = 8; s.groups[0].counts.M.adult = 8;
   s.resources.credits = 0;
-  run(s, 600);
+  run(s, 900);
   check('populace roste k nové kapacitě', totalPopulation(s) > cap0);
   check('populace nepřekročí kapacitu', totalPopulation(s) <= herdCapacity(s) + 5);
 }
@@ -312,6 +314,18 @@ function autoPlayer() {
   check('Tkalcovny vyrábějí sukno', s.rates.cloth > 0);
   check('Tkalcovny vyrábějí sýr', s.rates.cheese > 0);
   check('zpracováním ubude syrové vlny', s.rates.wool < woolRaw);
+}
+
+// 10) #29: brzké množení je pomalé, ale udržitelné (žádný death-spiral bez nákupu)
+{
+  const s = newGame();
+  s.groups[0].counts.F.adult = 12; s.groups[0].counts.M.adult = 12;
+  s.land.worlds.earth.counts = { 0: 30 }; s.land.density = 3;   // dost kapacity, headroom nebrzdí
+  const pop0 = totalPopulation(s);
+  run(s, 1200);
+  const pop = totalPopulation(s);
+  check('#29 brzké stádo se samo udrží a poroste (ne vymírá)', pop > pop0);
+  check('#29 brzké množení je pomalé (ne explozivní)', pop < pop0 * 40);
 }
 
 console.log(`sim: ${pass} passed, ${fail} failed`);

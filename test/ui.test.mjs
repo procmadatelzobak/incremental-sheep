@@ -264,6 +264,16 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('limit samců má vysvětlující hint', panel().textContent.includes('Limit') && panel().textContent.includes('za cyklus'));
 }
 
+// --- #29: signál „trh ovcí se vyčerpává" když množení předstihne nákup ---
+{
+  const s = newGame(); s.resources.credits = 1e6; s.buys.addSheep = 12;   // drahý nákup
+  initUI(s, 'app', () => {});
+  s.rates = { _popGrowth: 2, _pop: 4 };     // stádo roste rychle množením
+  updateUI(s);
+  clickTab('Stáda');
+  check('signál vyčerpaného trhu se zobrazí', panel().textContent.includes('Trh ovcí se vyčerpává'));
+}
+
 // --- #24: rozpad příjmů v panelu Stáda ---
 {
   const s = newGame(); s.resources.credits = 1e6;

@@ -328,8 +328,15 @@ function renderHerds(s) {
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmtCount(p)} / ${fmtCount(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
     liveSpan(() => limitText(s), 'dim small'),
     sexRow, qtyRow, buyBtn,
+    liveSpan(() => {
+      const add = ((s.settings.buy && s.settings.buy.qty) || 1) * BALANCE.sheepPerUnit;
+      const growth = (s.rates && s.rates._popGrowth) || 0;
+      return (growth > 0 && growth * 20 >= add && A.addSheepCost(s) > 500)
+        ? '🛒 Trh ovcí se vyčerpává — vlastní stádo se teď množí rychleji, než stihneš dokupovat. Investuj radši do pozemků a šlechtění.'
+        : '';
+    }, 'small note'),
     autobuyToggle('Automaticky dokupovat ovce', 'sheep'),
-    h('div', { class: 'dim small' }, 'Samice se množí, samci dávají kapacitu páření (1 samec spáří ≈ tolik samic, kolik je Plodnost). Kapacitu pozemků zvětšuj v záložce Pozemky.')));
+    h('div', { class: 'dim small' }, 'Zprvu hlavně dokupuj — množení je pomalé. Jak vyšlechtíš nižší Březost a rozrosteš stádo, množení převezme a nákup ztratí smysl (trh dojde). Samice se množí, samci dávají kapacitu páření (1 samec spáří ≈ Plodnost samic).')));
 
   wrap.appendChild(incomeSection(s));
 

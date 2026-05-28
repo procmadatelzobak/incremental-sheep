@@ -18,7 +18,7 @@ export const GENES = {
   woolQuality:   { min: 0.4, max: 4,   base: 1,   sd: 0.2,  mut: 0.10, dec: 2, label: 'Kvalita vlny',  extreme: true,  phase: 1 },
   size:          { min: 0.4, max: 5,   base: 1,   sd: 0.2,  mut: 0.10, dec: 2, label: 'Velikost',      extreme: true,  phase: 1 },
   fertility:     { min: 4,   max: 24,  base: 8,   sd: 1.5,  mut: 0.6,  dec: 1, label: 'Plodnost',      extreme: true,  phase: 1 },
-  gestation:     { min: 8,   max: 60,  base: 25,  sd: 4,    mut: 1.5,  dec: 1, label: 'Březost (s)',   lowerBetter: true, phase: 1 },
+  gestation:     { min: 8,   max: 60,  base: 38,  sd: 4,    mut: 1.5,  dec: 1, label: 'Březost (s)',   lowerBetter: true, phase: 1 },
   lifespan:      { min: 60,  max: 600, base: 180, sd: 20,   mut: 8,    dec: 0, label: 'Délka života',  extreme: true,  phase: 1 },
   maturity:      { min: 0.5, max: 4,   base: 1,   sd: 0.12, mut: 0.06, dec: 2, label: 'Rychlost dospívání', extreme: true, phase: 1 },
   adultFrac:     { min: 0.30,max: 0.60,base: 0.45,sd: 0.04, mut: 0.02, dec: 2, label: 'Podíl dospěl.', phase: 1 },
@@ -101,10 +101,9 @@ export const BALANCE = {
   sigmaFloorMut: 0.6,       // σ-floor = sigmaFloorMut * mut (drží šlechtění "živé")
   // kapacita: rozloha × hustota × modifikátory × baseCap
   baseCap: 12,              // kapacita na jednotku rozlohy
-  birthCapDamp: 0.5,
   // ceny (base, growth)
   cost: {
-    addSheep:  { base: 50,   growth: 1.5  },   // přidá malé stádo
+    addSheep:  { base: 50,   growth: 1.6  },   // přidá malé stádo; cena rychle roste (trh dojde)
     land:      { base: 60,   growth: 1.28 },   // koupě parcely aktuálního tieru (× costMult světa)
     density:   { base: 1e3,  growth: 5    },   // globální hustota pastvy (track)
     areaMod:   { base: 4e3,  growth: 7    },   // globální modifikátory rozlohy
