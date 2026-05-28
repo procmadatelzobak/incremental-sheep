@@ -83,6 +83,7 @@ export function newGame(carry = null) {
     },
     settings: {
       timeScale: 1,
+      buy: { sex: 'mix', qty: 1 },     // volba nákupu ovcí (#7)
       autobuy: carry?.perks?.foresight
         ? { sheep: true, land: true, upgrades: true, sphere: true }
         : (carry?.autobuy || { sheep: false, land: false, upgrades: false, sphere: false }),

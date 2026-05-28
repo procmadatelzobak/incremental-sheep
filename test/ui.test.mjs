@@ -27,11 +27,26 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
 {
   const pop0 = totalCount(s.groups[0]);
   const cr0 = s.resources.credits;
-  const b = buttonsByText(panel(), '+ Ovce')[0];
+  const b = buttonsByText(panel(), 'Koupit ovce')[0];
   check('tlačítko +Ovce existuje', !!b);
   b.click();
   check('+Ovce zvýší populaci', totalCount(s.groups[0]) > pop0);
   check('+Ovce sníží kredity', s.resources.credits < cr0);
+}
+
+// --- nákup ovcí: volba pohlaví a množství (#7) ---
+{
+  clickTab('Stáda');
+  const fBtn = buttonsByText(panel(), 'Samice')[0];
+  check('volba Samice existuje', !!fBtn);
+  if (fBtn) fBtn.click();
+  check('volba nastaví pohlaví F', s.settings.buy.sex === 'F');
+  const q10 = buttonsByText(panel(), '×10')[0];
+  if (q10) q10.click();
+  check('volba množství ×10', s.settings.buy.qty === 10);
+  const m0 = s.groups[0].counts.M.adult, f0 = s.groups[0].counts.F.adult;
+  buttonsByText(panel(), 'Koupit ovce')[0].click();
+  check('koupě samic přidá jen samice', s.groups[0].counts.F.adult > f0 && s.groups[0].counts.M.adult === m0);
 }
 
 // --- nákup vylepšení ---
@@ -97,11 +112,11 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   const s3 = newGame();
   s3.resources.credits = 1e6;
   initUI(s3, 'app', () => {});
-  const btnBefore = buttonsByText(panel(), '+ Ovce')[0];
+  const btnBefore = buttonsByText(panel(), 'Koupit ovce')[0];
   const wrapBefore = panel().children[0];
   // simuluj 20 frejmů, kde se mění jen čísla (kredity, rychlosti), ne struktura
   for (let i = 0; i < 20; i++) { s3.resources.credits += 1000; s3.rates = { wool: 5, meat: 1, _pop: 20 }; updateUI(s3); }
-  const btnAfter = buttonsByText(panel(), '+ Ovce')[0];
+  const btnAfter = buttonsByText(panel(), 'Koupit ovce')[0];
   check('panel se nepřekresluje bez strukturální změny (= žádné blikání)', btnBefore && btnBefore === btnAfter);
   check('struktura panelu zůstává stejná', wrapBefore === panel().children[0]);
   // při strukturální změně (nová lokace) se panel překreslí

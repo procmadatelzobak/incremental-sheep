@@ -83,6 +83,11 @@ function presetBtn(label, gene, gid) {
   b.addEventListener('click', () => { A.setCull(S, gid, { enabled: true, gene, stage: 'adult', cutFrac: 0.3 }); onAction(); rebuildPanel(); });
   return b;
 }
+function segBtn(label, active, fn) {
+  const b = h('button', { class: 'act seg' + (active ? ' on' : ''), text: label });
+  b.addEventListener('click', () => { fn(); onAction(); rebuildPanel(); });
+  return b;
+}
 function liveSpan(fn, cls) { const e = h('span', { class: cls || '' }); return reg(e, (el) => { el.textContent = fn(); }); }
 function liveBar(fracFn, labelFn, color = '#6aa84f') {
   const fill = h('div', { class: 'barfill', style: `background:${color}` });
@@ -132,7 +137,8 @@ function buildHud() {
 function updateHud(s) {
   if (!hud) return;
   hudEp.textContent = s.meta.epithet;
-  hudPhase.textContent = `  •  ${PHASE_ICONS[s.phase] || ''} Fáze ${s.phase}: ${phaseName(s)}`;
+  const sp = (s.rates && s.rates._speed) || 1;
+  hudPhase.textContent = `  •  ${PHASE_ICONS[s.phase] || ''} Fáze ${s.phase}: ${phaseName(s)}` + (sp > 1 ? `  ⏩ čas ×${sp.toFixed(1)}` : '');
   hudHint.textContent = '› ' + phaseHint(s);
   hudStep.textContent = '➤ ' + A.suggestStep(s);
   const r = s.rates || {};
@@ -184,21 +190,27 @@ function renderHerds(s) {
   const cv = h('canvas', { class: 'herdcanvas', width: 280, height: 90 });
   herdCanvasEl = cv;
   reg(cv, (el) => drawHerd(el, group()));
-  const sheepBtn = cBtn(`${ICONS.sheep} + Ovce`, () => A.costFor(s, 'addSheep'), () => A.buyAddSheep(s));
-  sheepBtn.addEventListener('click', () => flashEl(herdCanvasEl));
+  const buy = s.settings.buy || { sex: 'mix', qty: 1 };
+  const sexRow = h('div', { class: 'ctl-row' }, 'Kupovat: ',
+    segBtn('🐏 Samec', buy.sex === 'M', () => A.setBuy(s, { sex: 'M' })),
+    segBtn('🐑 Samice', buy.sex === 'F', () => A.setBuy(s, { sex: 'F' })),
+    segBtn('⚖️ Auto', buy.sex === 'mix', () => A.setBuy(s, { sex: 'mix' })));
+  const qtyRow = h('div', { class: 'ctl-row' }, 'Množství: ',
+    ...[1, 10, 100].map(q => segBtn('×' + q, buy.qty === q, () => A.setBuy(s, { qty: q }))));
+  const buyBtn = cBtn(`${ICONS.sheep} Koupit ovce`, () => A.addSheepCost(s), () => A.buyAddSheep(s));
+  buyBtn.addEventListener('click', () => flashEl(herdCanvasEl));
   wrap.appendChild(section(g.name,
     cv,
     h('div', { class: 'stat-row' },
       liveSpan(() => `Ovce: ${fmt(totalPopulation(s))} / ${fmt(herdCapacity(s))}`),
       liveSpan(() => `Skóre: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`)),
     h('div', { class: 'stat-row dim' },
-      liveSpan(() => `Děti ${fmt(group().counts.M.child + group().counts.F.child)}`),
-      liveSpan(() => `Dospělí ${fmt(group().counts.M.adult + group().counts.F.adult)}`),
-      liveSpan(() => `Staří ${fmt(group().counts.M.old + group().counts.F.old)}`)),
+      liveSpan(() => `♂ ${fmt(group().counts.M.adult)} · ♀ ${fmt(group().counts.F.adult)} dospělých`),
+      liveSpan(() => `Děti ${fmt(group().counts.M.child + group().counts.F.child)} · Staří ${fmt(group().counts.M.old + group().counts.F.old)}`)),
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => 'naplnění (všechny pozemky)'),
-    h('div', { class: 'dim small' }, 'Kapacita = součet všech pozemků. Kupuj/rozšiřuj louky a pastviny v záložce Stanice.'),
-    sheepBtn,
-    autobuyToggle('Automaticky kupovat ovce', 'sheep')));
+    sexRow, qtyRow, buyBtn,
+    autobuyToggle('Automaticky dokupovat ovce', 'sheep'),
+    h('div', { class: 'dim small' }, 'Samice se množí, samci dávají kapacitu páření. Kapacitu pozemků zvětšuj v záložce Pozemky.')));
 
   const genes = h('div', { class: 'genes' });
   for (const k in GENES) if (GENES[k].phase <= s.phase) genes.appendChild(geneBar(k));

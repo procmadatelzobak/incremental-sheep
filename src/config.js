@@ -92,6 +92,10 @@ export const EPITHETS = [
 // --- LADĚNÍ ----------------------------------------------------------------
 export const BALANCE = {
   startCredits: 25,
+  // čas: před nápojem nesmrtelnosti běží sim normálně, po něm se násobně zrychlí
+  immortalSpeed: 1.8,           // násobič rychlosti simulace po vypití elixíru
+  immortalSpeedPerPhase: 0.15, // + za každou fázi nad 4 (eskalující "čas letí")
+  sheepPerUnit: 4,            // kolik ovcí přidá jedna zakoupená "jednotka"
   // kohorty / genetika
   cullPeriod: 20,           // herních sekund mezi aplikacemi selekce
   maxCutFrac: 0.85,
@@ -121,11 +125,11 @@ export const BALANCE = {
   laser: { rangePerLevel: 1 },
   // prestiž
   prestige: {
-    blackHoleBase: 1.8e12,    // strop centrálního skladu pro 1. zažehnutí
+    blackHoleBase: 5e12,    // strop centrálního skladu pro 1. zažehnutí
     thresholdGrowth: 1.3,   // mírný růst stropu každý reset
     // odměna roste s počtem běhů (+ log z velikosti běhu) → ~8 smyček k singularitě
     award: (cw, base, runs) => Math.max(1, Math.floor(8 * (runs + 1) + 4 * Math.log10(Math.max(10, cw / (base / 100))))),
-    singularityKnowledge: 750, // kumulativní Vědění pro odemčení singularity
+    singularityKnowledge: 1400, // kumulativní Vědění pro odemčení singularity
   },
   // ceny extrémních genů: strop genu × ceilingMult (fáze 5 + perky)
   ceiling: { phase5: 3, perPerk: 1 },

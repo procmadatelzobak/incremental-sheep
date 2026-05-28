@@ -3,7 +3,7 @@ import { step } from '../src/sim/simulation.js';
 import { totalCount, totalPopulation } from '../src/sim/cohort.js';
 import { herdCapacity, totalArea } from '../src/content/locations.js';
 import { serialize, deserialize, applyOffline } from '../src/io/save.js';
-import { runAutobuy, setAutobuy, suggestStep, costFor, setProtect, buyLand } from '../src/econ/actions.js';
+import { runAutobuy, setAutobuy, suggestStep, costFor, setProtect, buyLand, buyAddSheep } from '../src/econ/actions.js';
 import { checkAchievements, updateRecords } from '../src/content/achievements.js';
 import { getMults } from '../src/econ/economy.js';
 import { applySelectionCull } from '../src/sim/groups.js';
@@ -107,6 +107,23 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   const voy = newGame({ perks: { voyage: 4 } });
   check('perk voyage zlevňuje stavitele', costFor(voy, 'builder') < costFor(base, 'builder'));
   check('perk foresight zapne autobuy', newGame({ perks: { foresight: 1 } }).settings.autobuy.land === true);
+}
+
+// 1j) po elixíru se simulace násobně zrychlí (#7)
+{
+  const a = newGame(), b = newGame();
+  a.phase = 5; b.phase = 5; b.flags.immortal = true;
+  for (const s of [a, b]) { const g = s.groups[0]; g.counts.M.adult = 200; g.counts.F.adult = 200; s.resources.credits = 0; }
+  run(a, 60); run(b, 60);
+  check('elixír zrychlí produkci', b.stats.woolLifetime > a.stats.woolLifetime * 1.5);
+}
+
+// 1k) nákup ovcí dle pohlaví/množství (#7)
+{
+  const s = newGame(); s.resources.credits = 1e6;
+  const m0 = s.groups[0].counts.M.adult;
+  buyAddSheep(s, 'M', 3);
+  check('nákup samců přidá jen samce', s.groups[0].counts.M.adult > m0 && s.groups[0].counts.F.adult === 2);
 }
 
 // 1i) autoculling: ochrana chovného jádra + záznam poslední selekce

@@ -13,11 +13,11 @@ export const PHASES = {
   2:  { name: 'Množení',         gate: s => s.stats.credLifetime >= 3e7,   hint: 'Šlechti stádo a prodávej mléko. Vydělej 10 mil. kreditů.' },
   3:  { name: 'Královská',       gate: s => s.stats.credLifetime >= 5e9, hint: 'Ovládni trh (Monopol). Vydělej 1,5 mld. kreditů.'  },
   4:  { name: 'Nesmrtelnosti',   gate: s => !!s.flags.immortal,            hint: 'Vyrob nápoj nesmrtelnosti (panel Stáda).' },
-  5:  { name: 'Moudrých ovcí',   gate: s => s.stats.credLifetime >= 6e12, hint: 'Šlechti chytré ovce. Vydělej 1,7 bilionu kreditů.' },
+  5:  { name: 'Moudrých ovcí',   gate: s => s.stats.credLifetime >= 2.4e13, hint: 'Šlechti chytré ovce. Vydělej 1,7 bilionu kreditů.' },
   6:  { name: 'Exodu',           gate: s => worldsColonized(s) >= 3,       hint: 'Kolonizuj Měsíc, Mars a Jupiter (panel Pozemky).' },
   7:  { name: 'Sféry',           gate: s => s.projects.dyson.count >= 1,   hint: 'Postav první Dysonovu sféru — kupuj stavitele.' },
   8:  { name: 'Rozmnožení sfér', gate: s => s.projects.dyson.count >= 5,   hint: 'Dokonči 5 sfér; posiluj laser.' },
-  9:  { name: 'Soudců',          gate: s => s.stats.credLifetime >= 3e14,  hint: 'Spravuj víc stád. Vydělej 90 bilionů kreditů.' },
+  9:  { name: 'Soudců',          gate: s => s.stats.credLifetime >= 1.8e15,  hint: 'Spravuj víc stád. Vydělej 90 bilionů kreditů.' },
   10: { name: 'Černé díry',      gate: () => false,  hint: 'Nasaj produkci do centrálního skladu a zažehni černou díru (Prestiž).' },
   11: { name: 'Zjevení',         gate: () => false,  hint: 'Dosáhni singularity.' },
 };

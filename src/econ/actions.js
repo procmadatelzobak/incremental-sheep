@@ -34,12 +34,28 @@ export function costFor(state, kind) {
   }
 }
 
-// --- stáda -----------------------------------------------------------------
-export function buyAddSheep(state) {
-  if (!spend(state, costFor(state, 'addSheep'))) return false;
+// --- stáda: nákup ovcí s volbou pohlaví (M/F/mix) a množství (#7) ----------
+export function addSheepCost(state, qty) {
+  qty = Math.max(1, (qty || (state.settings.buy && state.settings.buy.qty) || 1) | 0);
+  let cost = 0;
+  for (let i = 0; i < qty; i++) cost += costOf(BALANCE.cost.addSheep, state.buys.addSheep + i);
+  return Math.floor(cost);
+}
+export function buyAddSheep(state, sex, qty) {
+  sex = sex || (state.settings.buy && state.settings.buy.sex) || 'mix';
+  qty = Math.max(1, (qty || (state.settings.buy && state.settings.buy.qty) || 1) | 0);
+  if (!spend(state, addSheepCost(state, qty))) return false;
   const g = groupById(state, state.activeGroupId) || state.groups[0];
-  g.counts.M.adult += 3; g.counts.F.adult += 3;
-  state.buys.addSheep++;
+  const total = qty * BALANCE.sheepPerUnit;
+  if (sex === 'M') g.counts.M.adult += total;
+  else if (sex === 'F') g.counts.F.adult += total;
+  else { g.counts.M.adult += total / 2; g.counts.F.adult += total / 2; }
+  state.buys.addSheep += qty;
+  return true;
+}
+export function setBuy(state, patch) {
+  if (!state.settings.buy) state.settings.buy = { sex: 'mix', qty: 1 };
+  Object.assign(state.settings.buy, patch);
   return true;
 }
 
@@ -189,7 +205,7 @@ export function runAutobuy(state) {
   let guard = 0;
   while (guard++ < 80) {
     const opts = [];
-    if (ab.sheep) opts.push([costFor(state, 'addSheep'), () => buyAddSheep(state)]);
+    if (ab.sheep) opts.push([costFor(state, 'addSheep'), () => buyAddSheep(state, 'mix', 1)]);
     if (ab.land) {
       for (const wk of WORLD_ORDER) {
         if (WORLDS[wk].phase <= state.phase && !WORLDS[wk].fromProject) {

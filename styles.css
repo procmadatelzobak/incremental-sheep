@@ -96,6 +96,8 @@ table.stats td:last-child { text-align: right; }
 /* zvýraznění nejlevnějšího dostupného nákupu */
 button.act.best { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(123,196,127,.4); }
 button.act.preset { padding: 5px 9px; font-size: 12px; }
+button.act.seg { padding: 5px 10px; font-size: 12px; }
+button.act.seg.on { border-color: var(--accent); background: #354051; }
 /* šťáva u nákupů */
 .chip.flash, .herdcanvas.flash { animation: flash .4s ease; }
 @keyframes flash { 0% { box-shadow: 0 0 0 3px rgba(123,196,127,.7); } 100% { box-shadow: 0 0 0 0 rgba(123,196,127,0); } }

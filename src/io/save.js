@@ -33,6 +33,7 @@ function hydrate(data) {
   // doplň vnořená pole (staré savy nemají novinky jako autobuy/achievements/world → jinak pád UI)
   state.settings = Object.assign({}, defaults.settings, data.settings || {});
   state.settings.autobuy = Object.assign({}, defaults.settings.autobuy, (data.settings || {}).autobuy || {});
+  state.settings.buy = Object.assign({}, defaults.settings.buy, (data.settings || {}).buy || {});
   state.world = Object.assign({}, defaults.world, data.world || {});
   state.achievements = data.achievements || {};
   // pozemky: doplň nový model (staré savy měly locations → začnou s default rozlohou)

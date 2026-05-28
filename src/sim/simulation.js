@@ -23,8 +23,12 @@ export function step(state, dt) {
   const produced = {};
   const cap = herdCapacity(state);
 
+  // Po vypití elixíru nesmrtelnosti se simulace násobně zrychlí (#7).
+  const sp = state.flags.immortal ? (BALANCE.immortalSpeed + BALANCE.immortalSpeedPerPhase * Math.max(0, state.phase - 4)) : 1;
+  const edt = dt * sp;                   // zrychlený čas pro stárnutí/porody/produkci/selekci
+
   // 1) stárnutí všech stád
-  for (const g of state.groups) aging(g, dt);
+  for (const g of state.groups) aging(g, edt);
 
   // 2) porody ze SDÍLENÉ kapacity (rozloha × hustota × modifikátory)
   let pop = 0;
@@ -32,17 +36,17 @@ export function step(state, dt) {
   const bctx = (ctx.env.birthMult && ctx.env.birthMult !== 1) ? Object.assign({}, ctx, { birthMult: ctx.birthMult * ctx.env.birthMult }) : ctx;
   for (const g of state.groups) {
     const headroom = Math.max(0, cap - pop);
-    pop += births(g, headroom, dt, bctx);
+    pop += births(g, headroom, edt, bctx);
   }
 
   // 3) automatika (porážky) + produkce
   for (const g of state.groups) {
     addInto(produced, applyPolicyKills(g, ctx, state));
-    addInto(produced, produce(g, dt, ctx, state));
+    addInto(produced, produce(g, edt, ctx, state));
   }
 
-  // 4) selekční cyklus (každých cullPeriod s)
-  state._cullAcc += dt;
+  // 4) selekční cyklus (zrychluje se po elixíru spolu s časem)
+  state._cullAcc += edt;
   let guard = 0;
   while (state._cullAcc >= BALANCE.cullPeriod && guard++ < 50) {
     state._cullAcc -= BALANCE.cullPeriod;
@@ -50,7 +54,7 @@ export function step(state, dt) {
   }
 
   applyProduced(state, produced, ctx);
-  stepProjects(state, dt, ctx);
+  stepProjects(state, edt, ctx);
 
   let total = 0;
   for (const g of state.groups) total += totalCount(g);
@@ -70,4 +74,5 @@ export function step(state, dt) {
   state.rates = {};
   for (const k in produced) state.rates[k] = produced[k] / dt;
   state.rates._pop = total;
+  state.rates._speed = sp;
 }
