@@ -4,6 +4,7 @@
 import { BALANCE } from '../config.js';
 import { getMults } from '../econ/economy.js';
 import { applyProduced } from '../econ/storage.js';
+import { applyProcessing } from '../econ/processing.js';
 import { aging, births, totalCount } from './cohort.js';
 import { produce } from './production.js';
 import { applyPolicyKills, slaughterYields } from './groups.js';
@@ -54,6 +55,7 @@ export function step(state, dt) {
     addInto(produced, applyPolicyKills(g, ctx, state));
     addInto(produced, produce(g, edt, ctx, state));
   }
+  applyProcessing(produced, state);     // vlna→sukno, mléko→sýr (fáze 3+, dle Tkalcoven)
 
   const credBefore = state.resources.credits || 0;
   applyProduced(state, produced, ctx);

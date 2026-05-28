@@ -264,6 +264,29 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('limit samců má vysvětlující hint', panel().textContent.includes('Limit') && panel().textContent.includes('za cyklus'));
 }
 
+// --- #24: rozpad příjmů v panelu Stáda ---
+{
+  const s = newGame(); s.resources.credits = 1e6;
+  s.rates = { wool: 10, _income: 12, _pop: 4 };
+  initUI(s, 'app', () => {});
+  clickTab('Stáda');
+  check('panel ukazuje rozpad příjmů', panel().textContent.includes('Příjem kreditů') && panel().textContent.includes('Celkem'));
+  check('rozpad ukazuje vlnu v kr/s', panel().textContent.includes('kr/s'));
+}
+
+// --- #23: Laboratoř vysvětluje zpracování a ukazuje sukno/sýr ---
+{
+  const s = newGame(); s.phase = 3; s.resources.credits = 1e7;
+  s.land.worlds.earth.tier = 4;        // odemkne Laboratoř
+  s.rates = { cloth: 5, cheese: 2, _pop: 4 };
+  initUI(s, 'app', () => {});
+  clickTab('Laboratoř');
+  check('Laboratoř má sekci Zpracování', panel().textContent.includes('Zpracování'));
+  check('Zpracování ukazuje sukno i sýr', panel().textContent.includes('Sukno') && panel().textContent.includes('Sýr'));
+  s.upgrades.looms = 2; initUI(s, 'app', () => {}); clickTab('Laboratoř');
+  check('s Tkalcovnami hlásí % zpracování', panel().textContent.includes('%'));
+}
+
 // --- #21: počty ovcí jsou celá čísla (žádné desetinné) ---
 {
   const s = newGame(); s.resources.credits = 1e6;

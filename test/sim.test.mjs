@@ -298,5 +298,21 @@ function autoPlayer() {
   check('offline souhrn obsahuje born', off && typeof off.born === 'number' && off.born > 0);
 }
 
+// 9) zpracování (#23): bez Tkalcoven žádné sukno/sýr; s Tkalcovnami ano
+{
+  const s = newGame();
+  s.phase = 3;
+  s.groups[0].counts.F.adult = 200; s.groups[0].counts.M.adult = 60; s.groups[0].bredFracF = 1;
+  step(s, 1);
+  check('bez Tkalcoven se nezpracovává (cloth=0)', !(s.rates.cloth > 0) && !(s.rates.cheese > 0));
+  const woolRaw = s.rates.wool;
+  check('syrová vlna se prodává', woolRaw > 0);
+  s.upgrades.looms = 2;
+  step(s, 1);
+  check('Tkalcovny vyrábějí sukno', s.rates.cloth > 0);
+  check('Tkalcovny vyrábějí sýr', s.rates.cheese > 0);
+  check('zpracováním ubude syrové vlny', s.rates.wool < woolRaw);
+}
+
 console.log(`sim: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

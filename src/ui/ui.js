@@ -13,6 +13,7 @@ import { herdCapacity, totalArea, densityMult, densityMaxLevel, areaModMult, wor
 import { phaseName, phaseHint, PHASE_INFO, PHASES } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax, selectedNewbornDist } from '../sim/genetics.js';
 import { combinedCap, storedTradeTotal, TRADEABLE, storageEnabled } from '../econ/storage.js';
+import { processFraction } from '../econ/processing.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
 import { ACHIEVEMENTS, unlockedTitles } from '../content/achievements.js';
@@ -225,6 +226,31 @@ function buildTabs() {
 // --- PANELY (staví strukturu jednou; hodnoty přes reg()) -------------------
 function section(title, ...kids) { return h('div', { class: 'sect' }, h('h3', { text: title }), ...kids); }
 
+// Rozpad příjmů (#24): z čeho plynou kredity (zdroj → /s → kr/s).
+function incomeSection(s) {
+  const tbl = h('table', { class: 'stats income' });
+  const pm = () => getMults(s).priceMult;
+  for (const k of Object.keys(RESOURCES)) {
+    const def = RESOURCES[k];
+    if (!def.sell || def.phase > s.phase) continue;
+    const row = h('tr', {},
+      h('td', { class: 'dim' }, (RES_ICONS[k] || '') + ' ' + def.label),
+      h('td', {}, liveSpan(() => { const r = s.rates[k] || 0; return r > 1e-9 ? fmt(r) + '/s' : '—'; })),
+      h('td', {}, liveSpan(() => { const r = s.rates[k] || 0; return r > 1e-9 ? fmt(r * (def.value || 0) * pm()) + ' kr/s' : ''; })));
+    reg(row, () => { row.style.display = (s.rates[k] || 0) > 1e-9 ? '' : 'none'; });
+    tbl.appendChild(row);
+  }
+  tbl.appendChild(h('tr', { class: 'income-total' },
+    h('td', { class: 'dim', text: 'Celkem' }), h('td', {}),
+    h('td', {}, liveSpan(() => {
+      let t = 0;
+      for (const k of Object.keys(RESOURCES)) { const def = RESOURCES[k]; if (!def.sell || def.phase > s.phase) continue; t += (s.rates[k] || 0) * (def.value || 0) * pm(); }
+      return fmt(t) + ' kr/s';
+    }))));
+  return section('💰 Příjem kreditů (z čeho plynou)', tbl,
+    h('div', { class: 'dim small', text: 'Hrubá tržní hodnota produkce za sekundu. Zpracování v Laboratoři mění vlnu na sukno a mléko na sýr (dražší).' }));
+}
+
 function renderHerds(s) {
   const g = group();
   const wrap = h('div', {});
@@ -277,6 +303,8 @@ function renderHerds(s) {
     sexRow, qtyRow, buyBtn,
     autobuyToggle('Automaticky dokupovat ovce', 'sheep'),
     h('div', { class: 'dim small' }, 'Samice se množí, samci dávají kapacitu páření (1 samec spáří ≈ tolik samic, kolik je Plodnost). Kapacitu pozemků zvětšuj v záložce Pozemky.')));
+
+  wrap.appendChild(incomeSection(s));
 
   const genes = h('div', { class: 'genes' });
   for (const k in GENES) if (GENES[k].phase <= s.phase) genes.appendChild(geneBar(k));
@@ -375,6 +403,20 @@ function renderLab(s) {
     h('div', { class: 'dim small', text: 'Výzkumné křídlo farmy: dojení, zpracování, genetika a vývoj ovčích mozků.' }),
     autobuyToggle('Automaticky kupovat vylepšení', 'upgrades'),
     any ? list : h('div', { class: 'dim', text: 'Zatím není co zkoumat — odemkne se s dalšími fázemi.' })));
+
+  // Zpracování (#23): co dělají Tkalcovny + živý ukazatel sukna/sýra.
+  if (s.phase >= 3) {
+    wrap.appendChild(section(ICONS.processing + ' Zpracování (vlna→sukno, mléko→sýr)',
+      liveSpan(() => {
+        const f = processFraction(s);
+        return f <= 0
+          ? 'Zatím se nezpracovává nic. Kup Tkalcovny výše — část vlny se promění na sukno a mléka na sýr (prodá se dráž).'
+          : `Tkalcovny zpracují ${(f * 100).toFixed(0)} % vlny na sukno a mléka na sýr.`;
+      }, 'dim'),
+      h('div', { class: 'stat-row dim small' },
+        liveSpan(() => `🧵 Sukno: ${fmt(s.rates.cloth || 0)}/s`),
+        liveSpan(() => `🧀 Sýr: ${fmt(s.rates.cheese || 0)}/s`))));
+  }
   return wrap;
 }
 

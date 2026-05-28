@@ -33,7 +33,6 @@ export function getMults(state) {
     milkMult: (1 + U.milkMach.per * lvl('milkMach')) * globalProd,
     meatMult: (1 + U.fatten.per * lvl('fatten')) * globalProd,
     computeMult: (1 + U.computeOpt.per * lvl('computeOpt')) * globalProd,
-    procMult: 1 + U.looms.per * lvl('looms'),
     breedMult: Math.max(0.15, 1 - U.courtship.per * lvl('courtship')) * speed,
     fertBonus: U.ram.per * lvl('ram'),
     birthMult: 1 + U.cloning.per * lvl('cloning'),

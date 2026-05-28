@@ -91,6 +91,11 @@ table.mf th { font-weight: 600; font-size: 11px; color: var(--muted); text-align
 table.mf td { padding: 2px 0 2px 18px; text-align: right; }
 table.mf td:first-child, table.mf th:first-child { text-align: left; padding-left: 0; }
 
+/* rozpad příjmů (#24) */
+table.income td { text-align: right; }
+table.income td:first-child { text-align: left; }
+table.income tr.income-total td { border-top: 1px solid var(--border); padding-top: 5px; color: var(--accent); font-weight: 600; }
+
 .banner { background: rgba(0,0,0,.6); border: 1px solid var(--accent-2); color: var(--accent);
   padding: 10px 14px; border-radius: 10px; margin-bottom: 10px; }
 
