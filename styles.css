@@ -181,7 +181,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 17px;
 select, input[type=number] { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 5px 8px; font-family: var(--sans); box-shadow: var(--card-shadow); }
 
 /* ---- plátno stáda ------------------------------------------------------- */
-.herdcanvas { width: 100%; height: 90px; border-radius: var(--r-md); display: block; margin-bottom: 8px;
+.herdcanvas { width: 100%; height: 128px; border-radius: var(--r-md); display: block; margin-bottom: 8px;
   border: 1px solid var(--line); box-shadow: inset 0 1px 3px oklch(0.3 0.04 280/.2); }
 
 /* ---- tabulka statistik -------------------------------------------------- */

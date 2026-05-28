@@ -8,7 +8,7 @@ logiku — cílí na třídy, které už `src/ui/ui.js` vykresluje.
 ```
 styles.css              → nahradí kořenový styles.css (celý vzhled + proměnná --cosmic)
 src/redesign.js         → NOVÝ soubor: řídí proměnu fází + přidává particly/pulzy
-src/render/canvas.js    → nahradí tvůj render/canvas.js (plátno stáda laděné s motivem)
+src/render/canvas.js     → nahradí tvůj render/canvas.js (HEJNO OVCÍ laděné s motivem)
 ```
 
 ## Instalace (3 kroky)
@@ -31,7 +31,9 @@ takže do `index.html` není nutné nic dalšího.
   (fáze 1–3 pastorální, ~4–6 soumrak, 7+ vesmír). Zelená + zlatá zůstávají konstantní.
 - **Šťáva:** delegovaný posluchač na `button.act` → particle burst + pulz; kreditový
   chip pulzuje při změně a u nákupů vyskočí plovoucí „−cena".
-- **Plátno:** `canvas.js` čte `--cosmic` a interpoluje pozadí i popisky.
+- **Plátno:** `canvas.js` kreslí stádo jako **hejno oveček** (chomáčky ovcí na pastvě
+  s legendou ♂/♀ a genetickým skóre); čte `--cosmic` a v pozdních fázích se mění na
+  noční scénu se svítícími ovcemi pod hvězdami. Počet zobrazených oveček roste s populací.
 
 ## Volitelné doladění (vyžaduje malou úpravu ui.js)
 - **Zlaté CTA tlačítko:** přidej třídu `primary` hlavnímu tlačítku (např. „+ Ovce")
