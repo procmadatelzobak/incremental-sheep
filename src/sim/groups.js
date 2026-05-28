@@ -1,8 +1,7 @@
 // ===========================================================================
-//  Skupiny: porážkové výnosy, automatická pravidla, selekční cyklus, CRUD.
+//  Skupiny: porážkové výnosy (maso/části), automatická pravidla, CRUD.
 // ===========================================================================
-import { BALANCE } from '../config.js';
-import { selectGene, selectScore, seedGroupGenes } from './genetics.js';
+import { seedGroupGenes } from './genetics.js';
 import { emptyCounts } from './cohort.js';
 
 const STAGE_MEAT = { adult: 1.0, old: 0.6, child: 0.25 };
@@ -40,47 +39,13 @@ export function applyPolicyKills(group, ctx, state) {
   return y;
 }
 
-// Selekční cyklus (každých cullPeriod s): usekni spodní podíl → posuň rozložení + maso/části.
-// Chrání chovné jádro (min. dospělých samic/samců) a zaznamená výsledek do _lastSel.
-export function applySelectionCull(group, ctx, state) {
-  const pol = group.policy.cull;
-  if (!pol || !pol.enabled || pol.cutFrac <= 0) return {};
-  let p = Math.min(BALANCE.maxCutFrac, pol.cutFrac);
-  const stage = pol.stage || 'adult';
-  const c = group.counts;
-  const pr = group.policy.protect;
-  if (stage === 'adult' && pr && pr.enabled) {     // bezpečnostní brzda
-    const allowF = c.F.adult > 0 ? Math.max(0, 1 - (pr.minF || 0) / c.F.adult) : 0;
-    const allowM = c.M.adult > 0 ? Math.max(0, 1 - (pr.minM || 0) / c.M.adult) : 0;
-    p = Math.min(p, allowF, allowM);
-  }
-  const gk = pol.gene === 'breedingScore' ? null : pol.gene;
-  const before = gk ? { mu: group.genes[gk].mu, sigma: group.genes[gk].sigma } : null;
-  const n = (c.M[stage] + c.F[stage]) * p;
-  let y = {};
-  if (p > 0 && n > 0) {
-    c.M[stage] *= (1 - p);
-    c.F[stage] *= (1 - p);
-    if (pol.gene === 'breedingScore') selectScore(group, p, ctx.ceilingMult);
-    else selectGene(group, pol.gene, p, ctx.ceilingMult);
-    state.stats.culled += n;
-    y = slaughterYields(group, n, stage, ctx, state);
-  }
-  group._lastSel = {
-    n, meat: y.meat || 0, gene: pol.gene, stage,
-    muBefore: before ? before.mu : null, muAfter: gk ? group.genes[gk].mu : null,
-    sigBefore: before ? before.sigma : null, sigAfter: gk ? group.genes[gk].sigma : null,
-  };
-  return y;
-}
-
 // --- CRUD skupin (fáze 9 manažer) -----------------------------------------
 export function createGroup(state, name) {
   const g = {
     id: state.nextGroupId++, name: name || ('Stádo ' + String.fromCharCode(64 + state.nextGroupId)),
     species: 'base',
     genes: seedGroupGenes(0, 1), counts: emptyCounts(), bredFracF: 0,
-    policy: { killOld: false, killMaleChildren: false, maxMales: 0, cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2, stage: 'adult' }, protect: { enabled: true, minF: 8, minM: 2 } },
+    policy: { killOld: false, killMaleChildren: false, maxMales: 0, cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2 } },
   };
   state.groups.push(g);
   return g;

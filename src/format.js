@@ -1,5 +1,8 @@
 const SUFFIX = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
 
+// Počet ovcí: model je spojitý (float), ale hráči ukazujeme celé ovce (#18).
+export const fmtCount = (n) => fmt(Math.round(Number(n) || 0));
+
 export function fmt(n) {
   if (!isFinite(n)) return '∞';
   if (n < 0) return '-' + fmt(-n);

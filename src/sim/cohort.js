@@ -1,9 +1,10 @@
 // ===========================================================================
 //  Kohortový model: stárnutí (tok mezi stádii) a porody (agregovaně).
 // ===========================================================================
-import { GENES } from '../config.js';
+import { GENES, BALANCE } from '../config.js';
 import { clamp } from '../rng.js';
 import { mixNormal } from './distribution.js';
+import { selectedNewbornDist, clampGene } from './genetics.js';
 
 export const STAGES = ['child', 'adult', 'old'];
 export const SEXES = ['M', 'F'];
@@ -58,8 +59,10 @@ export function aging(group, dt) {
 }
 
 // Porody: limitované plodností samců, dospělými samicemi, březostí a kapacitou.
-// ctx: { fertBonus, breedMult, birthMult }. headroom = volné místo (sdílené přes
-// všechny pozemky). Vrací počet narozených (pro statistiky).
+// ctx: { fertBonus, breedMult, birthMult, ceilingMult }. headroom = volné místo
+// (sdílené přes pozemky). Pokud je zapnutý výběr při narození (#18), nejhorší
+// jehňata se rovnou vyřadí (→ maso) a do chovu jdou jen vybraná → spojitý posun μ/σ.
+// Vrací { born, killed } (born = ponechaná, killed = vyřazená jehňata).
 export function births(group, headroom, dt, ctx) {
   const g = group.genes, c = group.counts;
   const total = totalCount(group);
@@ -69,14 +72,23 @@ export function births(group, headroom, dt, ctx) {
   const mated = Math.min(c.F.adult, maleCap);
   let b = (mated / gest) * dt * (ctx.birthMult || 1);
   b = Math.min(b, Math.max(0, headroom));
+  let killed = 0;
   if (b > 0) {
-    c.M.child += b / 2;
-    c.F.child += b / 2;
+    const cull = group.policy && group.policy.cull;
+    const p = (cull && cull.enabled && cull.cutFrac > 0) ? Math.min(BALANCE.maxCutFrac, cull.cutFrac) : 0;
+    killed = b * p;
+    const kept = b - killed;
+    c.M.child += kept / 2;
+    c.F.child += kept / 2;
+    const ceil = ctx.ceilingMult || 1;
+    const nGenes = Object.keys(g).length;
     for (const k in g) {
       const spec = GENES[k];
+      if (!spec) continue;
       const sChild = Math.sqrt((g[k].sigma * g[k].sigma) / 2 + spec.mut * spec.mut);
-      const mixed = mixNormal(total, g[k].mu, g[k].sigma, b, g[k].mu, sChild);
-      g[k].mu = mixed.mu;
+      const nb = selectedNewbornDist(k, g[k].mu, sChild, cull, ceil, nGenes);
+      const mixed = mixNormal(total, g[k].mu, g[k].sigma, kept, nb.mu, nb.sigma);
+      g[k].mu = clampGene(k, mixed.mu, ceil);
       g[k].sigma = mixed.sigma;
     }
   }
@@ -85,5 +97,5 @@ export function births(group, headroom, dt, ctx) {
     const newly = Math.min(1, mated / c.F.adult);
     group.bredFracF = clamp(group.bredFracF + newly * (dt / gest) * (1 - group.bredFracF), 0, 1);
   }
-  return b;
+  return { born: b - killed, killed };
 }

@@ -50,29 +50,27 @@ export function breedingScore(genes, ceilingMult = 1) {
 
 const sigmaFloor = (key) => GENES[key].mut * BALANCE.sigmaFloorMut;
 
-// Selekce na jednom genu: usekni spodní (resp. horní) podíl p → posun μ, σ.
-export function selectGene(group, key, p, ceilingMult = 1) {
+// Výběr při narození (#18): rozložení vybraných jehňat pro gen `key`.
+// Z novorozeneckého N(muNb, sigNb) usekne spodní podíl p (resp. horní u lowerBetter)
+// → vybraná jehňata mají vyšší μ a nižší σ. breedingScore posune všechny geny mírně.
+// Nahrazuje cyklický culling: posun se děje spojitě, jak se rodí jehňata.
+export function selectedNewbornDist(key, muNb, sigNb, cull, ceilingMult = 1, nGenes = 1) {
+  if (!cull || !cull.enabled || !(cull.cutFrac > 0)) return { mu: muNb, sigma: sigNb };
   const spec = GENES[key];
-  const d = group.genes[key];
-  const r = selectTruncate(d.mu, d.sigma, p, !!spec.lowerBetter, sigmaFloor(key));
-  d.mu = clampGene(key, r.mu, ceilingMult);
-  d.sigma = r.sigma;
-}
-
-// Selekce na kompozitní skóre: posuň každý gen breeder's equation Δμ_k = w·σ·λ.
-export function selectScore(group, p, ceilingMult = 1) {
-  p = Math.max(0, Math.min(BALANCE.maxCutFrac, p));
-  if (p <= 0) return;
-  const keys = Object.keys(group.genes);
-  const w = 1 / Math.sqrt(keys.length);
-  const alpha = probit(p);
-  const lambda = phi(alpha) / (1 - p);
-  const sq = Math.sqrt(Math.max(0, 1 - w * w * lambda * (lambda - alpha)));
-  for (const k of keys) {
-    const spec = GENES[k];
-    const d = group.genes[k];
+  if (!spec) return { mu: muNb, sigma: sigNb };
+  const p = Math.max(0, Math.min(BALANCE.maxCutFrac, cull.cutFrac));
+  const floor = sigmaFloor(key);
+  if (cull.gene === 'breedingScore') {
+    const w = 1 / Math.sqrt(Math.max(1, nGenes));
+    const alpha = probit(p);
+    const lambda = phi(alpha) / (1 - p);
+    const sq = Math.sqrt(Math.max(0, 1 - w * w * lambda * (lambda - alpha)));
     const dir = spec.lowerBetter ? -1 : 1;
-    d.mu = clampGene(k, d.mu + dir * w * d.sigma * lambda, ceilingMult);
-    d.sigma = Math.max(sigmaFloor(k), d.sigma * sq);
+    return { mu: clampGene(key, muNb + dir * w * sigNb * lambda, ceilingMult), sigma: Math.max(floor, sigNb * sq) };
   }
+  if (key === cull.gene) {
+    const r = selectTruncate(muNb, sigNb, p, !!spec.lowerBetter, floor);
+    return { mu: clampGene(key, r.mu, ceilingMult), sigma: r.sigma };
+  }
+  return { mu: muNb, sigma: sigNb };
 }

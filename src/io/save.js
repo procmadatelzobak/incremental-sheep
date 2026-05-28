@@ -63,10 +63,9 @@ function hydrate(data) {
     g.genes = fixed;
     if (typeof g.bredFracF !== 'number') g.bredFracF = 0;
     if (!g.policy) g.policy = defaultPolicy();
-    if (!g.policy.protect) g.policy.protect = { enabled: true, minF: 8, minM: 2 };
+    if (!g.policy.cull) g.policy.cull = { enabled: false, gene: 'woolRate', cutFrac: 0.2 };
   }
   state.rates = {};
-  if (typeof state._cullAcc !== 'number') state._cullAcc = 0;
   return state;
 }
 

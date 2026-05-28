@@ -1,12 +1,11 @@
 import { newGame, activeGroup, prestigeCarry } from '../src/io/state.js';
 import { step } from '../src/sim/simulation.js';
-import { totalCount, totalPopulation } from '../src/sim/cohort.js';
+import { totalCount, totalPopulation, births } from '../src/sim/cohort.js';
 import { herdCapacity, totalArea } from '../src/content/locations.js';
 import { serialize, deserialize, applyOffline } from '../src/io/save.js';
-import { runAutobuy, setAutobuy, suggestStep, costFor, setProtect, buyLand, buyAddSheep } from '../src/econ/actions.js';
+import { runAutobuy, setAutobuy, suggestStep, costFor, buyLand, buyAddSheep } from '../src/econ/actions.js';
 import { checkAchievements, updateRecords } from '../src/content/achievements.js';
 import { getMults } from '../src/econ/economy.js';
-import { applySelectionCull } from '../src/sim/groups.js';
 import { GENES } from '../src/config.js';
 
 let pass = 0, fail = 0;
@@ -127,35 +126,41 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   check('nákup samců přidá jen samce', s.groups[0].counts.M.adult > m0 && s.groups[0].counts.F.adult === 2);
 }
 
-// 1i) autoculling: ochrana chovného jádra + záznam poslední selekce
+// 1i) výběr při narození (#18): zvedá μ, vyřazená jehňata dají maso; vypnuto = beze změny
 {
-  const s = newGame();
+  const s = newGame(); s.phase = 2;
   const g = s.groups[0];
-  g.counts.M.adult = 10; g.counts.F.adult = 10;
-  g.policy.cull = { enabled: true, gene: 'woolRate', cutFrac: 0.85, stage: 'adult' };
-  g.policy.protect = { enabled: true, minF: 8, minM: 2 };
-  applySelectionCull(g, getMults(s), s);
-  check('ochrana drží min. samic', g.counts.F.adult >= 8 - 1e-6);
-  check('ochrana drží min. samců', g.counts.M.adult >= 2 - 1e-6);
-  check('poslední selekce zaznamenána', g._lastSel && g._lastSel.muAfter >= g._lastSel.muBefore);
+  g.counts.M.adult = 20; g.counts.F.adult = 20;
+  g.genes.woolRate.sigma = 1.0;                 // velký rozptyl → silný výběr
+  g.policy.cull = { enabled: true, gene: 'woolRate', cutFrac: 0.6 };
+  const mu0 = g.genes.woolRate.mu, sig0 = g.genes.woolRate.sigma;
+  const ctx = getMults(s);
+  let killed = 0;
+  for (let i = 0; i < 300; i++) killed += births(g, 1e9, 0.5, ctx).killed;
+  check('výběr při narození zvedá μ', g.genes.woolRate.mu > mu0);
+  check('výběr při narození utahuje σ', g.genes.woolRate.sigma < sig0);
+  check('vyřazená jehňata jdou na maso (killed>0)', killed > 0);
 
+  // vypnutý výběr: nic se nevyřadí a μ se nehne (novorozenci mají μ rodičů)
   const g2 = newGame().groups[0];
-  g2.counts.M.adult = 10; g2.counts.F.adult = 10;
-  g2.policy.cull = { enabled: true, gene: 'woolRate', cutFrac: 0.85, stage: 'adult' };
-  g2.policy.protect = { enabled: false };
-  applySelectionCull(g2, getMults(s), s);
-  check('bez ochrany klesne pod jádro', g2.counts.F.adult < 8);
-
-  const sp = newGame(); setProtect(sp, sp.groups[0].id, { minF: 20 });
-  check('setProtect funguje', sp.groups[0].policy.protect.minF === 20);
+  g2.counts.M.adult = 20; g2.counts.F.adult = 20;
+  g2.policy.cull = { enabled: false, gene: 'woolRate', cutFrac: 0.6 };
+  const mu2 = g2.genes.woolRate.mu;
+  let killed2 = 0;
+  for (let i = 0; i < 100; i++) killed2 += births(g2, 1e9, 0.5, getMults(newGame())).killed;
+  check('vypnutý výběr nevyřazuje jehňata', killed2 === 0);
+  check('vypnutý výběr nemění μ', Math.abs(g2.genes.woolRate.mu - mu2) < 1e-9);
 }
 
 // 2) selekce zvedá μ a (čistě) drží σ omezenou
 {
-  const s = newGame();
+  const s = newGame(); s.phase = 2;
+  s.land.density = 5;                              // kapacita → je kam rodit
   const g = activeGroup(s);
   g.counts.M.adult = 500; g.counts.F.adult = 500; // velká populace
-  g.policy.cull = { enabled: true, gene: 'woolRate', cutFrac: 0.3, stage: 'adult' };
+  g.genes.woolRate.sigma = 0.4;
+  g.policy.cull = { enabled: true, gene: 'woolRate', cutFrac: 0.3 };
+  g.policy.killOld = true;                          // churn = uvolní místo pro vybraná jehňata
   const mu0 = g.genes.woolRate.mu, sig0 = g.genes.woolRate.sigma;
   run(s, 400);
   check('selection raises woolRate μ', g.genes.woolRate.mu > mu0 + 0.05);
@@ -166,10 +171,13 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 
 // 3) gestation (lowerBetter) klesá při selekci
 {
-  const s = newGame();
+  const s = newGame(); s.phase = 2;
+  s.land.density = 5;
   const g = activeGroup(s);
   g.counts.M.adult = 400; g.counts.F.adult = 400;
-  g.policy.cull = { enabled: true, gene: 'gestation', cutFrac: 0.3, stage: 'adult' };
+  g.genes.gestation.sigma = 6;
+  g.policy.cull = { enabled: true, gene: 'gestation', cutFrac: 0.3 };
+  g.policy.killOld = true;
   const mu0 = g.genes.gestation.mu;
   run(s, 400);
   check('selection lowers gestation μ', g.genes.gestation.mu < mu0 - 0.2);
@@ -239,25 +247,25 @@ function autoPlayer() {
   try { run(loaded, 30); } catch (e) { ok = false; console.error(e); }
   check('starý save (childhoodFrac) běží bez chyby', ok && isFinite(loaded.resources.credits) && isFinite(totalPopulation(loaded)));
 
-  // šlechtění na maturity i dlouhověkost zvedá μ
+  // výběr při narození na maturity i dlouhověkost zvedá μ
   const s = newGame(); s.phase = 2;
   const g = s.groups[0];
   g.counts.M.adult = 20; g.counts.F.adult = 20;
   g.genes.maturity.sigma = 0.4;
   const mu0 = g.genes.maturity.mu;
-  g.policy.cull = { enabled: true, gene: 'maturity', cutFrac: 0.4, stage: 'adult' };
-  g.policy.protect = { enabled: false };
-  applySelectionCull(g, getMults(s), s);
-  check('selekce na maturity zvedá μ', g.genes.maturity.mu > mu0);
+  g.policy.cull = { enabled: true, gene: 'maturity', cutFrac: 0.5 };
+  const ctx = getMults(s);
+  for (let i = 0; i < 300; i++) births(g, 1e9, 0.5, ctx);
+  check('výběr na maturity zvedá μ', g.genes.maturity.mu > mu0);
 
-  const s2 = newGame(); const g2 = s2.groups[0];
+  const s2 = newGame(); s2.phase = 2; const g2 = s2.groups[0];
   g2.counts.M.adult = 20; g2.counts.F.adult = 20;
   g2.genes.lifespan.sigma = 40;
   const life0 = g2.genes.lifespan.mu;
-  g2.policy.cull = { enabled: true, gene: 'lifespan', cutFrac: 0.4, stage: 'adult' };
-  g2.policy.protect = { enabled: false };
-  applySelectionCull(g2, getMults(s2), s2);
-  check('selekce na dlouhověkost zvedá μ', g2.genes.lifespan.mu > life0);
+  g2.policy.cull = { enabled: true, gene: 'lifespan', cutFrac: 0.5 };
+  const ctx2 = getMults(s2);
+  for (let i = 0; i < 300; i++) births(g2, 1e9, 0.5, ctx2);
+  check('výběr na dlouhověkost zvedá μ', g2.genes.lifespan.mu > life0);
 }
 
 // 7) #11: tik počítá trend příjmu a růstu stáda

@@ -10,8 +10,7 @@ export function defaultPolicy() {
     killOld: false,
     killMaleChildren: false,
     maxMales: 0,                 // 0 = bez limitu
-    cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2, stage: 'adult' },
-    protect: { enabled: true, minF: 8, minM: 2 },   // chovné jádro (bezpečnostní brzda)
+    cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2 },  // výběr při narození (#18)
   };
 }
 
@@ -101,7 +100,6 @@ export function newGame(carry = null) {
       maxStations: carry?.maxStations || 0,
       everPasture: carry?.everPasture || false,
     },
-    _cullAcc: 0,
   };
   // přenesené perky, které okamžitě platí
   return state;

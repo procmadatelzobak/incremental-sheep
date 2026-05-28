@@ -167,7 +167,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('preset Vlna existuje', !!vlna);
   if (vlna) vlna.click();
   check('preset nastaví selekci na woolRate', s.groups[0].policy.cull.gene === 'woolRate' && s.groups[0].policy.cull.enabled);
-  check('panel Selekce i Porážka jsou oddělené', panel().textContent.includes('Selekce') && panel().textContent.includes('Porážka') && panel().textContent.includes('chovné jádro'));
+  check('panel Výběr při narození i Porážka jsou oddělené', panel().textContent.includes('Výběr při narození') && panel().textContent.includes('Porážka') && panel().textContent.includes('Přísnost výběru'));
 
   const sp = newGame(); sp.phase = 7; sp.resources.credits = 1e6;
   initUI(sp, 'app', () => {});

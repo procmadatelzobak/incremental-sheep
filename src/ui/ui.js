@@ -4,15 +4,14 @@
 //  na místě (čísla, lišty, dostupnost). Struktura se překreslí jen při změně
 //  (nákup, přepnutí záložky, nová lokace/fáze).
 // ===========================================================================
-import { fmt } from '../format.js';
+import { fmt, fmtCount } from '../format.js';
 import * as A from '../econ/actions.js';
 import { upgradeCost, perkCost } from '../econ/economy.js';
 import { UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { herdCapacity, totalArea, densityMult, densityMaxLevel, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
 import { phaseName, phaseHint, PHASE_INFO, PHASES } from '../content/phases.js';
-import { breedingScore, geneMin, geneMax } from '../sim/genetics.js';
-import { selectTruncate } from '../sim/distribution.js';
+import { breedingScore, geneMin, geneMax, selectedNewbornDist } from '../sim/genetics.js';
 import { combinedCap, storedTradeTotal, TRADEABLE, storageEnabled } from '../econ/storage.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
@@ -92,7 +91,7 @@ function autobuyToggle(label, key) {
 }
 function presetBtn(label, gene, gid) {
   const b = h('button', { class: 'act preset', text: label });
-  b.addEventListener('click', () => { A.setCull(S, gid, { enabled: true, gene, stage: 'adult', cutFrac: 0.3 }); onAction(); rebuildPanel(); });
+  b.addEventListener('click', () => { A.setCull(S, gid, { enabled: true, gene, cutFrac: 0.3 }); onAction(); rebuildPanel(); });
   return b;
 }
 function segBtn(label, active, fn) {
@@ -172,7 +171,7 @@ function updateHud(s) {
   const r = s.rates || {};
   const set = (k, txt, show) => { const c = hudChips[k]; if (!c) return; c.chip.style.display = show ? '' : 'none'; c.val.textContent = txt; };
   set('credits', fmt(s.resources.credits || 0), true);
-  set('pop', `${fmt(r._pop || 0)} / ${fmt(herdCapacity(s))}`, true);
+  set('pop', `${fmtCount(r._pop || 0)} / ${fmtCount(herdCapacity(s))}`, true);
   set('wool', fmt(r.wool || 0), true);
   set('milk', fmt(r.milk || 0), s.phase >= 2);
   set('meat', fmt(r.meat || 0), true);
@@ -189,7 +188,7 @@ function updateHud(s) {
     const f = cap > 0 ? Math.max(0, Math.min(1, pop / cap)) : 0;
     hudCap.fill.style.width = (f * 100).toFixed(1) + '%';
     hudCap.fill.style.background = f > 0.97 ? '#c9a227' : '#6aa84f';   // skoro plno → zlatě (rozšiř pozemky)
-    hudCap.lab.textContent = `${ICONS.pasture} Pastviny: ${fmt(pop)} / ${fmt(cap)} ovcí (${(f * 100).toFixed(0)} %)`;
+    hudCap.lab.textContent = `${ICONS.pasture} Pastviny: ${fmtCount(pop)} / ${fmtCount(cap)} ovcí (${(f * 100).toFixed(0)} %)`;
   }
 }
 
@@ -245,17 +244,17 @@ function renderHerds(s) {
   const sexLbl = { M: 'samců', F: 'samic', mix: 'ovcí (půl/půl)' };
   const buyBtn = cBtn(`${ICONS.sheep} Koupit ovce`, () => A.addSheepCost(s),
     () => A.buyAddSheep(s),
-    () => { const add = (s.settings.buy.qty || 1) * BALANCE.sheepPerUnit, pop = totalPopulation(s); return `+${fmt(add)} ${sexLbl[s.settings.buy.sex] || 'ovcí'} · stádo ${fmt(pop)}→${fmt(pop + add)}`; });
+    () => { const add = (s.settings.buy.qty || 1) * BALANCE.sheepPerUnit, pop = totalPopulation(s); return `+${fmtCount(add)} ${sexLbl[s.settings.buy.sex] || 'ovcí'} · stádo ${fmtCount(pop)}→${fmtCount(pop + add)}`; });
   buyBtn.addEventListener('click', () => flashEl(herdCanvasEl));
   wrap.appendChild(section(g.name,
     cv,
     h('div', { class: 'stat-row' },
-      liveSpan(() => `Ovce: ${fmt(totalPopulation(s))} / ${fmt(herdCapacity(s))}`),
+      liveSpan(() => `Ovce: ${fmtCount(totalPopulation(s))} / ${fmtCount(herdCapacity(s))}`),
       liveSpan(() => `Skóre: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`)),
     h('div', { class: 'stat-row dim' },
-      liveSpan(() => `♂ ${fmt(group().counts.M.adult)} · ♀ ${fmt(group().counts.F.adult)} dospělých`),
-      liveSpan(() => `Děti ${fmt(group().counts.M.child + group().counts.F.child)} · Staří ${fmt(group().counts.M.old + group().counts.F.old)}`)),
-    liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmt(p)} / ${fmt(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
+      liveSpan(() => `♂ ${fmtCount(group().counts.M.adult)} · ♀ ${fmtCount(group().counts.F.adult)} dospělých`),
+      liveSpan(() => `Děti ${fmtCount(group().counts.M.child + group().counts.F.child)} · Staří ${fmtCount(group().counts.M.old + group().counts.F.old)}`)),
+    liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmtCount(p)} / ${fmtCount(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
     liveSpan(() => limitText(s), 'dim small'),
     sexRow, qtyRow, buyBtn,
     autobuyToggle('Automaticky dokupovat ovce', 'sheep'),
@@ -269,44 +268,30 @@ function renderHerds(s) {
     const cull = g.policy.cull;
     const geneOpts = [h('option', { value: 'breedingScore', ...(cull.gene === 'breedingScore' ? { selected: 'selected' } : {}) }, 'Celkové skóre'),
       ...Object.keys(GENES).filter(k => GENES[k].phase <= s.phase).map(k => h('option', { value: k, ...(cull.gene === k ? { selected: 'selected' } : {}) }, GENES[k].label))];
-    const stageOpts = ['adult', 'old', 'child'].map(st => h('option', { value: st, ...(cull.stage === st ? { selected: 'selected' } : {}) }, { adult: 'dospělí', old: 'staří', child: 'děti' }[st]));
-    const pr = g.policy.protect || { enabled: true, minF: 8, minM: 2 };
-    wrap.appendChild(section('🧬 Selekce',
-      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(cull.enabled ? { checked: 'checked' } : {}), onchange: e => { A.setCull(s, g.id, { enabled: !!e.target.checked }); onAction(); } }), ' Zapnout selekci (vybírat nejlepší do chovu)'),
-      h('div', { class: 'ctl-row' }, 'Strategie: ',
+    wrap.appendChild(section('🧬 Výběr při narození (šlechtění)',
+      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(cull.enabled ? { checked: 'checked' } : {}), onchange: e => { A.setCull(s, g.id, { enabled: !!e.target.checked }); onAction(); } }), ' Vybírat nejlepší jehňata do chovu (zbytek rovnou na maso)'),
+      h('div', { class: 'ctl-row' }, 'Šlechtit na: ',
         presetBtn('🧶 Vlna', 'woolRate', g.id), presetBtn('🥛 Mléko', 'milkRate', g.id), presetBtn('🥩 Maso', 'size', g.id),
         presetBtn('🐇 Množení', 'gestation', g.id), presetBtn('🍼 Dospívání', 'maturity', g.id), presetBtn('⏳ Dlouhověkost', 'lifespan', g.id),
         s.phase >= 5 ? presetBtn('🧠 Mozek', 'intelligence', g.id) : null, presetBtn('⚖️ Vše', 'breedingScore', g.id)),
-      h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value }); } }, ...geneOpts),
-        ' ve stádiu ', h('select', { onchange: e => { A.setCull(s, g.id, { stage: e.target.value }); } }, ...stageOpts)),
+      h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value }); } }, ...geneOpts)),
       h('div', { class: 'ctl-row' },
-        liveSpan(() => `Agresivita selekce: ${(group().policy.cull.cutFrac * 100).toFixed(0)} %`),
+        liveSpan(() => { const p = group().policy.cull.cutFrac; return `Přísnost výběru: necháš nejlepších ${((1 - p) * 100).toFixed(0)} % jehňat, ${(p * 100).toFixed(0)} % jde na maso`; }),
         h('input', { type: 'range', min: 0, max: BALANCE.maxCutFrac, step: 0.05, value: cull.cutFrac, oninput: e => { A.setCull(s, g.id, { cutFrac: +e.target.value }); } })),
-      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(pr.enabled ? { checked: 'checked' } : {}), onchange: e => { A.setProtect(s, g.id, { enabled: !!e.target.checked }); onAction(); } }), ' 🛡 Chránit chovné jádro'),
-      h('div', { class: 'ctl-row' }, 'Min. samic ', h('input', { type: 'number', min: 0, value: pr.minF, style: 'width:64px', onchange: e => { A.setProtect(s, g.id, { minF: +e.target.value }); } }),
-        ' · min. samců ', h('input', { type: 'number', min: 0, value: pr.minM, style: 'width:64px', onchange: e => { A.setProtect(s, g.id, { minM: +e.target.value }); } })),
       liveSpan(() => {
         const gg = group(), cl = gg.policy.cull;
-        if (!cl.enabled) return 'Selekce je vypnutá.';
+        if (!cl.enabled) return 'Výběr vypnutý — do chovu jdou všechna jehňata.';
         const p = Math.min(BALANCE.maxCutFrac, cl.cutFrac);
-        const stageLbl = { adult: 'dospělých', old: 'starých', child: 'dětí' }[cl.stage] || cl.stage;
-        let eff = ' · zlepší celkové skóre';
-        if (cl.gene !== 'breedingScore' && gg.genes[cl.gene]) {
-          const d = gg.genes[cl.gene], spec = GENES[cl.gene];
-          const r = selectTruncate(d.mu, d.sigma, p, !!spec.lowerBetter, spec.mut * BALANCE.sigmaFloorMut);
-          const dpct = d.mu > 0 ? Math.abs((r.mu - d.mu) / d.mu * 100) : 0;
-          eff = ` · ${spec.label} ${spec.lowerBetter ? '−' : '+'}${dpct.toFixed(1)} %/cyklus`;
-        }
-        return `Odhad: každých ${BALANCE.cullPeriod}s vyřadí ~${(p * 100).toFixed(0)} % ${stageLbl}${eff}`;
+        if (p <= 0) return 'Přísnost 0 % — nevyřazuje se žádné jehně.';
+        if (cl.gene === 'breedingScore') return 'Vybraná jehňata mají lepší celkové skóre ve všech genech → μ stádečka roste s každým vrhem.';
+        const d = gg.genes[cl.gene]; if (!d) return '';
+        const spec = GENES[cl.gene];
+        const sChild = Math.sqrt(d.sigma * d.sigma / 2 + spec.mut * spec.mut);
+        const nb = selectedNewbornDist(cl.gene, d.mu, sChild, cl, s.world.ceilingMult, Object.keys(gg.genes).length);
+        const dpct = d.mu > 0 ? Math.abs((nb.mu - d.mu) / d.mu * 100) : 0;
+        return `Vybraná jehňata mají ${spec.label} ${spec.lowerBetter ? '−' : '+'}${dpct.toFixed(1)} % oproti průměru stáda → μ se posouvá každým vrhem.`;
       }, 'dim small'),
-      liveSpan(() => {
-        const ls = group()._lastSel;
-        if (!ls || !ls.n) return 'Poslední selekce: zatím žádná.';
-        let gtxt = '';
-        if (ls.muBefore != null && GENES[ls.gene]) gtxt = ` · ${GENES[ls.gene].label} μ ${ls.muBefore.toFixed(2)}→${ls.muAfter.toFixed(2)}, σ ${ls.sigBefore.toFixed(2)}→${ls.sigAfter.toFixed(2)}`;
-        return `Poslední selekce: vyřazeno ${fmt(ls.n)} · maso +${fmt(ls.meat)}${gtxt}`;
-      }, 'dim small'),
-      h('div', { class: 'dim small' }, 'Pastýř pravil: měkká vlna zůstane, hrubá odejde. (Selekce zvedá μ a utahuje σ; mutace ji doplňuje → šlechtit lze napořád.)')));
+      h('div', { class: 'dim small' }, 'Pastýř pravil: měkká vlna zůstane, hrubá odejde. Vybíráš rovnou při narození — žádné cykly. (μ stoupá, σ se utahuje; mutace ji doplňuje → šlechtit lze napořád.)')));
 
     wrap.appendChild(section('🥩 Porážka',
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killOld ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killOld'); onAction(); } }), ' Porážet staré (maso + části)'),

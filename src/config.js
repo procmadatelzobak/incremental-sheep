@@ -96,9 +96,8 @@ export const BALANCE = {
   immortalSpeed: 1.8,           // násobič rychlosti simulace po vypití elixíru
   immortalSpeedPerPhase: 0.15, // + za každou fázi nad 4 (eskalující "čas letí")
   sheepPerUnit: 4,            // kolik ovcí přidá jedna zakoupená "jednotka"
-  // kohorty / genetika
-  cullPeriod: 20,           // herních sekund mezi aplikacemi selekce
-  maxCutFrac: 0.85,
+  // kohorty / genetika (výběr při narození #18: nejhorší jehňata se vyřadí hned)
+  maxCutFrac: 0.85,         // max podíl vyřazených jehňat z vrhu
   sigmaFloorMut: 0.6,       // σ-floor = sigmaFloorMut * mut (drží šlechtění "živé")
   // kapacita: rozloha × hustota × modifikátory × baseCap
   baseCap: 12,              // kapacita na jednotku rozlohy

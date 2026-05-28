@@ -170,12 +170,6 @@ export function setMaxMales(state, groupId, n) {
   g.policy.maxMales = Math.max(0, n | 0);
   return true;
 }
-export function setProtect(state, groupId, patch) {
-  const g = groupById(state, groupId); if (!g) return false;
-  if (!g.policy.protect) g.policy.protect = { enabled: true, minF: 8, minM: 2 };
-  Object.assign(g.policy.protect, patch);
-  return true;
-}
 export function setAutotrade(state, res, frac) {
   state.storage.autotrade[res] = Math.max(0, Math.min(1, frac));
   return true;

@@ -6,7 +6,7 @@ import { getMults } from '../econ/economy.js';
 import { applyProduced } from '../econ/storage.js';
 import { aging, births, totalCount } from './cohort.js';
 import { produce } from './production.js';
-import { applyPolicyKills, applySelectionCull } from './groups.js';
+import { applyPolicyKills, slaughterYields } from './groups.js';
 import { herdCapacity, worldEnv } from '../content/locations.js';
 import { stepProjects } from '../content/projects.js';
 import { checkPhase } from '../content/phases.js';
@@ -39,23 +39,20 @@ export function step(state, dt) {
   const bctx = (ctx.env.birthMult && ctx.env.birthMult !== 1) ? Object.assign({}, ctx, { birthMult: ctx.birthMult * ctx.env.birthMult }) : ctx;
   for (const g of state.groups) {
     const headroom = Math.max(0, cap - pop);
-    const nb = births(g, headroom, edt, bctx);
-    pop += nb;
-    state.stats.born += nb;
+    const r = births(g, headroom, edt, bctx);
+    pop += r.born;
+    state.stats.born += r.born;
+    // výběr při narození: vyřazená jehňata jdou rovnou na maso/části (#18)
+    if (r.killed > 1e-12) {
+      state.stats.culled += r.killed;
+      addInto(produced, slaughterYields(g, r.killed, 'child', ctx, state));
+    }
   }
 
   // 3) automatika (porážky) + produkce
   for (const g of state.groups) {
     addInto(produced, applyPolicyKills(g, ctx, state));
     addInto(produced, produce(g, edt, ctx, state));
-  }
-
-  // 4) selekční cyklus (zrychluje se po elixíru spolu s časem)
-  state._cullAcc += edt;
-  let guard = 0;
-  while (state._cullAcc >= BALANCE.cullPeriod && guard++ < 50) {
-    state._cullAcc -= BALANCE.cullPeriod;
-    for (const g of state.groups) addInto(produced, applySelectionCull(g, ctx, state));
   }
 
   const credBefore = state.resources.credits || 0;
