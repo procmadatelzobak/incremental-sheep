@@ -46,27 +46,30 @@ export const RESOURCES = {
 
 // --- VYLEPŠENÍ (úrovňová, kumulativní) -------------------------------------
 // effect: jak se aplikuje (viz econ/economy.js getMults). cost = base*growth^lvl.
+// --- IKONY (game-icons.net, CC BY 3.0 — Lorc, Delapouite & contributors) --
+const GI = (a, n) => `https://game-icons.net/icons/000000/transparent/1x1/${a}/${n}.svg`;
+
 export const UPGRADES = {
-  shears:    { label: 'Nůžky',         phase: 1, base: 60,   growth: 1.7,  per: 0.15, kind: 'woolMult',  desc: '+15 % vlna' },
-  commerce:  { label: 'Obchod',        phase: 1, base: 120,  growth: 1.75, per: 0.12, kind: 'priceMult', desc: '+12 % ceny' },
-  courtship: { label: 'Námluvy',       phase: 1, base: 100,  growth: 1.8,  per: 0.10, kind: 'breedMult', desc: '-10 % březost' },
-  ram:       { label: 'Beran',         phase: 1, base: 300,  growth: 2.0,  per: 2,    kind: 'fertBonus', desc: '+2 plodnost samců' },
-  milkMach:  { label: 'Dojička',       phase: 2, base: 400,  growth: 1.75, per: 0.18, kind: 'milkMult',  desc: '+18 % mléko' },
-  fatten:    { label: 'Výkrm',         phase: 2, base: 500,  growth: 1.8,  per: 0.15, kind: 'meatMult',  desc: '+15 % maso' },
-  monopoly:  { label: 'Monopol',       phase: 3, base: 5e3,  growth: 2.1,  per: 0.25, kind: 'priceMult', desc: '+25 % ceny (šponování)' },
-  looms:     { label: 'Tkalcovny',     phase: 3, base: 8e3,  growth: 1.9,  per: 0.2,  kind: 'procMult',  desc: '+20 % zpracování' },
-  genetics:  { label: 'Genetika',      phase: 5, base: 5e4,  growth: 1.9,  per: 0.05, kind: 'ceilingMult', desc: '+5 % strop genů' },
-  cloning:   { label: 'Klonování',     phase: 5, base: 8e4,  growth: 1.85, per: 0.2,  kind: 'birthMult', desc: '+20 % porodnost' },
-  computeOpt:{ label: 'Optimalizace',  phase: 5, base: 1e5,  growth: 1.9,  per: 0.25, kind: 'computeMult',desc:'+25 % výpočet' },
+  shears:    { label: 'Nůžky',         phase: 1, base: 60,   growth: 1.7,  per: 0.15, kind: 'woolMult',    desc: '+15 % vlna',             icon: GI('delapouite','shears') },
+  commerce:  { label: 'Obchod',        phase: 1, base: 120,  growth: 1.75, per: 0.12, kind: 'priceMult',   desc: '+12 % ceny',             icon: GI('delapouite','two-coins') },
+  courtship: { label: 'Námluvy',       phase: 1, base: 100,  growth: 1.8,  per: 0.10, kind: 'breedMult',   desc: '-10 % březost',          icon: GI('lorc','crowned-heart') },
+  ram:       { label: 'Beran',         phase: 1, base: 300,  growth: 2.0,  per: 2,    kind: 'fertBonus',   desc: '+2 plodnost samců',      icon: GI('delapouite','ram-profile') },
+  milkMach:  { label: 'Dojička',       phase: 2, base: 400,  growth: 1.75, per: 0.18, kind: 'milkMult',    desc: '+18 % mléko',            icon: GI('delapouite','udder') },
+  fatten:    { label: 'Výkrm',         phase: 2, base: 500,  growth: 1.8,  per: 0.15, kind: 'meatMult',    desc: '+15 % maso',             icon: GI('lorc','meat') },
+  monopoly:  { label: 'Monopol',       phase: 3, base: 5e3,  growth: 2.1,  per: 0.25, kind: 'priceMult',   desc: '+25 % ceny (šponování)', icon: GI('lorc','crown') },
+  looms:     { label: 'Tkalcovny',     phase: 3, base: 8e3,  growth: 1.9,  per: 0.2,  kind: 'procMult',    desc: '+20 % zpracování',       icon: GI('lorc','gears') },
+  genetics:  { label: 'Genetika',      phase: 5, base: 5e4,  growth: 1.9,  per: 0.05, kind: 'ceilingMult', desc: '+5 % strop genů',        icon: GI('lorc','lightning-helix') },
+  cloning:   { label: 'Klonování',     phase: 5, base: 8e4,  growth: 1.85, per: 0.2,  kind: 'birthMult',   desc: '+20 % porodnost',        icon: GI('lorc','duality') },
+  computeOpt:{ label: 'Optimalizace',  phase: 5, base: 1e5,  growth: 1.9,  per: 0.25, kind: 'computeMult', desc: '+25 % výpočet',          icon: GI('lorc','processor') },
 };
 
 // --- PERKY (trvalé, kupují se za Vědění; přežijí reset) --------------------
 export const PERKS = {
-  headstart: { label: 'Náskok',        base: 1,  growth: 1.6, per: 0.5,  kind: 'startCredits', desc: '+50 % start. kreditů / lvl' },
-  vigor:     { label: 'Plodná krev',   base: 2,  growth: 1.7, per: 0.15, kind: 'globalProd',   desc: '+15 % veškerá produkce' },
-  haste:     { label: 'Spěch',         base: 3,  growth: 1.8, per: 0.12, kind: 'globalSpeed',  desc: '+12 % rychlost cyklu' },
-  legacy:    { label: 'Dědictví genů', base: 5,  growth: 1.9, per: 0.08, kind: 'startGenes',   desc: 'lepší startovní geny' },
-  foreknow:  { label: 'Předvídání',    base: 8,  growth: 2.0, per: 0.2,  kind: 'cheaper',      desc: '-20 % ceny vylepšení' },
+  headstart: { label: 'Náskok',        base: 1,  growth: 1.6, per: 0.5,  kind: 'startCredits', desc: '+50 % start. kreditů / lvl', icon: GI('lorc','rocket') },
+  vigor:     { label: 'Plodná krev',   base: 2,  growth: 1.7, per: 0.15, kind: 'globalProd',   desc: '+15 % veškerá produkce',     icon: GI('lorc','drop') },
+  haste:     { label: 'Spěch',         base: 3,  growth: 1.8, per: 0.12, kind: 'globalSpeed',  desc: '+12 % rychlost cyklu',       icon: GI('lorc','hourglass') },
+  legacy:    { label: 'Dědictví genů', base: 5,  growth: 1.9, per: 0.08, kind: 'startGenes',   desc: 'lepší startovní geny',       icon: GI('lorc','oak') },
+  foreknow:  { label: 'Předvídání',    base: 8,  growth: 2.0, per: 0.2,  kind: 'cheaper',      desc: '-20 % ceny vylepšení',       icon: GI('lorc','eyeball') },
 };
 
 // --- EPITETA HRDINY dle fáze -----------------------------------------------
@@ -123,12 +126,12 @@ export const BALANCE = {
 // --- DEFINICE LOKACÍ (druhy) -----------------------------------------------
 // env modifikátory; capMult = násobič kapacity; phase = kdy lze stavět.
 export const LOCATION_KINDS = {
-  meadow:   { label: 'Louka',    phase: 1, capMult: 1.0, env: {} },
-  pasture:  { label: 'Pastvina', phase: 2, capMult: 1.6, env: {} },
-  moon:     { label: 'Měsíc',    phase: 6, capMult: 2.2, env: { oxygenRequired: true, woolMult: 1.1 } },
-  mars:     { label: 'Mars',     phase: 6, capMult: 2.6, env: { light: 0.6, woolMult: 0.8, milkMult: 0.9 } },
-  jupiter:  { label: 'Jupiter',  phase: 6, capMult: 3.5, env: { gravity: 2.0, birthMult: 0.6, meatMult: 1.4 } },
-  sphere:   { label: 'Dysonova sféra', phase: 7, capMult: 50, env: { woolMult: 1.5, milkMult: 1.5, meatMult: 1.5 } },
+  meadow:   { label: 'Louka',          phase: 1, capMult: 1.0, env: {},                                               icon: GI('lorc','wheat') },
+  pasture:  { label: 'Pastvina',       phase: 2, capMult: 1.6, env: {},                                               icon: GI('delapouite','stable') },
+  moon:     { label: 'Měsíc',          phase: 6, capMult: 2.2, env: { oxygenRequired: true, woolMult: 1.1 },          icon: GI('lorc','moon') },
+  mars:     { label: 'Mars',           phase: 6, capMult: 2.6, env: { light: 0.6, woolMult: 0.8, milkMult: 0.9 },    icon: GI('delapouite','mars-pathfinder') },
+  jupiter:  { label: 'Jupiter',        phase: 6, capMult: 3.5, env: { gravity: 2.0, birthMult: 0.6, meatMult: 1.4 }, icon: GI('delapouite','jupiter') },
+  sphere:   { label: 'Dysonova sféra', phase: 7, capMult: 50,  env: { woolMult: 1.5, milkMult: 1.5, meatMult: 1.5 }, icon: GI('delapouite','death-star') },
 };
 
 // pořadí planet pro fázi 6 (Exodus)

@@ -49,7 +49,8 @@ button.act:disabled { opacity: .42; cursor: not-allowed; }
 /* Items / lists */
 .list { display: flex; flex-direction: column; gap: 8px; }
 .item { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
-.item-h { display: flex; justify-content: space-between; align-items: baseline; }
+.item-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.item-icon { width: 32px; height: 32px; flex-shrink: 0; filter: invert(1); opacity: 0.65; }
 .stat-row { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0; font-variant-numeric: tabular-nums; }
 .dim { color: var(--muted); }
 .small { font-size: 12px; }

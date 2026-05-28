@@ -214,7 +214,10 @@ function renderUpgrades(s) {
     any = true;
     const cost = upgradeCost(s, k), lvl = s.upgrades[k] || 0;
     list.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: u.label }), h('span', { class: 'dim', text: `Lv ${lvl}` })),
+      h('div', { class: 'item-h' },
+        u.icon ? h('img', { src: u.icon, class: 'item-icon', alt: '' }) : null,
+        h('b', { text: u.label }),
+        h('span', { class: 'dim', text: `Lv ${lvl}` })),
       h('div', { class: 'dim small', text: u.desc }),
       costBtn(s, 'Koupit', cost, () => A.buyUpgrade(s, k))));
   }
@@ -229,7 +232,10 @@ function renderStations(s) {
     const cap = locationCap(loc);
     const pop = s.groups.filter(g => g.locationId === loc.id).reduce((t, g) => t + totalCount(g), 0);
     list.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: `${loc.name}` }), h('span', { class: 'dim', text: locKind(loc).label })),
+      h('div', { class: 'item-h' },
+        locKind(loc).icon ? h('img', { src: locKind(loc).icon, class: 'item-icon', alt: '' }) : null,
+        h('b', { text: loc.name }),
+        h('span', { class: 'dim', text: locKind(loc).label })),
       h('div', { class: 'dim small', text: `Ovcí ${fmt(pop)} / ${fmt(cap)} · hustota ${loc.density}` }),
       h('div', { class: 'btn-row' },
         costBtn(s, 'Rozšířit', A.costFor(s, 'expand', loc), () => A.buyExpand(s, loc.id)),
@@ -312,7 +318,10 @@ function renderPrestige(s) {
     ...Object.keys(PERKS).map(k => {
       const p = PERKS[k], cost = perkCost(s, k), lvl = s.prestige.perks[k] || 0;
       return h('div', { class: 'item' },
-        h('div', { class: 'item-h' }, h('b', { text: p.label }), h('span', { class: 'dim', text: `Lv ${lvl}` })),
+        h('div', { class: 'item-h' },
+          p.icon ? h('img', { src: p.icon, class: 'item-icon', alt: '' }) : null,
+          h('b', { text: p.label }),
+          h('span', { class: 'dim', text: `Lv ${lvl}` })),
         h('div', { class: 'dim small', text: p.desc }),
         btn(`Koupit (${fmt(cost)} vědění)`, (s.prestige.knowledge || 0) >= cost, () => A.buyPerk(s, k)));
     })));
