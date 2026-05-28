@@ -151,7 +151,7 @@ function geneBar(key) {
 let hudChips = {}, hudEp, hudPhase, hudHint, hudStep, hudCap, hudGate;
 function buildHud() {
   clear(hud);
-  hudEp = h('b', {}); hudPhase = h('span', { class: 'dim' });
+  hudEp = h('b', {}); hudPhase = h('span', { class: 'dim', id: 'hud-phase' });
   hudHint = h('div', { class: 'hud-hint' });
   hudStep = h('div', { class: 'hud-step' });
   const chips = h('div', { class: 'chips' });
@@ -230,6 +230,7 @@ const labUnlocked = (s) => (s.land.worlds.earth.tier || 0) >= 4;
 
 const TABS = [
   { id: 'herds', label: ICONS.sheep + ' Stáda', avail: () => true, render: renderHerds },
+  { id: 'genetics', label: ICONS.genes + ' Genetika', avail: () => true, render: renderGenetics },
   { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
   { id: 'lab', label: ICONS.lab + ' Laboratoř', avail: s => labUnlocked(s), render: renderLab },
   { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: s => s.phase >= 2, render: renderStations },
@@ -340,9 +341,45 @@ function renderHerds(s) {
 
   wrap.appendChild(incomeSection(s));
 
+  if (s.phase >= 2) {
+    wrap.appendChild(section('🥩 Porážka',
+      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killOld ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killOld'); onAction(); } }), ' Porážet staré (maso + části)'),
+      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killMaleChildren ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killMaleChildren'); onAction(); } }), ' Porážet nadbytečné samce-mláďata (maso)'),
+      h('div', { class: 'ctl-row' }, 'Max dospělých samců (0 = bez limitu): ',
+        h('input', { type: 'number', min: 0, value: g.policy.maxMales, style: 'width:80px', onchange: e => { A.setMaxMales(s, g.id, +e.target.value); onAction(); } })),
+      liveSpan(() => {
+        const gg = group();
+        if (!gg.policy.maxMales) return 'Bez limitu — všichni samci zůstávají na množení.';
+        const fert = Math.max(0.1, gg.genes.fertility.mu + (getMults(s).fertBonus || 0));
+        const can = gg.policy.maxMales * fert;
+        const warn = can < gg.counts.F.adult * 0.95 ? ' ⚠ to brzdí porody — děti pak ubývají rychleji, než se rodí. Zvyš limit nebo dej 0.' : '';
+        return `Limit ${fmtCount(gg.policy.maxMales)} samců spáří ~${fmtCount(can)} samic za cyklus.${warn}`;
+      }, 'dim small')));
+  }
+
+  if (s.phase === 4 && !s.flags.immortal) {
+    wrap.appendChild(section('Nápoj nesmrtelnosti',
+      h('div', { class: 'dim' }, 'Z ovčího mléka. Po vypití získáš čas na pokročilou genetiku.'),
+      cBtn(`${ICONS.immortality} Vyrobit nápoj nesmrtelnosti`, () => A.costFor(s, 'immortality'), () => A.craftImmortality(s))));
+  }
+  return wrap;
+}
+
+// Genetika (#30): genom + výběr při narození (šlechtění), přesunuté z dashboardu Stáda.
+function renderGenetics(s) {
+  const g = group();
+  const wrap = h('div', {});
+  if (s.groups.length > 1) {
+    wrap.appendChild(section('Stádo',
+      h('select', { onchange: e => { s.activeGroupId = +e.target.value; rebuildPanel(); } },
+        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmtCount(totalCount(x))})`)))));
+  }
+
   const genes = h('div', { class: 'genes' });
   for (const k in GENES) if (GENES[k].phase <= s.phase) genes.appendChild(geneBar(k));
-  wrap.appendChild(section('Geny (μ • rozptyl σ)', genes));
+  wrap.appendChild(section('Geny stáda (μ • rozptyl σ)',
+    liveSpan(() => `Celkové skóre šlechtění: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`, 'dim small'),
+    genes));
 
   if (s.phase >= 2) {
     const cull = g.policy.cull;
@@ -372,26 +409,8 @@ function renderHerds(s) {
         return `Vybraná jehňata mají ${spec.label} ${spec.lowerBetter ? '−' : '+'}${dpct.toFixed(1)} % oproti průměru stáda → μ se posouvá každým vrhem.`;
       }, 'dim small'),
       h('div', { class: 'dim small' }, 'Pastýř pravil: měkká vlna zůstane, hrubá odejde. Vybíráš rovnou při narození — žádné cykly. (μ stoupá, σ se utahuje; mutace ji doplňuje → šlechtit lze napořád.)')));
-
-    wrap.appendChild(section('🥩 Porážka',
-      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killOld ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killOld'); onAction(); } }), ' Porážet staré (maso + části)'),
-      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killMaleChildren ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killMaleChildren'); onAction(); } }), ' Porážet nadbytečné samce-mláďata (maso)'),
-      h('div', { class: 'ctl-row' }, 'Max dospělých samců (0 = bez limitu): ',
-        h('input', { type: 'number', min: 0, value: g.policy.maxMales, style: 'width:80px', onchange: e => { A.setMaxMales(s, g.id, +e.target.value); onAction(); } })),
-      liveSpan(() => {
-        const gg = group();
-        if (!gg.policy.maxMales) return 'Bez limitu — všichni samci zůstávají na množení.';
-        const fert = Math.max(0.1, gg.genes.fertility.mu + (getMults(s).fertBonus || 0));
-        const can = gg.policy.maxMales * fert;
-        const warn = can < gg.counts.F.adult * 0.95 ? ' ⚠ to brzdí porody — děti pak ubývají rychleji, než se rodí. Zvyš limit nebo dej 0.' : '';
-        return `Limit ${fmtCount(gg.policy.maxMales)} samců spáří ~${fmtCount(can)} samic za cyklus.${warn}`;
-      }, 'dim small')));
-  }
-
-  if (s.phase === 4 && !s.flags.immortal) {
-    wrap.appendChild(section('Nápoj nesmrtelnosti',
-      h('div', { class: 'dim' }, 'Z ovčího mléka. Po vypití získáš čas na pokročilou genetiku.'),
-      cBtn(`${ICONS.immortality} Vyrobit nápoj nesmrtelnosti`, () => A.costFor(s, 'immortality'), () => A.craftImmortality(s))));
+  } else {
+    wrap.appendChild(h('div', { class: 'dim small' }, 'Šlechtění (výběr nejlepších jehňat při narození) se odemkne ve fázi 2.'));
   }
   return wrap;
 }
