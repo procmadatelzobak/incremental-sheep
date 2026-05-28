@@ -25,7 +25,7 @@ export function getMults(state) {
   const u = state.upgrades, p = state.prestige.perks, U = UPGRADES;
   const lvl = k => u[k] || 0;
   const plvl = k => p[k] || 0;
-  const globalProd = 1 + 0.15 * plvl('vigor');
+  const globalProd = (1 + 0.15 * plvl('vigor')) * (state.world.achievementMult || 1);
   const speed = 1 / (1 + 0.12 * plvl('haste'));
   return {
     priceMult: (1 + U.commerce.per * lvl('commerce')) * (1 + U.monopoly.per * lvl('monopoly')),

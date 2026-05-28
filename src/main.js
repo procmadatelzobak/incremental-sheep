@@ -6,7 +6,7 @@ import { newGame } from './io/state.js';
 import { loadLocal, saveLocal, clearLocal, serialize, deserialize, applyOffline } from './io/save.js';
 import { step } from './sim/simulation.js';
 import { runAutobuy } from './econ/actions.js';
-import { initUI, updateUI, showBanner } from './ui/ui.js';
+import { initUI, updateUI, showBanner, notifyPhase, notifyAchievement } from './ui/ui.js';
 import { fmt } from './format.js';
 
 const loaded = loadLocal();
@@ -53,6 +53,8 @@ function frame(now) {
   runAutobuy(state);               // automatické nákupy (zapnuté kategorie)
   saveAcc += dt;
   updateUI(state);                 // jen aktualizuje hodnoty na místě (bez blikání)
+  if (state._phaseUp && state._phaseUp.length) { for (const p of state._phaseUp) notifyPhase(p); state._phaseUp.length = 0; }
+  if (state._achUp && state._achUp.length) { for (const id of state._achUp.slice(0, 6)) notifyAchievement(id); state._achUp.length = 0; }
   if (saveAcc >= AUTOSAVE_MS / 1000) { save(); saveAcc = 0; }
   requestAnimationFrame(frame);
 }

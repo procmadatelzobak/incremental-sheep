@@ -3,6 +3,7 @@
 //  Nákupy za kredity vyprázdní obchodovatelný sklad (pravidlo lore §9).
 // ===========================================================================
 import { BALANCE, LOCATION_KINDS, PLANET_ORDER, UPGRADES, PERKS } from '../config.js';
+import { fmt } from '../format.js';
 import { costOf, upgradeCost, perkCost } from './economy.js';
 import { emptyStorage } from './storage.js';
 import { locationById, groupById, activeLocation } from '../io/state.js';
@@ -203,6 +204,44 @@ export function runAutobuy(state) {
     if (!best || best[1]() === false) break;
   }
   if (ab.sphere && state.phase >= 7) doClaimSphere(state);
+}
+
+// --- doporučený další krok (pro HUD) --------------------------------------
+function cheapestUseful(s) {
+  const opts = [];
+  for (const k in UPGRADES) if (UPGRADES[k].phase <= s.phase) opts.push({ label: UPGRADES[k].label, cost: upgradeCost(s, k) });
+  for (const loc of s.locations) {
+    opts.push({ label: 'Rozšířit ' + loc.name, cost: costFor(s, 'expand', loc) });
+    if (loc.density < BALANCE.density.max) opts.push({ label: 'Hustota ' + loc.name, cost: costFor(s, 'density', loc) });
+  }
+  opts.push({ label: 'Ovce', cost: costFor(s, 'addSheep') });
+  if (s.phase >= 2) opts.push({ label: 'Pastvina', cost: costFor(s, 'newPasture') });
+  let best = null;
+  for (const o of opts) if (!best || o.cost < best.cost) best = o;
+  return best;
+}
+
+export function suggestStep(s) {
+  const cr = credits(s);
+  if (singularityAvailable(s)) return '★ Dosáhni singularity! (záložka Prestiž)';
+  if (s.phase >= 10) {
+    if (canIgnite(s)) return 'Zažehni černou díru! (Prestiž)';
+    if (s.prestige.armed) return 'Sklad se plní k černé díře… vyčkej';
+    return 'Zapni „Nasávat produkci" (Prestiž) a střádej';
+  }
+  if (s.phase === 4 && !s.flags.immortal) {
+    const c = costFor(s, 'immortality');
+    return cr >= c ? 'Vyrob nápoj nesmrtelnosti (Stáda)' : `Našetři ${fmt(c)} na nesmrtelnost`;
+  }
+  if (s.phase === 6 && s.buys.station < 3) {
+    const c = costFor(s, 'station');
+    return cr >= c ? `Postav stanici (zbývají ${3 - s.buys.station})` : `Našetři ${fmt(c)} na stanici (Stanice)`;
+  }
+  if (s.phase === 7 && s.projects.dyson.count < 1) return sphereReady(s) ? 'Dokonči Dysonovu sféru! (Stanice)' : 'Kupuj stavitele sféry (Stanice)';
+  if (s.phase === 8 && s.projects.dyson.count < 5) return sphereReady(s) ? 'Dokonči další sféru! (Stanice)' : 'Stav další sféry — stavitelé/laser (Stanice)';
+  const best = cheapestUseful(s);
+  if (!best) return 'Nech stádo růst a šlechti (Stáda)';
+  return cr >= best.cost ? `Kup: ${best.label} (${fmt(best.cost)})` : `Našetři na ${best.label} (${fmt(best.cost)})`;
 }
 
 export { canIgnite, singularityAvailable, sphereReady };

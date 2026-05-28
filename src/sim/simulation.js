@@ -10,6 +10,7 @@ import { applyPolicyKills, applySelectionCull } from './groups.js';
 import { herdCapacity, locEnv } from '../content/locations.js';
 import { stepProjects } from '../content/projects.js';
 import { checkPhase } from '../content/phases.js';
+import { updateRecords, checkAchievements } from '../content/achievements.js';
 import { locationById } from '../io/state.js';
 
 function addInto(dst, src) { for (const k in src) dst[k] = (dst[k] || 0) + src[k]; }
@@ -58,7 +59,16 @@ export function step(state, dt) {
   for (const g of state.groups) total += totalCount(g);
   if (total > state.stats.peakPop) state.stats.peakPop = total;
 
+  const prevPhase = state.phase;
   checkPhase(state);
+  if (state.phase > prevPhase) {
+    state._phaseUp = state._phaseUp || [];
+    for (let p = prevPhase + 1; p <= state.phase; p++) state._phaseUp.push(p);
+  }
+
+  updateRecords(state);
+  const newAch = checkAchievements(state);
+  if (newAch.length) { state._achUp = (state._achUp || []).concat(newAch.map(a => a.id)); }
 
   state.rates = {};
   for (const k in produced) state.rates[k] = produced[k] / dt;

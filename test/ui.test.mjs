@@ -1,6 +1,6 @@
 import { installDom, buttonsByText, allButtons } from './dom-stub.mjs';
 const { document } = installDom();
-const { initUI, updateUI } = await import('../src/ui/ui.js');
+const { initUI, updateUI, notifyPhase, notifyAchievement } = await import('../src/ui/ui.js');
 import { newGame } from '../src/io/state.js';
 import { totalCount } from '../src/sim/cohort.js';
 import { serialize, deserialize } from '../src/io/save.js';
@@ -125,6 +125,20 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
     for (const L of ['Stáda', 'Vylepšení', 'Stanice']) { clickTab(L); updateUI(loaded); }
   } catch (e) { ok = false; console.error('  pád UI na starém save:', e.message); }
   check('UI se starým save nespadne (zamrznutí opraveno)', ok);
+}
+
+// --- Kronika + událost fáze + toast milníku (nesmí spadnout) ---
+{
+  const s = newGame();
+  s.resources.credits = 1e6;
+  s.achievements = { sheep10: 1, phase2: 1 };   // něco odemčeno
+  initUI(s, 'app', () => {});
+  clickTab('Kronika');
+  check('Kronika se vykreslí', panel().children.length > 0 && panel().textContent.includes('Milníky'));
+  let ok = true;
+  try { notifyPhase(2); notifyAchievement('sheep10'); updateUI(s); } catch (e) { ok = false; console.error('  notifikace spadly:', e.message); }
+  check('modál fáze + toast milníku nespadnou', ok);
+  check('HUD ukazuje doporučený krok', document.getElementById('hud').textContent.includes('➤'));
 }
 
 console.log(`ui: ${pass} passed, ${fail} failed`);

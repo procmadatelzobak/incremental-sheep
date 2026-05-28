@@ -10,16 +10,19 @@ import { upgradeCost, perkCost } from '../econ/economy.js';
 import { UPGRADES, PERKS, GENES, RESOURCES, BALANCE } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { locationCap, locKind, herdCapacity } from '../content/locations.js';
-import { phaseName, phaseHint } from '../content/phases.js';
+import { phaseName, phaseHint, PHASE_INFO, PHASES } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax } from '../sim/genetics.js';
 import { combinedCap, storedTradeTotal, TRADEABLE, storageEnabled } from '../econ/storage.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
+import { ACHIEVEMENTS, unlockedTitles } from '../content/achievements.js';
 import { drawHerd } from '../render/canvas.js';
 
 let root, hud, tabsBar, panelEl, bannerEl, activeTab = 'herds', lastTabSig = '', structSig = '';
 let updaters = [];           // aktualizace hodnot aktivního panelu (běží každý frame)
 let S, onAction = () => {};
+let modalEl = null; const modalQueue = []; let toastWrap = null; const visitedTabs = new Set();
+let herdCanvasEl = null;
 
 // --- DOM helpers -----------------------------------------------------------
 function h(tag, props = {}, ...kids) {
@@ -40,13 +43,21 @@ function h(tag, props = {}, ...kids) {
 const clear = (e) => { while (e && e.firstChild) e.removeChild(e.firstChild); };
 const group = () => S.groups.find(g => g.id === S.activeGroupId) || S.groups[0];
 
+function setClass(el, cls, on) {
+  const parts = (el.className || '').split(' ').filter(Boolean).filter(c => c !== cls);
+  if (on) parts.push(cls);
+  el.className = parts.join(' ');
+}
+function flashEl(el) { if (!el) return; setClass(el, 'flash', true); setTimeout(() => setClass(el, 'flash', false), 350); }
+function flashChip(key) { const c = hudChips[key]; if (c) flashEl(c.chip); }
+
 // --- "živé" prvky: postaví se jednou, hodnota se obnoví v refreshPanel() ----
 function reg(el, fn) { updaters.push(() => fn(el)); return el; }
 
 function cBtn(label, costFn, actFn) {
-  const b = h('button', { class: 'act' });
-  b.addEventListener('click', () => { if (actFn() !== false) { onAction(); rebuildPanel(); } });
-  return reg(b, (el) => { const c = costFn(); el.textContent = `${label} (${fmt(c)})`; el.disabled = (S.resources.credits || 0) < c; });
+  const b = h('button', { class: 'act cost' });
+  b.addEventListener('click', () => { if (actFn() !== false) { onAction(); flashChip('credits'); rebuildPanel(); } });
+  return reg(b, (el) => { const c = costFn(); el._cost = c; el.textContent = `${label} (${fmt(c)})`; el.disabled = (S.resources.credits || 0) < c; });
 }
 function aBtn(label, enabledFn, actFn) {
   const b = h('button', { class: 'act', text: label });
@@ -89,11 +100,12 @@ function geneBar(key) {
 }
 
 // --- HUD (staví se jednou, aktualizuje na místě) ---------------------------
-let hudChips = {}, hudEp, hudPhase, hudHint;
+let hudChips = {}, hudEp, hudPhase, hudHint, hudStep;
 function buildHud() {
   clear(hud);
   hudEp = h('b', {}); hudPhase = h('span', { class: 'dim' });
   hudHint = h('div', { class: 'hud-hint' });
+  hudStep = h('div', { class: 'hud-step' });
   const chips = h('div', { class: 'chips' });
   hudChips = {};
   for (const [k, lab] of [['credits', 'Kredity'], ['pop', 'Ovce'], ['wool', 'Vlna/s'], ['milk', 'Mléko/s'], ['meat', 'Maso/s'], ['compute', 'Výpočet/s'], ['knowledge', 'Vědění']]) {
@@ -102,13 +114,14 @@ function buildHud() {
     hudChips[k] = { chip, val }; chips.appendChild(chip);
   }
   hud.appendChild(h('div', { class: 'hud-title' }, hudEp, hudPhase));
-  hud.appendChild(hudHint); hud.appendChild(chips);
+  hud.appendChild(hudHint); hud.appendChild(hudStep); hud.appendChild(chips);
 }
 function updateHud(s) {
   if (!hud) return;
   hudEp.textContent = s.meta.epithet;
   hudPhase.textContent = `  •  Fáze ${s.phase}: ${phaseName(s)}`;
   hudHint.textContent = '› ' + phaseHint(s);
+  hudStep.textContent = '➤ ' + A.suggestStep(s);
   const r = s.rates || {};
   const set = (k, txt, show) => { const c = hudChips[k]; if (!c) return; c.chip.style.display = show ? '' : 'none'; c.val.textContent = txt; };
   set('credits', fmt(s.resources.credits || 0), true);
@@ -128,15 +141,18 @@ const TABS = [
   { id: 'storage', label: 'Sklad', avail: s => s.phase >= 6, render: renderStorage },
   { id: 'manager', label: 'Manažer', avail: s => s.phase >= 9, render: renderManager },
   { id: 'prestige', label: 'Prestiž', avail: s => s.phase >= 10 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
+  { id: 'kronika', label: 'Kronika', avail: () => true, render: renderKronika },
   { id: 'stats', label: 'Staty', avail: () => true, render: renderStats },
 ];
 function buildTabs() {
   clear(tabsBar);
   for (const t of TABS) {
-    const b = h('button', { class: 'tab' + (t.id === activeTab ? ' active' : ''), onclick: () => { if (activeTab !== t.id) { activeTab = t.id; buildTabs(); rebuildPanel(); } } }, t.label);
+    const isNew = t.avail(S) && !visitedTabs.has(t.id) && t.id !== activeTab;
+    const b = h('button', { class: 'tab' + (t.id === activeTab ? ' active' : '') + (isNew ? ' pulse' : ''), onclick: () => { if (activeTab !== t.id) { visitedTabs.add(t.id); activeTab = t.id; buildTabs(); rebuildPanel(); } } }, t.label);
     if (!t.avail(S)) b.style.display = 'none';
     tabsBar.appendChild(b);
   }
+  visitedTabs.add(activeTab);
 }
 
 // --- PANELY (staví strukturu jednou; hodnoty přes reg()) -------------------
@@ -154,7 +170,10 @@ function renderHerds(s) {
   }
 
   const cv = h('canvas', { class: 'herdcanvas', width: 280, height: 90 });
+  herdCanvasEl = cv;
   reg(cv, (el) => drawHerd(el, group()));
+  const sheepBtn = cBtn('+ Ovce', () => A.costFor(s, 'addSheep'), () => A.buyAddSheep(s));
+  sheepBtn.addEventListener('click', () => flashEl(herdCanvasEl));
   wrap.appendChild(section(`${g.name} — ${loc.name}`,
     cv,
     h('div', { class: 'stat-row' },
@@ -166,7 +185,7 @@ function renderHerds(s) {
       liveSpan(() => `Staří ${fmt(group().counts.M.old + group().counts.F.old)}`)),
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => 'naplnění (všechny pozemky)'),
     h('div', { class: 'dim small' }, 'Kapacita = součet všech pozemků. Kupuj/rozšiřuj louky a pastviny v záložce Stanice.'),
-    cBtn('+ Ovce', () => A.costFor(s, 'addSheep'), () => A.buyAddSheep(s)),
+    sheepBtn,
     autobuyToggle('Automaticky kupovat ovce', 'sheep')));
 
   const genes = h('div', { class: 'genes' });
@@ -336,6 +355,26 @@ function renderStats(s) {
     ...rows.map(([a, fn]) => h('tr', {}, h('td', { class: 'dim', text: a }), h('td', {}, liveSpan(fn))))));
 }
 
+function achRow(a, done) {
+  return h('div', { class: 'item' + (done ? ' done' : '') },
+    h('div', { class: 'item-h' }, h('b', { text: (done ? '🏆 ' : '🔒 ') + a.name }), a.bonus ? h('span', { class: 'dim', text: `+${Math.round(a.bonus * 100)} %` }) : null),
+    h('div', { class: 'dim small', text: a.desc }));
+}
+function renderKronika(s) {
+  const wrap = h('div', {});
+  const titles = unlockedTitles(s);
+  wrap.appendChild(section('Tituly',
+    titles.length ? h('div', { class: 'dim' }, titles.join('  ·  ')) : h('div', { class: 'dim', text: 'Zatím žádné — odemykají se milníky.' }),
+    liveSpan(() => `Trvalý bonus z milníků: ×${(s.world.achievementMult || 1).toFixed(2)} k veškeré produkci`, 'dim small')));
+  const done = ACHIEVEMENTS.filter(a => s.achievements[a.id]);
+  const todo = ACHIEVEMENTS.filter(a => !s.achievements[a.id]);
+  const list = h('div', { class: 'list' });
+  for (const a of done) list.appendChild(achRow(a, true));
+  for (const a of todo) list.appendChild(achRow(a, false));
+  wrap.appendChild(section(`Milníky (${done.length}/${ACHIEVEMENTS.length})`, list));
+  return wrap;
+}
+
 // --- jádro: build vs in-place refresh --------------------------------------
 function structSigOf(s) {
   return [activeTab, s.phase, s.groups.length, s.locations.length, s.activeGroupId,
@@ -344,6 +383,12 @@ function structSigOf(s) {
 }
 function refreshPanel() {
   for (const u of updaters) { try { u(); } catch (e) { /* prvek mohl zmizet */ } }
+  // zvýrazni nejlevnější dostupný nákup (další nejlepší krok)
+  if (!panelEl) return;
+  const btns = panelEl.querySelectorAll('button');
+  let best = null;
+  for (const b of btns) { if (b._cost == null) continue; if (!b.disabled && (best == null || b._cost < best._cost)) best = b; }
+  for (const b of btns) { if (b._cost == null) continue; setClass(b, 'best', b === best); }
 }
 function rebuildPanel() {
   if (!panelEl) return;
@@ -367,6 +412,7 @@ export function initUI(state, mountId = 'app', actionCb = () => {}) {
   bannerEl = h('div', { class: 'banner', id: 'banner', style: 'display:none' });
   root.appendChild(bannerEl); root.appendChild(hud); root.appendChild(tabsBar); root.appendChild(panelEl);
   lastTabSig = ''; structSig = '';
+  modalEl = null; toastWrap = null; modalQueue.length = 0; visitedTabs.clear();
   buildHud(); updateHud(state); buildTabs(); rebuildPanel();
 }
 
@@ -386,4 +432,44 @@ export function showBanner(text) {
   bannerEl.textContent = text;
   bannerEl.style.display = '';
   setTimeout(() => { if (bannerEl) bannerEl.style.display = 'none'; }, 8000);
+}
+
+// --- modály (vstup do fáze) a toasty (milníky) -----------------------------
+function showNextModal() {
+  if (modalEl || !modalQueue.length || !root) return;
+  const content = modalQueue.shift();
+  const card = h('div', { class: 'modal' }, content, h('button', { class: 'act', onclick: closeModal }, 'Pokračovat'));
+  modalEl = h('div', { class: 'modal-bg' }, card);
+  root.appendChild(modalEl);
+}
+function closeModal() {
+  if (modalEl && root) { try { root.removeChild(modalEl); } catch (e) { /* ignore */ } }
+  modalEl = null;
+  showNextModal();
+}
+
+export function notifyPhase(phase) {
+  const info = PHASE_INFO[phase];
+  const name = (PHASES[phase] && PHASES[phase].name) || '';
+  const content = h('div', {},
+    h('div', { class: 'modal-tag', text: `Fáze ${phase}` }),
+    h('h2', { text: name }),
+    info ? h('div', { class: 'modal-lore', text: info.lore }) : null,
+    info && info.unlocks ? h('div', {}, h('div', { class: 'dim small', text: 'Nově odemčeno:' }),
+      h('ul', { class: 'unlocks' }, ...info.unlocks.map(u => h('li', { text: u })))) : null);
+  modalQueue.push(content);
+  showNextModal();
+}
+
+function showToast(text) {
+  if (!root) return;
+  if (!toastWrap) { toastWrap = h('div', { class: 'toasts', id: 'toasts' }); root.appendChild(toastWrap); }
+  const t = h('div', { class: 'toast', text });
+  toastWrap.appendChild(t);
+  setTimeout(() => { if (toastWrap) { try { toastWrap.removeChild(t); } catch (e) { /* ignore */ } } }, 4500);
+}
+export function notifyAchievement(id) {
+  const a = ACHIEVEMENTS.find(x => x.id === id);
+  if (!a) return;
+  showToast(`🏆 ${a.name}` + (a.bonus ? `  (+${Math.round(a.bonus * 100)} %)` : ''));
 }

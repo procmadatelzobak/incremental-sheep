@@ -29,9 +29,11 @@ export function deserialize(str) {
 function hydrate(data) {
   const defaults = newGame();
   const state = Object.assign({}, defaults, data);
-  // doplň vnořená nastavení (staré savy nemají nová pole jako autobuy → jinak pád UI)
+  // doplň vnořená pole (staré savy nemají novinky jako autobuy/achievements/world → jinak pád UI)
   state.settings = Object.assign({}, defaults.settings, data.settings || {});
   state.settings.autobuy = Object.assign({}, defaults.settings.autobuy, (data.settings || {}).autobuy || {});
+  state.world = Object.assign({}, defaults.world, data.world || {});
+  state.achievements = data.achievements || {};
   state.rates = {};
   if (typeof state._cullAcc !== 'number') state._cullAcc = 0;
   return state;

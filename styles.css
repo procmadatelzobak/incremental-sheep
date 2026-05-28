@@ -91,6 +91,30 @@ table.stats td:last-child { text-align: right; }
 #footer a { color: var(--muted); }
 #save-msg { color: var(--accent); }
 
+/* další nejlepší krok */
+.hud-step { color: var(--accent); font-size: 13px; margin-bottom: 8px; }
+/* zvýraznění nejlevnějšího dostupného nákupu */
+button.act.best { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(123,196,127,.4); }
+/* šťáva u nákupů */
+.chip.flash, .herdcanvas.flash { animation: flash .4s ease; }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px rgba(123,196,127,.7); } 100% { box-shadow: 0 0 0 0 rgba(123,196,127,0); } }
+/* zvýraznění nové záložky */
+.tab.pulse { border-color: var(--gold); animation: tabpulse 1.2s ease-in-out infinite; }
+@keyframes tabpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(201,162,39,0); } 50% { box-shadow: 0 0 0 3px rgba(201,162,39,.45); } }
+/* Kronika */
+.item.done { border-color: var(--accent-2); }
+/* modál vstupu do fáze */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal { background: var(--panel); border: 1px solid var(--accent-2); border-radius: 14px; padding: 18px 22px; max-width: 440px; width: 90%; }
+.modal h2 { margin: 4px 0 10px; }
+.modal-tag { color: var(--gold); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.modal-lore { color: var(--muted); font-style: italic; margin: 0 0 10px; }
+.modal .unlocks { margin: 6px 0 12px; padding-left: 18px; }
+.modal .unlocks li { margin: 2px 0; color: var(--accent); }
+/* toasty milníků */
+.toasts { position: fixed; right: 14px; bottom: 56px; display: flex; flex-direction: column; gap: 6px; z-index: 40; }
+.toast { background: var(--panel-2); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 12px; font-size: 13px; animation: flash .5s ease; }
+
 @media (max-width: 640px) {
   .genes { grid-template-columns: 1fr; }
 }

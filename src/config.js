@@ -106,11 +106,11 @@ export const BALANCE = {
   // zpracování (fáze 3+): poměr raw → processed
   processing: { wool: { to: 'cloth', ratio: 1 }, milk: { to: 'cheese', ratio: 1 } },
   // projekty
-  dyson: { target: 1.6e6, builderRate: 0.8, energyPerSphere: 1e4 },
+  dyson: { target: 2.6e6, builderRate: 0.8, energyPerSphere: 1e4 },
   laser: { rangePerLevel: 1 },
   // prestiž
   prestige: {
-    blackHoleBase: 1e12,    // strop centrálního skladu pro 1. zažehnutí
+    blackHoleBase: 1.8e12,    // strop centrálního skladu pro 1. zažehnutí
     thresholdGrowth: 1.3,   // mírný růst stropu každý reset
     // odměna roste s počtem běhů (+ log z velikosti běhu) → ~8 smyček k singularitě
     award: (cw, base, runs) => Math.max(1, Math.floor(8 * (runs + 1) + 4 * Math.log10(Math.max(10, cw / (base / 100))))),

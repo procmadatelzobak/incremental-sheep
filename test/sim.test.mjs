@@ -1,9 +1,10 @@
-import { newGame, activeGroup } from '../src/io/state.js';
+import { newGame, activeGroup, prestigeCarry } from '../src/io/state.js';
 import { step } from '../src/sim/simulation.js';
 import { totalCount, totalPopulation } from '../src/sim/cohort.js';
 import { herdCapacity, locationCap } from '../src/content/locations.js';
 import { serialize, deserialize } from '../src/io/save.js';
-import { runAutobuy, setAutobuy } from '../src/econ/actions.js';
+import { runAutobuy, setAutobuy, suggestStep } from '../src/econ/actions.js';
+import { checkAchievements, updateRecords } from '../src/content/achievements.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) { if (cond) pass++; else { fail++; console.error('  FAIL:', name); } }
@@ -56,6 +57,35 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   const c3 = s3.resources.credits;
   runAutobuy(s3);
   check('autobuy pozastaven při nasávání černé díry', s3.resources.credits === c3);
+}
+
+// 1d) milníky: odemykají se, dávají trvalý bonus a přežijí reset
+{
+  const s = newGame();
+  s.world.maxSheep = 100; s.phase = 2;    // dosažené rekordy → milníky se odemknou
+  updateRecords(s);
+  check('milník se odemkne', checkAchievements(s).length > 0);
+  s.world.maxSheep = 1e6;                  // velký rekord → bonusový milník
+  checkAchievements(s);
+  check('bonusový milník zvýší achievementMult', s.world.achievementMult > 1);
+  const carry = prestigeCarry(s);
+  const s2 = newGame(carry);
+  check('milníky přežijí reset', Object.keys(s2.achievements).length === Object.keys(s.achievements).length);
+  check('bonus přežije reset', s2.world.achievementMult === s.world.achievementMult);
+}
+
+// 1e) doporučený krok je smysluplný řetězec
+{
+  check('suggestStep fáze 1', typeof suggestStep(newGame()) === 'string' && suggestStep(newGame()).length > 0);
+  const sp = newGame(); sp.phase = 10; sp.prestige.singularity = true;
+  check('suggestStep singularita', /singular/i.test(suggestStep(sp)));
+}
+
+// 1f) postup fáze naplní frontu událostí (_phaseUp)
+{
+  const s = newGame(); s.stats.credLifetime = 1e6;  // překročí gate fáze 1
+  step(s, 0.1);
+  check('postup fáze naplní _phaseUp', s.phase > 1 && (s._phaseUp || []).length > 0);
 }
 
 // 2) selekce zvedá μ a (čistě) drží σ omezenou

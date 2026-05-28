@@ -74,7 +74,18 @@ export function newGame(carry = null) {
     },
     settings: { timeScale: 1, autobuy: carry?.autobuy || { sheep: false, land: false, upgrades: false, sphere: false } },
     stats: { born: 0, died: 0, culled: 0, woolLifetime: 0, milkLifetime: 0, meatLifetime: 0, credLifetime: 0, peakPop: 0 },
-    world: { ceilingMult: 1 },
+    achievements: carry?.achievements || {},
+    world: {
+      ceilingMult: 1,
+      achievementMult: carry?.achievementMult || 1,
+      maxSheep: carry?.maxSheep || 0,
+      maxCredits: carry?.maxCredits || 0,
+      bestWoolQ: carry?.bestWoolQ || 0,
+      bestIntel: carry?.bestIntel || 0,
+      maxSpheres: carry?.maxSpheres || 0,
+      maxStations: carry?.maxStations || 0,
+      everPasture: carry?.everPasture || false,
+    },
     _cullAcc: 0,
   };
   // přenesené perky, které okamžitě platí
@@ -98,5 +109,14 @@ export function prestigeCarry(state) {
     totalGameTime: state.meta.totalGameTime,
     singularity: state.prestige.singularity,
     autobuy: state.settings.autobuy,
+    achievements: state.achievements,
+    achievementMult: state.world.achievementMult,
+    maxSheep: state.world.maxSheep,
+    maxCredits: state.world.maxCredits,
+    bestWoolQ: state.world.bestWoolQ,
+    bestIntel: state.world.bestIntel,
+    maxSpheres: state.world.maxSpheres,
+    maxStations: state.world.maxStations,
+    everPasture: state.world.everPasture,
   };
 }
