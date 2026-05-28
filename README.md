@@ -1,26 +1,30 @@
 # Incremental Sheep
 
-Inkrementální/idle hra o množení a šlechtění ovcí. Běží **celá v prohlížeči** —
-žádný backend, žádná databáze. Postup se ukládá do `localStorage` a dá se
-exportovat/importovat jako textový string.
+Inkrementální/idle hra o **agregovaném** chovu a šlechtění ovcí. Běží **celá
+v prohlížeči** — žádný backend, žádný build. Postup se ukládá do `localStorage`
+a dá se exportovat/importovat jako textový string.
 
-## Hratelnost (v1 — MVP)
+Příběh (lore) hry je *Bible Farmářova* ve složce [`lore/`](lore/README.md):
+cesta od stříhání pár ovcí přes monopol, nesmrtelnost, vesmír a Dysonovy sféry
+až k černé díře a singularitě — a poselství, že **víc ovcí nikdy nestačí**.
 
-- Koupíš první pár (1 samec + 1 samice). Ovce se samy množí.
-- Každá ovce má **geny** (plodnost, délka života, rychlost a kvalita vlny,
-  velikost, délka březosti, poměry životních fází). Potomek = **průměr rodičů +
-  mutace**, která může překročit oba rodiče → **šlechtěním** (výběrem, kdo se
-  množí a koho pošleš na porážku) tlačíš geny nahoru.
-- Životní cyklus: **dítě → dospělec → starý → smrt stářím**. Vlnu dávají dospělí
-  (víc) i staří (míň). **Maso** je jen z porážky (smrt stářím maso nedá).
-- Vlna i maso se automaticky prodávají za **kredity**. Za ně kupuješ další ovce,
-  vylepšení (nůžky, námluvy, obchod, beran), **rozšíření ohrádky** (strop populace)
-  a odemykáš pravidla **auto-porážky**.
-- Samec (čtvereček) / samice (kolečko) v 2D ohrádce, která roste s kapacitou.
-- Při obrovském stádu hra přepne na **populační režim** (statistické kohorty,
-  ohrádka = heatmapa), aby běžela i v galaktických číslech.
+## Jak se hraje
 
-Porážet ručně: zaškrtni „Klikni na ovci pro porážku" a klikni na ovci.
+- Ovce se **nepočítají jednotlivě** — každé **stádo** je populace s rozložením
+  genů `{průměr μ, rozptyl σ}` na každý gen. **Šlechtění** = selekce: usekneš
+  nejhorší podíl ve zvoleném genu → μ stoupne a σ se utáhne. Mutace σ doplňuje,
+  takže šlechtit lze donekonečna (s klesajícím výnosem).
+- Životní cyklus stáda: **dítě → dospělec → starý → smrt stářím**. Vlnu dávají
+  dospělí (víc) i staří (míň). **Mléko** dávají samice po prvním oplodnění.
+  **Maso a části** vznikají jen z porážky (smrt stářím nedá nic).
+- Vlna/mléko/maso se prodávají za **kredity**; za ně kupuješ ovce, vylepšení,
+  rozšiřuješ a zahušťuješ pastviny a expanduješ.
+- **11 fází** (každá mění pravidla): Stvoření → Množení → Královská (monopol) →
+  Nesmrtelnost → Moudré ovce (vesmír) → Exodus (planety, kyslík, sklady) →
+  Dysonova sféra → další sféry → Manažer stád → **Černá díra (prestiž reset)** →
+  **Singularita** (New Game+). Cíl každé fáze ukazuje nápověda v HUDu.
+- Cesta k singularitě je laděná zhruba na **~100 hodin** přes několik
+  zrychlujících se černoděrových resetů (přenášejí „Vědění" a perky).
 
 ## Spuštění lokálně
 
@@ -29,23 +33,34 @@ python3 -m http.server 8080
 # otevři http://localhost:8080
 ```
 
-## Nasazení v sinuhetcloud
+## Testy
 
-Repo obsahuje `sinuhetcloud.conf` — manager appku najde scanem, naklonuje na
-runner a spustí jako statický web (`python3 -m http.server ${PORT}`), stejně jako
-`relativistic-biliard`. Vystaví ji na `incremental-sheep.sinuhetcloud.coitus.cz`.
+```bash
+npm test          # node test/all.mjs — bez závislostí
+```
+
+- `test/distribution.test.mjs` — matematika selekce (useknutý normál).
+- `test/sim.test.mjs` — simulace: růst, prodej, selekce, postup fází, save.
+- `test/ui.test.mjs` — klikatelnost tlačítek a vykreslení panelů (DOM stub).
+- `test/integration.test.mjs` — nahrání `main.js` a běh smyčky se stubem prohlížeče.
+- `test/balance.test.mjs` — auto-hráč projde hru k singularitě a změří pacing.
 
 ## Struktura
 
-- `index.html`, `styles.css` — UI kostra
-- `src/config.js` — laditelné konstanty (geny, ceny, sazby, strop populace)
-- `src/genetics.js` — geny, dědičnost (průměr + mutace)
-- `src/sheep.js` — model jednotlivce, životní fáze
-- `src/simulation.js` — herní tick (stárnutí, množení, vlna, smrt, porážka)
-- `src/population.js` — agregátní populační model (overflow nad strop)
-- `src/economy.js` — ceny, vylepšení, kapacita
-- `src/render.js` — Canvas (ohrádka, kolečka/čtverečky, heatmapa)
-- `src/ui.js` — HUD a ovládací panel
-- `src/save.js` — export/import string, localStorage, offline progress
-- `src/format.js` — formátování velkých čísel
-- `src/main.js` — bootstrap a herní smyčka
+- `index.html`, `styles.css` — kostra (dashboard) + plátno jako akcent.
+- `src/config.js` — všechny laditelné konstanty (geny, ceny, fáze, perky, balanc).
+- `src/sim/` — `distribution.js` (φ/Φ/Φ⁻¹, selekce), `cohort.js` (stárnutí/porody),
+  `genetics.js` (rozložení genů), `production.js`, `groups.js`, `simulation.js` (tick).
+- `src/econ/` — `economy.js` (ceny/multiplikátory), `storage.js` (sklad/autotrade),
+  `actions.js` (hráčské akce = API pro UI).
+- `src/content/` — `phases.js` (11 fází), `locations.js`, `projects.js` (sféra),
+  `prestige.js` (černá díra, singularita).
+- `src/io/` — `state.js` (newGame), `save.js` (serialize/offline).
+- `src/ui/ui.js` — HUD, záložky, panely. `src/render/canvas.js` — plátno-akcenty.
+- `src/main.js` — bootstrap a herní smyčka. `src/format.js`, `src/rng.js` — pomůcky.
+- `REWRITE-SPEC.md` — návrhová specifikace. `MECHANICS.txt` — popis staré verze.
+
+## Nasazení v sinuhetcloud
+
+Repo obsahuje `sinuhetcloud.conf`; manager appku najde scanem, naklonuje a spustí
+jako statický web (`python3 -m http.server ${PORT}`).
