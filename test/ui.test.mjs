@@ -183,5 +183,16 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('offline modal nespadne', ok);
 }
 
+// --- #10/#12/#16: tlačítka ukazují efekt / důvod nedostupnosti ---
+{
+  const s = newGame(); s.resources.credits = 0;
+  initUI(s, 'app', () => {});
+  clickTab('Vylepšení');
+  const b = buttonsByText(panel(), 'Koupit')[0];
+  check('nedostupné tlačítko ukazuje „chybí"', !!b && b.textContent.includes('chybí'));
+  s.resources.credits = 1e6; updateUI(s);
+  check('dostupné tlačítko ukazuje efekt (%)', buttonsByText(panel(), 'Koupit')[0].textContent.includes('%'));
+}
+
 console.log(`ui: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

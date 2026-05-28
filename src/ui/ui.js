@@ -62,15 +62,27 @@ function etaStr(sec) {
 // --- "živé" prvky: postaví se jednou, hodnota se obnoví v refreshPanel() ----
 function reg(el, fn) { updaters.push(() => fn(el)); return el; }
 
-function cBtn(label, costFn, actFn) {
-  const b = h('button', { class: 'act cost' });
+// Dvouřádkové tlačítko: hlavní řádek (popisek · cena) + podřádek (efekt nákupu,
+// nebo důvod nedostupnosti "chybí X"). effectFn vrací krátký popis efektu. (#10/#12/#16)
+function cBtn(label, costFn, actFn, effectFn) {
+  const main = h('span', { class: 'b-main' });
+  const sub = h('span', { class: 'b-sub' });
+  const b = h('button', { class: 'act cost' }, main, sub);
   b.addEventListener('click', () => { if (actFn() !== false) { onAction(); flashChip('credits'); rebuildPanel(); } });
-  return reg(b, (el) => { const c = costFn(); el._cost = c; el.textContent = `${label} (${fmt(c)})`; el.disabled = (S.resources.credits || 0) < c; });
+  return reg(b, (el) => {
+    const c = costFn(); el._cost = c;
+    main.textContent = `${label} · ${fmt(c)} 💰`;
+    const have = S.resources.credits || 0;
+    el.disabled = have < c;
+    sub.textContent = have < c ? `chybí ${fmt(c - have)} 💰` : (effectFn ? effectFn() : '');
+  });
 }
-function aBtn(label, enabledFn, actFn) {
-  const b = h('button', { class: 'act', text: label });
+function aBtn(label, enabledFn, actFn, reasonFn, cls) {
+  const main = h('span', { class: 'b-main', text: label });
+  const sub = reasonFn ? h('span', { class: 'b-sub' }) : null;
+  const b = h('button', { class: 'act' + (cls ? ' ' + cls : '') }, main, sub);
   b.addEventListener('click', () => { if (actFn() !== false) { onAction(); rebuildPanel(); } });
-  return reg(b, (el) => { el.disabled = !enabledFn(); });
+  return reg(b, (el) => { const ok = enabledFn(); el.disabled = !ok; if (sub) sub.textContent = ok ? '' : reasonFn(); });
 }
 function autobuyToggle(label, key) {
   const on = (S.settings.autobuy || {})[key];
@@ -87,6 +99,16 @@ function segBtn(label, active, fn) {
   const b = h('button', { class: 'act seg' + (active ? ' on' : ''), text: label });
   b.addEventListener('click', () => { fn(); onAction(); rebuildPanel(); });
   return b;
+}
+// Co stádo právě nejvíc brzdí (#9).
+function limitText(s) {
+  const pop = totalPopulation(s), cap = herdCapacity(s);
+  if (pop >= cap * 0.95) return '⚠ Brzdí: kapacita pozemků — rozšiř rozlohu/hustotu (Pozemky)';
+  const g = group();
+  if (g.counts.F.adult < 2) return '⚠ Brzdí: málo dospělých samic — kup samice';
+  const fert = g.genes.fertility.mu + 0;
+  if (g.counts.M.adult * fert < g.counts.F.adult) return 'Brzdí: málo samců (nízká kapacita páření)';
+  return 'Stádo roste — kup víc rozlohy/hustoty pro další růst';
 }
 function liveSpan(fn, cls) { const e = h('span', { class: cls || '' }); return reg(e, (el) => { el.textContent = fn(); }); }
 function liveBar(fracFn, labelFn, color = '#6aa84f') {
@@ -144,7 +166,7 @@ function updateHud(s) {
   const r = s.rates || {};
   const set = (k, txt, show) => { const c = hudChips[k]; if (!c) return; c.chip.style.display = show ? '' : 'none'; c.val.textContent = txt; };
   set('credits', fmt(s.resources.credits || 0), true);
-  set('pop', fmt(r._pop || 0), true);
+  set('pop', `${fmt(r._pop || 0)} / ${fmt(herdCapacity(s))}`, true);
   set('wool', fmt(r.wool || 0), true);
   set('milk', fmt(r.milk || 0), s.phase >= 2);
   set('meat', fmt(r.meat || 0), true);
@@ -197,7 +219,10 @@ function renderHerds(s) {
     segBtn('⚖️ Auto', buy.sex === 'mix', () => A.setBuy(s, { sex: 'mix' })));
   const qtyRow = h('div', { class: 'ctl-row' }, 'Množství: ',
     ...[1, 10, 100].map(q => segBtn('×' + q, buy.qty === q, () => A.setBuy(s, { qty: q }))));
-  const buyBtn = cBtn(`${ICONS.sheep} Koupit ovce`, () => A.addSheepCost(s), () => A.buyAddSheep(s));
+  const sexLbl = { M: 'samců', F: 'samic', mix: 'ovcí (půl/půl)' };
+  const buyBtn = cBtn(`${ICONS.sheep} Koupit ovce`, () => A.addSheepCost(s),
+    () => A.buyAddSheep(s),
+    () => `+${fmt((s.settings.buy.qty || 1) * BALANCE.sheepPerUnit)} ${sexLbl[s.settings.buy.sex] || 'ovcí'}`);
   buyBtn.addEventListener('click', () => flashEl(herdCanvasEl));
   wrap.appendChild(section(g.name,
     cv,
@@ -208,6 +233,7 @@ function renderHerds(s) {
       liveSpan(() => `♂ ${fmt(group().counts.M.adult)} · ♀ ${fmt(group().counts.F.adult)} dospělých`),
       liveSpan(() => `Děti ${fmt(group().counts.M.child + group().counts.F.child)} · Staří ${fmt(group().counts.M.old + group().counts.F.old)}`)),
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => 'naplnění (všechny pozemky)'),
+    liveSpan(() => limitText(s), 'dim small'),
     sexRow, qtyRow, buyBtn,
     autobuyToggle('Automaticky dokupovat ovce', 'sheep'),
     h('div', { class: 'dim small' }, 'Samice se množí, samci dávají kapacitu páření. Kapacitu pozemků zvětšuj v záložce Pozemky.')));
@@ -284,7 +310,7 @@ function renderUpgrades(s) {
     list.appendChild(h('div', { class: 'item' },
       h('div', { class: 'item-h' }, h('b', { text: u.label }), liveSpan(() => `Lv ${s.upgrades[k] || 0}`, 'dim')),
       h('div', { class: 'dim small', text: u.desc }),
-      cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k))));
+      cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k), () => `${u.desc} → Lv ${(s.upgrades[k] || 0) + 1}`)));
   }
   wrap.appendChild(section('Vylepšení',
     autobuyToggle('Automaticky kupovat vylepšení', 'upgrades'),
@@ -314,8 +340,8 @@ function renderStations(s) {
       item.appendChild(h('div', { class: 'dim small', text: 'Roste dokončováním Dysonových sfér (níže).' }));
     } else {
       item.appendChild(h('div', { class: 'btn-row' },
-        cBtn(`+ ${w.tiers[t.tier].label}`, () => landParcelCost(s, wk), () => A.buyLand(s, wk)),
-        canUnlockTier(s, wk) ? cBtn(`⤴ Odemknout: ${w.tiers[t.tier + 1].label}`, () => tierUnlockCost(s, wk), () => A.unlockTier(s, wk)) : null));
+        cBtn(`+ ${w.tiers[t.tier].label}`, () => landParcelCost(s, wk), () => A.buyLand(s, wk), () => `+${fmt(w.tiers[t.tier].area)} rozlohy`),
+        canUnlockTier(s, wk) ? cBtn(`⤴ Odemknout: ${w.tiers[t.tier + 1].label}`, () => tierUnlockCost(s, wk), () => A.unlockTier(s, wk), () => `${fmt(w.tiers[t.tier + 1].area)} rozlohy / parcela`) : null));
     }
     worldsBox.appendChild(item);
   }
@@ -326,7 +352,7 @@ function renderStations(s) {
   wrap.appendChild(section('Hustota / technologie pastvy (globální násobič)',
     liveSpan(() => `${DENSITY_TIERS[s.land.density].icon} ${DENSITY_TIERS[s.land.density].label} (×${fmt(densityMult(s))})`, 'dim'),
     s.land.density < dmax
-      ? cBtn(`Vylepšit → ${DENSITY_TIERS[s.land.density + 1].label} (×${DENSITY_TIERS[s.land.density + 1].mult})`, () => densityCost(s), () => A.buyDensity(s))
+      ? cBtn(`Vylepšit → ${DENSITY_TIERS[s.land.density + 1].label}`, () => densityCost(s), () => A.buyDensity(s), () => `kapacita ×${(DENSITY_TIERS[s.land.density + 1].mult / DENSITY_TIERS[s.land.density].mult).toFixed(0)}`)
       : h('div', { class: 'dim', text: 'Maximální hustota.' })));
 
   // MODIFIKÁTORY ROZLOHY
@@ -356,9 +382,9 @@ function renderStations(s) {
       liveSpan(() => `Hotových sfér: ${s.projects.dyson.count} · stavitelů: ${s.projects.dyson.builders} · energie: ${fmt(s.resources.energy || 0)}`, 'dim small'),
       autobuyToggle('Automaticky stavět (stavitelé + dokončovat sféry)', 'sphere'),
       h('div', { class: 'btn-row' },
-        cBtn(`${ICONS.builder} + Stavitel`, () => A.costFor(s, 'builder'), () => A.buyBuilder(s)),
-        aBtn(`${ICONS.sphere} Dokončit sféru!`, () => sphereReady(s), () => A.doClaimSphere(s)),
-        s.phase >= 8 ? cBtn(`${ICONS.laser} + Laser`, () => A.costFor(s, 'laser'), () => A.buyLaser(s)) : null)));
+        cBtn(`${ICONS.builder} + Stavitel`, () => A.costFor(s, 'builder'), () => A.buyBuilder(s), () => `+${(BALANCE.dyson.builderRate * 100).toFixed(0)} % rychlost stavby`),
+        aBtn(`${ICONS.sphere} Dokončit sféru!`, () => sphereReady(s), () => A.doClaimSphere(s), () => 'sféra ještě není hotová'),
+        s.phase >= 8 ? cBtn(`${ICONS.laser} + Laser`, () => A.costFor(s, 'laser'), () => A.buyLaser(s), () => '+50 % rychlost stavby') : null)));
   }
   return wrap;
 }
@@ -412,8 +438,8 @@ function renderPrestige(s) {
           ? `Plní se ${fmt(rate)}/s → zažehnutí za ~${etaStr(rate > 0 ? remain / rate : Infinity)} · získáš ~${fmt(award)} ${ICONS.knowledge}`
           : `Po zažehnutí získáš ~${fmt(award)} ${ICONS.knowledge} Vědění`;
       }, 'dim small'),
-      aBtn('Zažehnout černou díru (RESET)', () => canIgnite(s), () => A.doIgnite(s)),
-      singularityAvailable(s) ? aBtn('★ Dosáhnout singularity (NG+)', () => true, () => A.doSingularity(s)) : null));
+      aBtn('Zažehnout černou díru (RESET)', () => canIgnite(s), () => A.doIgnite(s), () => 'sklad ještě není plný', 'danger'),
+      singularityAvailable(s) ? aBtn('★ Dosáhnout singularity (NG+)', () => true, () => A.doSingularity(s), null, 'danger') : null));
   } else {
     const est = BALANCE.prestige.award(BALANCE.prestige.blackHoleBase, BALANCE.prestige.blackHoleBase, s.prestige.runs);
     wrap.appendChild(section('Černá díra — zatím nedostupné 🔒',
