@@ -141,5 +141,22 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('HUD ukazuje doporučený krok', document.getElementById('hud').textContent.includes('➤'));
 }
 
+// --- Batch B: šlechtící presety + náhled prestige ---
+{
+  const s = newGame(); s.resources.credits = 1e6; s.phase = 2;
+  initUI(s, 'app', () => {});
+  clickTab('Stáda');
+  const vlna = buttonsByText(panel(), 'Vlna')[0];
+  check('preset Vlna existuje', !!vlna);
+  if (vlna) vlna.click();
+  check('preset nastaví selekci na woolRate', s.groups[0].policy.cull.gene === 'woolRate' && s.groups[0].policy.cull.enabled);
+
+  const sp = newGame(); sp.phase = 7; sp.resources.credits = 1e6;
+  initUI(sp, 'app', () => {});
+  let ok = true;
+  try { clickTab('Prestiž'); } catch (e) { ok = false; console.error(e); }
+  check('náhled prestige (fáze 7) se vykreslí', ok && panel().textContent.includes('Černá díra'));
+}
+
 console.log(`ui: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -70,6 +70,11 @@ function autobuyToggle(label, key) {
     h('input', { type: 'checkbox', ...(on ? { checked: 'checked' } : {}), onchange: e => { A.setAutobuy(S, key, !!e.target.checked); onAction(); } }),
     ' ⚙ ' + label);
 }
+function presetBtn(label, gene, gid) {
+  const b = h('button', { class: 'act preset', text: label });
+  b.addEventListener('click', () => { A.setCull(S, gid, { enabled: true, gene, stage: 'adult', cutFrac: 0.3 }); onAction(); rebuildPanel(); });
+  return b;
+}
 function liveSpan(fn, cls) { const e = h('span', { class: cls || '' }); return reg(e, (el) => { el.textContent = fn(); }); }
 function liveBar(fracFn, labelFn, color = '#6aa84f') {
   const fill = h('div', { class: 'barfill', style: `background:${color}` });
@@ -140,7 +145,7 @@ const TABS = [
   { id: 'stations', label: 'Stanice', avail: () => true, render: renderStations },
   { id: 'storage', label: 'Sklad', avail: s => s.phase >= 6, render: renderStorage },
   { id: 'manager', label: 'Manažer', avail: s => s.phase >= 9, render: renderManager },
-  { id: 'prestige', label: 'Prestiž', avail: s => s.phase >= 10 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
+  { id: 'prestige', label: 'Prestiž', avail: s => s.phase >= 7 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
   { id: 'kronika', label: 'Kronika', avail: () => true, render: renderKronika },
   { id: 'stats', label: 'Staty', avail: () => true, render: renderStats },
 ];
@@ -204,7 +209,10 @@ function renderHerds(s) {
       h('div', { class: 'ctl-row' },
         liveSpan(() => `Useknout nejhorších: ${(group().policy.cull.cutFrac * 100).toFixed(0)} %`),
         h('input', { type: 'range', min: 0, max: BALANCE.maxCutFrac, step: 0.05, value: cull.cutFrac, oninput: e => { A.setCull(s, g.id, { cutFrac: +e.target.value }); } })),
-      h('div', { class: 'dim small' }, 'Selekce zvedá μ a utahuje σ; mutace σ doplňuje → šlechtit lze napořád.')));
+      h('div', { class: 'ctl-row' }, 'Strategie: ',
+        presetBtn('Vlna', 'woolRate', g.id), presetBtn('Množení', 'gestation', g.id), presetBtn('Maso', 'size', g.id),
+        s.phase >= 5 ? presetBtn('Inteligence', 'intelligence', g.id) : null, presetBtn('Vše', 'breedingScore', g.id)),
+      h('div', { class: 'dim small' }, 'Selekce zvedá μ a utahuje σ; mutace ji doplňuje → šlechtit lze napořád. Rychlá březost množí rychleji, kvalitní vlna nese víc kreditů; ve fázi 9 rozděl stáda a specializuj je (Manažer).')));
 
     wrap.appendChild(section('Automatika',
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killOld ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killOld'); onAction(); } }), ' Porážet staré (maso)'),
@@ -323,6 +331,12 @@ function renderPrestige(s) {
       liveBar(() => s.prestige.centralWarehouse / s.prestige.threshold, () => `${fmt(s.prestige.centralWarehouse)} / ${fmt(s.prestige.threshold)}`, '#8a5bef'),
       aBtn('Zažehnout černou díru (RESET)', () => canIgnite(s), () => A.doIgnite(s)),
       singularityAvailable(s) ? aBtn('★ Dosáhnout singularity (NG+)', () => true, () => A.doSingularity(s)) : null));
+  } else {
+    const est = BALANCE.prestige.award(BALANCE.prestige.blackHoleBase, BALANCE.prestige.blackHoleBase, s.prestige.runs);
+    wrap.appendChild(section('Černá díra — zatím nedostupné 🔒',
+      h('div', { class: 'dim small' }, 'Odemkne se ve fázi 10. Nahromadíš tolik surovin, až se zhroutí v černou díru — a s ní přijde návrat v čase (reset).'),
+      h('div', { class: 'dim small' }, `Odhad: první zažehnutí ti dá přibližně ${fmt(est)} Vědění.`),
+      h('div', { class: 'dim small' }, 'Za Vědění pak kupuješ trvalé perky níže — každý další běh je rychlejší.')));
   }
   const perks = h('div', {});
   perks.appendChild(liveSpan(() => `Vědění: ${fmt(s.prestige.knowledge || 0)} · resetů: ${s.prestige.runs}`, 'dim'));
