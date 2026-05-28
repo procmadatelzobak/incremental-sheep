@@ -200,7 +200,7 @@ function renderHerds(s) {
       costBtn(s, 'Vyrobit nápoj nesmrtelnosti', A.costFor(s, 'immortality'), () => A.craftImmortality(s))));
   }
 
-  setTimeout(() => drawHerd(cv, g), 0);
+  setTimeout(() => drawHerd(cv, g, s.world.ceilingMult), 0);
   return wrap;
 }
 
