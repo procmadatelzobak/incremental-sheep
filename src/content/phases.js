@@ -49,6 +49,24 @@ export function checkPhase(state) {
 export const phaseName = (state) => PHASES[state.phase]?.name || '?';
 export const phaseHint = (state) => PHASES[state.phase]?.hint || '';
 
+// Postup k další fázi (#26): { cur, target, label }. Cíle musí sedět s gate výše.
+export function phaseProgress(state) {
+  const cred = (target, label = 'Kredity celkem') => ({ cur: state.stats.credLifetime, target, label });
+  switch (state.phase) {
+    case 1: return cred(1500);
+    case 2: return cred(3e7);
+    case 3: return cred(5e9);
+    case 4: return { cur: state.flags.immortal ? 1 : 0, target: 1, label: 'Nápoj nesmrtelnosti' };
+    case 5: return cred(2.4e13);
+    case 6: return { cur: worldsColonized(state), target: 3, label: 'Kolonizované světy' };
+    case 7: return { cur: state.projects.dyson.count, target: 1, label: 'Dysonovy sféry' };
+    case 8: return { cur: state.projects.dyson.count, target: 5, label: 'Dysonovy sféry' };
+    case 9: return cred(1.8e15);
+    case 10: return { cur: state.prestige.centralWarehouse, target: state.prestige.threshold, label: 'Centrální sklad' };
+    default: return null;
+  }
+}
+
 // Vstup do fáze jako událost: lore + co se nově odemklo.
 export const PHASE_INFO = {
   2:  { unlocks: ['Mléko', 'Šlechtění (selekce)', 'Pastviny', 'Automatika porážek'], lore: '„I počal Farmář šlechtit, a stádo se mu množilo pod rukama."' },

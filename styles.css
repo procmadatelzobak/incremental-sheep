@@ -23,7 +23,13 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .hud-title .dim { font-size: 13px; }
 .hud-hint { color: var(--gold); font-size: 13px; margin: 4px 0 10px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; display: flex; flex-direction: column; min-width: 72px; }
+.chip { position: relative; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; display: flex; flex-direction: column; min-width: 72px; }
+/* delta bublina po nákupu (#25) */
+.chip-d { position: absolute; top: 2px; right: 8px; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; opacity: 0; pointer-events: none; }
+.chip-d.show { animation: deltapop 1.4s ease-out; }
+.chip-d.bad { color: var(--danger); }
+.chip-d.good { color: var(--accent); }
+@keyframes deltapop { 0% { opacity: 0; transform: translateY(7px); } 14% { opacity: 1; transform: translateY(0); } 78% { opacity: 1; } 100% { opacity: 0; transform: translateY(-7px); } }
 .chip-l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .chip-v { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .chip:first-child .chip-v { color: var(--accent); }

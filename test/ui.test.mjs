@@ -243,7 +243,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   const bars = hud().querySelectorAll('.bar');
   check('HUD má ukazatel naplnění pastvin', bars.length >= 1);
   check('ukazatel ukazuje počet ovcí / kapacitu', hud().textContent.includes('Pastviny') && hud().textContent.includes('/'));
-  const fill = hud().querySelector('.barfill');
+  const fill = hud().querySelector('.cap-fill');
   check('výplň ukazatele má nenulovou šířku (funguje)', !!fill && parseFloat(fill.style.width) > 0);
   s.groups[0].counts.F.adult = 1e6;     // přeplň → ~100 %
   updateUI(s);
@@ -296,6 +296,40 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   const txt = panel().textContent;
   // v sekci přehledu stáda nesmí být "3.7" ani "2.2"
   check('počty ovcí jsou zaokrouhlené (#21)', !txt.includes('3.7') && !txt.includes('2.2'));
+}
+
+// --- #26: HUD ukazuje progress lištu k další fázi ---
+{
+  const s = newGame(); s.resources.credits = 1e6; s.stats.credLifetime = 750;  // půl cesty do fáze 2 (1500)
+  initUI(s, 'app', () => {});
+  check('HUD má lištu postupu k fázi', !!hud().querySelector('.gate-fill'));
+  check('lišta postupu ukazuje fázi → fázi', hud().textContent.includes('Fáze 1→2'));
+  const gf = hud().querySelector('.gate-fill');
+  check('lišta postupu je ~v půlce (50 %)', parseFloat(gf.style.width) > 40 && parseFloat(gf.style.width) < 60);
+}
+
+// --- #27: filtr vylepšení (Vše/Dostupné/Brzy/Zakoupené) ---
+{
+  const s = newGame(); s.resources.credits = 80;   // jen na nejlevnější (Nůžky 60)
+  initUI(s, 'app', () => {});
+  clickTab('Vylepšení');
+  check('panel má filtr vylepšení', buttonsByText(panel(), 'Dostupné').length > 0 && buttonsByText(panel(), 'Zakoupené').length > 0);
+  const total = buttonsByText(panel(), 'Koupit').length;
+  buttonsByText(panel(), 'Dostupné')[0].click();
+  const avail = buttonsByText(panel(), 'Koupit').length;
+  check('filtr Dostupné ukáže méně položek než Vše', avail < total && avail >= 1);
+  buttonsByText(panel(), 'Zakoupené')[0].click();
+  check('filtr Zakoupené (nic koupeno) → prázdné', buttonsByText(panel(), 'Koupit').length === 0);
+}
+
+// --- #25: delta bublina po nákupu ---
+{
+  const s = newGame(); s.resources.credits = 1e6;
+  initUI(s, 'app', () => {});
+  clickTab('Vylepšení');
+  buttonsByText(panel(), 'Koupit')[0].click();
+  const d = hud().querySelector('.chip-d');
+  check('po nákupu se ukáže delta kreditů', !!d && d.textContent.includes('−'));
 }
 
 console.log(`ui: ${pass} passed, ${fail} failed`);

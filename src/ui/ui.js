@@ -10,7 +10,7 @@ import { upgradeCost, perkCost, getMults } from '../econ/economy.js';
 import { UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { herdCapacity, totalArea, densityMult, densityMaxLevel, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
-import { phaseName, phaseHint, PHASE_INFO, PHASES } from '../content/phases.js';
+import { phaseName, phaseHint, phaseProgress, PHASE_INFO, PHASES } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax, selectedNewbornDist } from '../sim/genetics.js';
 import { combinedCap, storedTradeTotal, TRADEABLE, storageEnabled } from '../econ/storage.js';
 import { processFraction } from '../econ/processing.js';
@@ -25,6 +25,7 @@ let updaters = [];           // aktualizace hodnot aktivního panelu (běží ka
 let S, onAction = () => {};
 let modalEl = null; const modalQueue = []; let toastWrap = null; const visitedTabs = new Set();
 let herdCanvasEl = null;
+let upgradeFilter = 'all';     // filtr v panelech vylepšení (#27): all|avail|soon|owned
 
 // --- DOM helpers -----------------------------------------------------------
 function h(tag, props = {}, ...kids) {
@@ -68,7 +69,10 @@ function cBtn(label, costFn, actFn, effectFn) {
   const main = h('span', { class: 'b-main' });
   const sub = h('span', { class: 'b-sub' });
   const b = h('button', { class: 'act cost' }, main, sub);
-  b.addEventListener('click', () => { if (actFn() !== false) { onAction(); flashChip('credits'); rebuildPanel(); } });
+  b.addEventListener('click', () => {
+    const cost = b._cost;
+    if (actFn() !== false) { onAction(); flashChip('credits'); if (cost > 0) popDelta('credits', '−' + fmt(cost), false); rebuildPanel(); }
+  });
   return reg(b, (el) => {
     const c = costFn(); el._cost = c;
     main.textContent = `${label} · ${fmt(c)} 💰`;
@@ -144,7 +148,7 @@ function geneBar(key) {
 }
 
 // --- HUD (staví se jednou, aktualizuje na místě) ---------------------------
-let hudChips = {}, hudEp, hudPhase, hudHint, hudStep, hudCap;
+let hudChips = {}, hudEp, hudPhase, hudHint, hudStep, hudCap, hudGate;
 function buildHud() {
   clear(hud);
   hudEp = h('b', {}); hudPhase = h('span', { class: 'dim' });
@@ -155,16 +159,30 @@ function buildHud() {
   for (const [k, lab] of [['credits', ICONS.credits + ' Kredity'], ['pop', ICONS.sheep + ' Ovce'], ['wool', ICONS.wool + ' Vlna/s'], ['milk', ICONS.milk + ' Mléko/s'], ['meat', ICONS.meat + ' Maso/s'], ['compute', ICONS.compute + ' Výpočet/s'], ['knowledge', ICONS.knowledge + ' Vědění']]) {
     const val = h('span', { class: 'chip-v', text: '0' });
     const trend = h('span', { class: 'chip-t' });
-    const chip = h('div', { class: 'chip' }, h('span', { class: 'chip-l', text: lab }), val, trend);
-    hudChips[k] = { chip, val, trend }; chips.appendChild(chip);
+    const delta = h('span', { class: 'chip-d' });           // delta flash po nákupu (#25)
+    const chip = h('div', { class: 'chip' }, h('span', { class: 'chip-l', text: lab }), val, trend, delta);
+    hudChips[k] = { chip, val, trend, delta }; chips.appendChild(chip);
   }
+  // Postup k další fázi (#26): vždy viditelná lišta cur / target.
+  const gateFill = h('div', { class: 'barfill gate-fill', style: 'background:#c9a227' });
+  const gateLab = h('span', { class: 'barlabel' });
+  const gateBar = h('div', { class: 'bar', title: 'Postup k další fázi' }, gateFill, gateLab);
+  hudGate = { bar: gateBar, fill: gateFill, lab: gateLab };
   // Ukazatel naplnění pastvin (#17): vždy viditelná lišta ovce / kapacita.
-  const capFill = h('div', { class: 'barfill', style: 'background:#6aa84f' });
+  const capFill = h('div', { class: 'barfill cap-fill', style: 'background:#6aa84f' });
   const capLab = h('span', { class: 'barlabel' });
   const capBar = h('div', { class: 'bar', title: 'Naplnění pastvin (ovce / kapacita)' }, capFill, capLab);
   hudCap = { fill: capFill, lab: capLab };
   hud.appendChild(h('div', { class: 'hud-title' }, hudEp, hudPhase));
-  hud.appendChild(hudHint); hud.appendChild(hudStep); hud.appendChild(chips); hud.appendChild(capBar);
+  hud.appendChild(hudHint); hud.appendChild(hudStep); hud.appendChild(chips); hud.appendChild(gateBar); hud.appendChild(capBar);
+}
+// Krátká delta bublina na kartě po akci (#25).
+function popDelta(key, text, good) {
+  const c = hudChips[key]; if (!c || !c.delta) return;
+  c.delta.textContent = text;
+  c.delta.className = 'chip-d show ' + (good ? 'good' : 'bad');
+  clearTimeout(c._dt);
+  c._dt = setTimeout(() => { if (c.delta) c.delta.className = 'chip-d'; }, 1400);
 }
 function updateHud(s) {
   if (!hud) return;
@@ -187,6 +205,15 @@ function updateHud(s) {
   if (hudChips.pop) {
     const gpm = (r._popGrowth || 0) * 60;
     hudChips.pop.trend.textContent = Math.abs(gpm) >= 0.1 ? `${gpm > 0 ? '+' : ''}${fmt(gpm)}/min` : '';
+  }
+  if (hudGate) {
+    const pg = phaseProgress(s);
+    if (pg && pg.target > 0 && s.phase < 11) {
+      hudGate.bar.style.display = '';
+      const f = Math.max(0, Math.min(1, pg.cur / pg.target));
+      hudGate.fill.style.width = (f * 100).toFixed(1) + '%';
+      hudGate.lab.textContent = `Fáze ${s.phase}→${s.phase + 1}: ${pg.label} ${fmt(pg.cur)} / ${fmt(pg.target)} (${(f * 100).toFixed(0)} %)`;
+    } else { hudGate.bar.style.display = 'none'; }
   }
   if (hudCap) {
     const cap = herdCapacity(s), pop = totalPopulation(s);
@@ -370,20 +397,39 @@ function upgradeItem(s, k) {
     cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k), () => `${u.desc} → Lv ${(s.upgrades[k] || 0) + 1}`));
 }
 
+// Filtr vylepšení (#27): projde-li daný klíč aktuálním filtrem.
+function upgradeVisible(s, k, isLab) {
+  const u = UPGRADES[k];
+  if (u.phase > s.phase) return false;
+  if (isLab ? !u.lab : (u.lab && labUnlocked(s))) return false;   // lab/ne-lab rozdělení
+  if (upgradeFilter === 'avail') return (s.resources.credits || 0) >= upgradeCost(s, k);
+  if (upgradeFilter === 'soon') return (s.resources.credits || 0) < upgradeCost(s, k);
+  if (upgradeFilter === 'owned') return (s.upgrades[k] || 0) > 0;
+  return true;   // 'all'
+}
+function filterChips() {
+  const opts = [['all', 'Vše'], ['avail', 'Dostupné'], ['soon', 'Brzy'], ['owned', 'Zakoupené']];
+  return h('div', { class: 'ctl-row' }, ...opts.map(([id, lab]) => {
+    const b = h('button', { class: 'act seg' + (upgradeFilter === id ? ' on' : ''), text: lab });
+    b.addEventListener('click', () => { upgradeFilter = id; rebuildPanel(); });
+    return b;
+  }));
+}
+const filterEmptyMsg = () => upgradeFilter === 'avail' ? 'Na nic teď nemáš — šetři.' : upgradeFilter === 'owned' ? 'Zatím nic zakoupeného.' : upgradeFilter === 'soon' ? 'Vše dostupné je koupené nebo na dosah.' : 'Zatím nic.';
+
 function renderUpgrades(s) {
   const wrap = h('div', {});
   const list = h('div', { class: 'list' });
   let any = false;
   for (const k in UPGRADES) {
-    const u = UPGRADES[k];
-    if (u.phase > s.phase) continue;
-    if (u.lab && labUnlocked(s)) continue;   // pokročilé upgrady se přesunou do Laboratoře
+    if (!upgradeVisible(s, k, false)) continue;
     any = true;
     list.appendChild(upgradeItem(s, k));
   }
   wrap.appendChild(section('Vylepšení',
     autobuyToggle('Automaticky kupovat vylepšení', 'upgrades'),
-    any ? list : h('div', { class: 'dim', text: 'Zatím nic.' })));
+    filterChips(),
+    any ? list : h('div', { class: 'dim', text: filterEmptyMsg() })));
   return wrap;
 }
 
@@ -393,16 +439,18 @@ function renderLab(s) {
   const wrap = h('div', {});
   const list = h('div', { class: 'list' });
   let any = false;
+  let anyUnlocked = false;
   for (const k in UPGRADES) {
-    const u = UPGRADES[k];
-    if (!u.lab || u.phase > s.phase) continue;
+    if (UPGRADES[k].lab && UPGRADES[k].phase <= s.phase) anyUnlocked = true;
+    if (!upgradeVisible(s, k, true)) continue;
     any = true;
     list.appendChild(upgradeItem(s, k));
   }
   wrap.appendChild(section(ICONS.lab + ' Laboratoř',
     h('div', { class: 'dim small', text: 'Výzkumné křídlo farmy: dojení, zpracování, genetika a vývoj ovčích mozků.' }),
     autobuyToggle('Automaticky kupovat vylepšení', 'upgrades'),
-    any ? list : h('div', { class: 'dim', text: 'Zatím není co zkoumat — odemkne se s dalšími fázemi.' })));
+    filterChips(),
+    any ? list : h('div', { class: 'dim', text: anyUnlocked ? filterEmptyMsg() : 'Zatím není co zkoumat — odemkne se s dalšími fázemi.' })));
 
   // Zpracování (#23): co dělají Tkalcovny + živý ukazatel sukna/sýra.
   if (s.phase >= 3) {
@@ -635,7 +683,7 @@ function rebuildPanel() {
 
 // --- veřejné API -----------------------------------------------------------
 export function initUI(state, mountId = 'app', actionCb = () => {}) {
-  S = state; onAction = actionCb; activeTab = 'herds';
+  S = state; onAction = actionCb; activeTab = 'herds'; upgradeFilter = 'all';
   root = document.getElementById(mountId);
   clear(root);
   hud = h('div', { class: 'hud', id: 'hud' });
