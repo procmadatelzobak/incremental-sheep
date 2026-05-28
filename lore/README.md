@@ -26,6 +26,11 @@ správně.
 | 10 | [Kniha Černé díry](10-kniha-cerne-diry.md) | Sklad, černá díra, stroj času a návrat |
 | 11 | [Kniha Zjevení](11-kniha-zjeveni.md) | Singularita a zjištění, kam to celé vedlo |
 
+## Pro vývoj hry
+
+[**Osnova příběhu a postupu hry**](osnova-hry.md) — heslovitý přehled fáze po
+fázi (příběhový beat + herní mechaniky každé fáze) jako vývojová mapa.
+
 ## Dva refrény, jež se vinou Písmem
 
 1. *„A spočítal Farmář své ovce, a bylo jich tolik a tolik. A viděl, že je to
