@@ -20,7 +20,7 @@ export const GENES = {
   fertility:     { min: 4,   max: 24,  base: 8,   sd: 1.5,  mut: 0.6,  dec: 1, label: 'Plodnost',      extreme: true,  phase: 1 },
   gestation:     { min: 8,   max: 60,  base: 25,  sd: 4,    mut: 1.5,  dec: 1, label: 'Březost (s)',   lowerBetter: true, phase: 1 },
   lifespan:      { min: 60,  max: 600, base: 180, sd: 20,   mut: 8,    dec: 0, label: 'Délka života',  extreme: true,  phase: 1 },
-  childhoodFrac: { min: 0.10,max: 0.45,base: 0.25,sd: 0.03, mut: 0.02, dec: 2, label: 'Podíl dětství', phase: 1 },
+  maturity:      { min: 0.5, max: 4,   base: 1,   sd: 0.12, mut: 0.06, dec: 2, label: 'Rychlost dospívání', extreme: true, phase: 1 },
   adultFrac:     { min: 0.30,max: 0.60,base: 0.45,sd: 0.04, mut: 0.02, dec: 2, label: 'Podíl dospěl.', phase: 1 },
   milkRate:      { min: 0.2, max: 6,   base: 0.8, sd: 0.2,  mut: 0.10, dec: 2, label: 'Mléko/s',       extreme: true,  phase: 2 },
   intelligence:  { min: 0.1, max: 10,  base: 0.5, sd: 0.15, mut: 0.12, dec: 2, label: 'Inteligence',   extreme: true,  phase: 5 },
@@ -51,13 +51,13 @@ export const UPGRADES = {
   commerce:  { label: 'Obchod',        phase: 1, base: 120,  growth: 1.75, per: 0.12, kind: 'priceMult', desc: '+12 % ceny' },
   courtship: { label: 'Námluvy',       phase: 1, base: 100,  growth: 1.8,  per: 0.10, kind: 'breedMult', desc: '-10 % březost' },
   ram:       { label: 'Beran',         phase: 1, base: 300,  growth: 2.0,  per: 2,    kind: 'fertBonus', desc: '+2 plodnost samců' },
-  milkMach:  { label: 'Dojička',       phase: 2, base: 400,  growth: 1.75, per: 0.18, kind: 'milkMult',  desc: '+18 % mléko' },
+  milkMach:  { label: 'Dojička',       phase: 2, base: 400,  growth: 1.75, per: 0.18, kind: 'milkMult',  desc: '+18 % mléko', lab: true },
   fatten:    { label: 'Výkrm',         phase: 2, base: 500,  growth: 1.8,  per: 0.15, kind: 'meatMult',  desc: '+15 % maso' },
   monopoly:  { label: 'Monopol',       phase: 3, base: 5e3,  growth: 2.1,  per: 0.25, kind: 'priceMult', desc: '+25 % ceny (šponování)' },
-  looms:     { label: 'Tkalcovny',     phase: 3, base: 8e3,  growth: 1.9,  per: 0.2,  kind: 'procMult',  desc: '+20 % zpracování' },
-  genetics:  { label: 'Genetika',      phase: 5, base: 5e4,  growth: 1.9,  per: 0.05, kind: 'ceilingMult', desc: '+5 % strop genů' },
-  cloning:   { label: 'Klonování',     phase: 5, base: 8e4,  growth: 1.85, per: 0.2,  kind: 'birthMult', desc: '+20 % porodnost' },
-  computeOpt:{ label: 'Optimalizace',  phase: 5, base: 1e5,  growth: 1.9,  per: 0.25, kind: 'computeMult',desc:'+25 % výpočet' },
+  looms:     { label: 'Tkalcovny',     phase: 3, base: 8e3,  growth: 1.9,  per: 0.2,  kind: 'procMult',  desc: '+20 % zpracování', lab: true },
+  genetics:  { label: 'Genetika',      phase: 5, base: 5e4,  growth: 1.9,  per: 0.05, kind: 'ceilingMult', desc: '+5 % strop genů', lab: true },
+  cloning:   { label: 'Klonování',     phase: 5, base: 8e4,  growth: 1.85, per: 0.2,  kind: 'birthMult', desc: '+20 % porodnost', lab: true },
+  computeOpt:{ label: 'Optimalizace',  phase: 5, base: 1e5,  growth: 1.9,  per: 0.25, kind: 'computeMult',desc:'+25 % výpočet', lab: true },
 };
 
 // --- PERKY (trvalé, kupují se za Vědění; přežijí reset) — 5 větví -----------

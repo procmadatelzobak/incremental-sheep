@@ -39,6 +39,7 @@ export function breedingScore(genes, ceilingMult = 1) {
   let sum = 0, n = 0;
   for (const k in genes) {
     const spec = GENES[k];
+    if (!spec) continue;             // přeskoč osiřelé geny ze starých savů
     const lo = geneMin(k, ceilingMult), hi = geneMax(k, ceilingMult);
     let norm = (genes[k].mu - lo) / (hi - lo || 1);
     if (spec.lowerBetter) norm = 1 - norm;

@@ -27,6 +27,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .chip-l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .chip-v { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .chip:first-child .chip-v { color: var(--accent); }
+.chip-t { font-size: 10px; color: var(--accent); font-variant-numeric: tabular-nums; min-height: 12px; }
 
 /* Tabs */
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }

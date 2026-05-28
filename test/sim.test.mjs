@@ -7,6 +7,7 @@ import { runAutobuy, setAutobuy, suggestStep, costFor, setProtect, buyLand, buyA
 import { checkAchievements, updateRecords } from '../src/content/achievements.js';
 import { getMults } from '../src/econ/economy.js';
 import { applySelectionCull } from '../src/sim/groups.js';
+import { GENES } from '../src/config.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) { if (cond) pass++; else { fail++; console.error('  FAIL:', name); } }
@@ -211,6 +212,61 @@ function autoPlayer() {
     if (s.phase === 4 && !s.flags.immortal) { craftImmortality(s); return; }
     runAutobuy(s);
   };
+}
+
+// 6) #15: gen "rychlost dospívání" (maturity) + migrace starého childhoodFrac
+{
+  check('gen maturity existuje, childhoodFrac ne', !!GENES.maturity && !GENES.childhoodFrac);
+  const ng = newGame();
+  check('nová skupina má gen maturity', !!ng.groups[0].genes.maturity && !ng.groups[0].genes.childhoodFrac);
+
+  // vyšší maturity = rychlejší dospívání (kratší dětství → dřív dospělí)
+  const fast = newGame(), slow = newGame();
+  fast.groups[0].genes.maturity.mu = 3; slow.groups[0].genes.maturity.mu = 0.6;
+  fast.groups[0].counts = { M: { child: 100, adult: 0, old: 0 }, F: { child: 100, adult: 0, old: 0 } };
+  slow.groups[0].counts = { M: { child: 100, adult: 0, old: 0 }, F: { child: 100, adult: 0, old: 0 } };
+  run(fast, 20); run(slow, 20);
+  check('vyšší maturity → rychleji dospělí', fast.groups[0].counts.M.adult > slow.groups[0].counts.M.adult);
+
+  // starý save: gen childhoodFrac místo maturity se zmigruje, hra nespadne
+  const old = newGame();
+  delete old.groups[0].genes.maturity;
+  old.groups[0].genes.childhoodFrac = { mu: 0.4, sigma: 0.03 };  // pomalé dětství
+  const loaded = deserialize(serialize(old));
+  check('hydrate přejmenuje childhoodFrac → maturity', !!loaded.groups[0].genes.maturity && !loaded.groups[0].genes.childhoodFrac);
+  check('migrace: dlouhé dětství → nízká maturity', loaded.groups[0].genes.maturity.mu < 1);
+  let ok = true;
+  try { run(loaded, 30); } catch (e) { ok = false; console.error(e); }
+  check('starý save (childhoodFrac) běží bez chyby', ok && isFinite(loaded.resources.credits) && isFinite(totalPopulation(loaded)));
+
+  // šlechtění na maturity i dlouhověkost zvedá μ
+  const s = newGame(); s.phase = 2;
+  const g = s.groups[0];
+  g.counts.M.adult = 20; g.counts.F.adult = 20;
+  g.genes.maturity.sigma = 0.4;
+  const mu0 = g.genes.maturity.mu;
+  g.policy.cull = { enabled: true, gene: 'maturity', cutFrac: 0.4, stage: 'adult' };
+  g.policy.protect = { enabled: false };
+  applySelectionCull(g, getMults(s), s);
+  check('selekce na maturity zvedá μ', g.genes.maturity.mu > mu0);
+
+  const s2 = newGame(); const g2 = s2.groups[0];
+  g2.counts.M.adult = 20; g2.counts.F.adult = 20;
+  g2.genes.lifespan.sigma = 40;
+  const life0 = g2.genes.lifespan.mu;
+  g2.policy.cull = { enabled: true, gene: 'lifespan', cutFrac: 0.4, stage: 'adult' };
+  g2.policy.protect = { enabled: false };
+  applySelectionCull(g2, getMults(s2), s2);
+  check('selekce na dlouhověkost zvedá μ', g2.genes.lifespan.mu > life0);
+}
+
+// 7) #11: tik počítá trend příjmu a růstu stáda
+{
+  const s = newGame();
+  run(s, 30);
+  check('rates: příjem kreditů /s je číslo', typeof s.rates._income === 'number' && s.rates._income >= 0);
+  check('rates: růst stáda /s je číslo', typeof s.rates._popGrowth === 'number');
+  check('rostoucí stádo má kladný příjem', s.rates._income > 0);
 }
 
 console.log(`sim: ${pass} passed, ${fail} failed`);

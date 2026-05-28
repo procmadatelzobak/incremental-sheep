@@ -27,6 +27,9 @@ export function step(state, dt) {
   const sp = state.flags.immortal ? (BALANCE.immortalSpeed + BALANCE.immortalSpeedPerPhase * Math.max(0, state.phase - 4)) : 1;
   const edt = dt * sp;                   // zrychlený čas pro stárnutí/porody/produkci/selekci
 
+  let popStart = 0;
+  for (const g of state.groups) popStart += totalCount(g);
+
   // 1) stárnutí všech stád
   for (const g of state.groups) aging(g, edt);
 
@@ -53,6 +56,7 @@ export function step(state, dt) {
     for (const g of state.groups) addInto(produced, applySelectionCull(g, ctx, state));
   }
 
+  const credBefore = state.resources.credits || 0;
   applyProduced(state, produced, ctx);
   stepProjects(state, edt, ctx);
 
@@ -74,5 +78,7 @@ export function step(state, dt) {
   state.rates = {};
   for (const k in produced) state.rates[k] = produced[k] / dt;
   state.rates._pop = total;
+  state.rates._popGrowth = (total - popStart) / dt;          // čistá změna stáda /s (trend #11)
+  state.rates._income = ((state.resources.credits || 0) - credBefore) / dt;  // příjem kreditů /s (#11)
   state.rates._speed = sp;
 }

@@ -1,10 +1,11 @@
 // ===========================================================================
 //  Ukládání: JSON → base64, offline progres. Verze 3, bez migrace (čistý start).
 // ===========================================================================
-import { SAVE_KEY, VERSION, MAX_OFFLINE_SECONDS, TIME_SCALE } from '../config.js';
-import { newGame } from './state.js';
+import { SAVE_KEY, VERSION, MAX_OFFLINE_SECONDS, TIME_SCALE, GENES } from '../config.js';
+import { newGame, defaultPolicy } from './state.js';
 import { step } from '../sim/simulation.js';
 import { totalCount } from '../sim/cohort.js';
+import { clamp } from '../rng.js';
 
 function replacer(key, value) {
   if (key.startsWith('_')) return undefined;   // _cullAcc apod.
@@ -43,6 +44,26 @@ function hydrate(data) {
     mods: dl.mods || {},
     worlds: Object.assign({}, JSON.parse(JSON.stringify(defaults.land.worlds)), dl.worlds || {}),
   };
+  // geny skupin: srovnej na aktuální sadu GENES (doplň chybějící, zahoď osiřelé,
+  // přejmenuj childhoodFrac → maturity, ať staré savy nepadnou na NaN).
+  for (const g of state.groups) {
+    const old = (g && typeof g.genes === 'object' && g.genes) || {};
+    const fixed = {};
+    for (const k in GENES) {
+      const spec = GENES[k];
+      fixed[k] = (old[k] && typeof old[k].mu === 'number')
+        ? { mu: old[k].mu, sigma: typeof old[k].sigma === 'number' ? old[k].sigma : spec.sd }
+        : { mu: spec.base, sigma: spec.sd };
+    }
+    // migrace: vyšší childhoodFrac = pomalejší dospívání → maturity ≈ 0.25/childFrac
+    if (old.childhoodFrac && typeof old.childhoodFrac.mu === 'number' && !old.maturity) {
+      fixed.maturity = { mu: clamp(0.25 / Math.max(0.05, old.childhoodFrac.mu), GENES.maturity.min, GENES.maturity.max), sigma: GENES.maturity.sd };
+    }
+    g.genes = fixed;
+    if (typeof g.bredFracF !== 'number') g.bredFracF = 0;
+    if (!g.policy) g.policy = defaultPolicy();
+    if (!g.policy.protect) g.policy.protect = { enabled: true, minF: 8, minM: 2 };
+  }
   state.rates = {};
   if (typeof state._cullAcc !== 'number') state._cullAcc = 0;
   return state;

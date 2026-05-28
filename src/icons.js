@@ -7,7 +7,7 @@ export const ICONS = {
   pasture: '🌾', processing: '🏭', station: '🚀', moon: '🌕', mars: '🔴', jupiter: '🪐',
   sphere: '☀️', compute: '🧠', knowledge: '📚', blackHole: '🕳️', singularity: '✨',
   builder: '🏗️', laser: '🔦', immortality: '🧪', storage: '📦', manager: '🧑‍🌾',
-  prestige: '🕳️', stats: '📊', kronika: '📜', upgrades: '🧬', oxygen: '🫧', energy: '⚡',
+  prestige: '🕳️', stats: '📊', kronika: '📜', upgrades: '🛠️', oxygen: '🫧', energy: '⚡', lab: '🔬',
 };
 
 // ikona fáze (1–11)

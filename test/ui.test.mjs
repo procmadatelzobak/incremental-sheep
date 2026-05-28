@@ -205,5 +205,50 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('fáze 1 má méně záložek než fáze 9', vis1 < vis9);
 }
 
+// --- #8: Laboratoř se odemkne s pozemky kolem města (Země tier 4) ---
+{
+  const a = newGame(); a.phase = 3; a.resources.credits = 1e7;
+  initUI(a, 'app', () => {});
+  const labHidden = !allButtons(tabs()).some(b => b.textContent.includes('Laboratoř') && b.style.display !== 'none');
+  check('Laboratoř skrytá bez městských pozemků', labHidden);
+
+  const b = newGame(); b.phase = 3; b.resources.credits = 1e7;
+  b.land.worlds.earth.tier = 4;
+  initUI(b, 'app', () => {});
+  const labVisible = allButtons(tabs()).some(x => x.textContent.includes('Laboratoř') && x.style.display !== 'none');
+  check('Laboratoř viditelná s pozemky kolem města', labVisible);
+  clickTab('Vylepšení');
+  check('lab upgrade (Dojička) NENÍ ve Vylepšení po odemčení laboratoře', !panel().textContent.includes('Dojička'));
+  clickTab('Laboratoř');
+  check('Laboratoř obsahuje pokročilé upgrady', panel().textContent.includes('Dojička') && panel().textContent.includes('Tkalcovny'));
+  let ok = true;
+  try { for (const bn of allButtons(panel())) { if (!bn.disabled) bn.click(); } } catch (e) { ok = false; console.error(e); }
+  check('proklik Laboratoře bez chyby', ok);
+}
+
+// --- #11: karty zdrojů ukazují trend (+kr/s, růst stáda /min) ---
+{
+  const s = newGame(); s.resources.credits = 1000;
+  initUI(s, 'app', () => {});
+  s.rates = { _income: 48, _popGrowth: 0.2, _pop: totalCount(s.groups[0]) };
+  updateUI(s);
+  check('karta kreditů ukazuje příjem /s', hud().textContent.includes('+48') && hud().textContent.includes('/s'));
+  check('karta ovcí ukazuje růst /min', hud().textContent.includes('/min'));
+}
+
+// --- #17: ukazatel naplnění pastvin na dashboardu (HUD) ---
+{
+  const s = newGame(); s.resources.credits = 1e6;
+  initUI(s, 'app', () => {});
+  const bars = hud().querySelectorAll('.bar');
+  check('HUD má ukazatel naplnění pastvin', bars.length >= 1);
+  check('ukazatel ukazuje počet ovcí / kapacitu', hud().textContent.includes('Pastviny') && hud().textContent.includes('/'));
+  const fill = hud().querySelector('.barfill');
+  check('výplň ukazatele má nenulovou šířku (funguje)', !!fill && parseFloat(fill.style.width) > 0);
+  s.groups[0].counts.F.adult = 1e6;     // přeplň → ~100 %
+  updateUI(s);
+  check('ukazatel reaguje na zaplnění (≈100 %)', parseFloat(fill.style.width) > 90);
+}
+
 console.log(`ui: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

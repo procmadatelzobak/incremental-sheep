@@ -140,7 +140,7 @@ function geneBar(key) {
 }
 
 // --- HUD (staví se jednou, aktualizuje na místě) ---------------------------
-let hudChips = {}, hudEp, hudPhase, hudHint, hudStep;
+let hudChips = {}, hudEp, hudPhase, hudHint, hudStep, hudCap;
 function buildHud() {
   clear(hud);
   hudEp = h('b', {}); hudPhase = h('span', { class: 'dim' });
@@ -150,11 +150,17 @@ function buildHud() {
   hudChips = {};
   for (const [k, lab] of [['credits', ICONS.credits + ' Kredity'], ['pop', ICONS.sheep + ' Ovce'], ['wool', ICONS.wool + ' Vlna/s'], ['milk', ICONS.milk + ' Mléko/s'], ['meat', ICONS.meat + ' Maso/s'], ['compute', ICONS.compute + ' Výpočet/s'], ['knowledge', ICONS.knowledge + ' Vědění']]) {
     const val = h('span', { class: 'chip-v', text: '0' });
-    const chip = h('div', { class: 'chip' }, h('span', { class: 'chip-l', text: lab }), val);
-    hudChips[k] = { chip, val }; chips.appendChild(chip);
+    const trend = h('span', { class: 'chip-t' });
+    const chip = h('div', { class: 'chip' }, h('span', { class: 'chip-l', text: lab }), val, trend);
+    hudChips[k] = { chip, val, trend }; chips.appendChild(chip);
   }
+  // Ukazatel naplnění pastvin (#17): vždy viditelná lišta ovce / kapacita.
+  const capFill = h('div', { class: 'barfill', style: 'background:#6aa84f' });
+  const capLab = h('span', { class: 'barlabel' });
+  const capBar = h('div', { class: 'bar', title: 'Naplnění pastvin (ovce / kapacita)' }, capFill, capLab);
+  hudCap = { fill: capFill, lab: capLab };
   hud.appendChild(h('div', { class: 'hud-title' }, hudEp, hudPhase));
-  hud.appendChild(hudHint); hud.appendChild(hudStep); hud.appendChild(chips);
+  hud.appendChild(hudHint); hud.appendChild(hudStep); hud.appendChild(chips); hud.appendChild(capBar);
 }
 function updateHud(s) {
   if (!hud) return;
@@ -172,12 +178,29 @@ function updateHud(s) {
   set('meat', fmt(r.meat || 0), true);
   set('compute', fmt(r.compute || 0), s.phase >= 5);
   set('knowledge', fmt(s.prestige.knowledge || 0), (s.prestige.knowledge || 0) > 0 || s.phase >= 10);
+  // mini trend na kartách (#11): příjem kreditů /s a růst stáda /min
+  if (hudChips.credits) hudChips.credits.trend.textContent = (r._income > 0.01) ? `+${fmt(r._income)}/s` : '';
+  if (hudChips.pop) {
+    const gpm = (r._popGrowth || 0) * 60;
+    hudChips.pop.trend.textContent = Math.abs(gpm) >= 0.1 ? `${gpm > 0 ? '+' : ''}${fmt(gpm)}/min` : '';
+  }
+  if (hudCap) {
+    const cap = herdCapacity(s), pop = totalPopulation(s);
+    const f = cap > 0 ? Math.max(0, Math.min(1, pop / cap)) : 0;
+    hudCap.fill.style.width = (f * 100).toFixed(1) + '%';
+    hudCap.fill.style.background = f > 0.97 ? '#c9a227' : '#6aa84f';   // skoro plno → zlatě (rozšiř pozemky)
+    hudCap.lab.textContent = `${ICONS.pasture} Pastviny: ${fmt(pop)} / ${fmt(cap)} ovcí (${(f * 100).toFixed(0)} %)`;
+  }
 }
 
 // --- ZÁLOŽKY ---------------------------------------------------------------
+// Laboratoř se odemkne, jakmile má hráč pozemky kolem prvního města (Země tier 4).
+const labUnlocked = (s) => (s.land.worlds.earth.tier || 0) >= 4;
+
 const TABS = [
   { id: 'herds', label: ICONS.sheep + ' Stáda', avail: () => true, render: renderHerds },
   { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
+  { id: 'lab', label: ICONS.lab + ' Laboratoř', avail: s => labUnlocked(s), render: renderLab },
   { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: s => s.phase >= 2, render: renderStations },
   { id: 'storage', label: ICONS.storage + ' Sklad', avail: s => s.phase >= 6, render: renderStorage },
   { id: 'manager', label: ICONS.manager + ' Manažer', avail: s => s.phase >= 9, render: renderManager },
@@ -222,7 +245,7 @@ function renderHerds(s) {
   const sexLbl = { M: 'samců', F: 'samic', mix: 'ovcí (půl/půl)' };
   const buyBtn = cBtn(`${ICONS.sheep} Koupit ovce`, () => A.addSheepCost(s),
     () => A.buyAddSheep(s),
-    () => `+${fmt((s.settings.buy.qty || 1) * BALANCE.sheepPerUnit)} ${sexLbl[s.settings.buy.sex] || 'ovcí'}`);
+    () => { const add = (s.settings.buy.qty || 1) * BALANCE.sheepPerUnit, pop = totalPopulation(s); return `+${fmt(add)} ${sexLbl[s.settings.buy.sex] || 'ovcí'} · stádo ${fmt(pop)}→${fmt(pop + add)}`; });
   buyBtn.addEventListener('click', () => flashEl(herdCanvasEl));
   wrap.appendChild(section(g.name,
     cv,
@@ -232,7 +255,7 @@ function renderHerds(s) {
     h('div', { class: 'stat-row dim' },
       liveSpan(() => `♂ ${fmt(group().counts.M.adult)} · ♀ ${fmt(group().counts.F.adult)} dospělých`),
       liveSpan(() => `Děti ${fmt(group().counts.M.child + group().counts.F.child)} · Staří ${fmt(group().counts.M.old + group().counts.F.old)}`)),
-    liveBar(() => totalPopulation(s) / herdCapacity(s), () => 'naplnění (všechny pozemky)'),
+    liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmt(p)} / ${fmt(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
     liveSpan(() => limitText(s), 'dim small'),
     sexRow, qtyRow, buyBtn,
     autobuyToggle('Automaticky dokupovat ovce', 'sheep'),
@@ -252,7 +275,8 @@ function renderHerds(s) {
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(cull.enabled ? { checked: 'checked' } : {}), onchange: e => { A.setCull(s, g.id, { enabled: !!e.target.checked }); onAction(); } }), ' Zapnout selekci (vybírat nejlepší do chovu)'),
       h('div', { class: 'ctl-row' }, 'Strategie: ',
         presetBtn('🧶 Vlna', 'woolRate', g.id), presetBtn('🥛 Mléko', 'milkRate', g.id), presetBtn('🥩 Maso', 'size', g.id),
-        presetBtn('🐇 Množení', 'gestation', g.id), s.phase >= 5 ? presetBtn('🧠 Mozek', 'intelligence', g.id) : null, presetBtn('⚖️ Vše', 'breedingScore', g.id)),
+        presetBtn('🐇 Množení', 'gestation', g.id), presetBtn('🍼 Dospívání', 'maturity', g.id), presetBtn('⏳ Dlouhověkost', 'lifespan', g.id),
+        s.phase >= 5 ? presetBtn('🧠 Mozek', 'intelligence', g.id) : null, presetBtn('⚖️ Vše', 'breedingScore', g.id)),
       h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value }); } }, ...geneOpts),
         ' ve stádiu ', h('select', { onchange: e => { A.setCull(s, g.id, { stage: e.target.value }); } }, ...stageOpts)),
       h('div', { class: 'ctl-row' },
@@ -299,6 +323,14 @@ function renderHerds(s) {
   return wrap;
 }
 
+function upgradeItem(s, k) {
+  const u = UPGRADES[k];
+  return h('div', { class: 'item' },
+    h('div', { class: 'item-h' }, h('b', { text: u.label }), liveSpan(() => `Lv ${s.upgrades[k] || 0}`, 'dim')),
+    h('div', { class: 'dim small', text: u.desc }),
+    cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k), () => `${u.desc} → Lv ${(s.upgrades[k] || 0) + 1}`));
+}
+
 function renderUpgrades(s) {
   const wrap = h('div', {});
   const list = h('div', { class: 'list' });
@@ -306,15 +338,32 @@ function renderUpgrades(s) {
   for (const k in UPGRADES) {
     const u = UPGRADES[k];
     if (u.phase > s.phase) continue;
+    if (u.lab && labUnlocked(s)) continue;   // pokročilé upgrady se přesunou do Laboratoře
     any = true;
-    list.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: u.label }), liveSpan(() => `Lv ${s.upgrades[k] || 0}`, 'dim')),
-      h('div', { class: 'dim small', text: u.desc }),
-      cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k), () => `${u.desc} → Lv ${(s.upgrades[k] || 0) + 1}`)));
+    list.appendChild(upgradeItem(s, k));
   }
   wrap.appendChild(section('Vylepšení',
     autobuyToggle('Automaticky kupovat vylepšení', 'upgrades'),
     any ? list : h('div', { class: 'dim', text: 'Zatím nic.' })));
+  return wrap;
+}
+
+// Laboratoř (#8): samostatná sekce pro pokročilé upgrady — dojení, zpracování,
+// genetika, klonování, vývoj mozků. Odemkne se s pozemky kolem prvního města.
+function renderLab(s) {
+  const wrap = h('div', {});
+  const list = h('div', { class: 'list' });
+  let any = false;
+  for (const k in UPGRADES) {
+    const u = UPGRADES[k];
+    if (!u.lab || u.phase > s.phase) continue;
+    any = true;
+    list.appendChild(upgradeItem(s, k));
+  }
+  wrap.appendChild(section(ICONS.lab + ' Laboratoř',
+    h('div', { class: 'dim small', text: 'Výzkumné křídlo farmy: dojení, zpracování, genetika a vývoj ovčích mozků.' }),
+    autobuyToggle('Automaticky kupovat vylepšení', 'upgrades'),
+    any ? list : h('div', { class: 'dim', text: 'Zatím není co zkoumat — odemkne se s dalšími fázemi.' })));
   return wrap;
 }
 

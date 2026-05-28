@@ -20,10 +20,17 @@ export const totalPopulation = (state) => state.groups.reduce((t, g) => t + tota
 export function adultCount(group) { return group.counts.M.adult + group.counts.F.adult; }
 export function stageTotal(group, stage) { return group.counts.M[stage] + group.counts.F[stage]; }
 
+// Podíl života stráveného jako dítě = odvozeno z genu "rychlost dospívání"
+// (vyšší maturity → kratší dětství). Delší dětství = lepší kvalita vlny (viz produkce).
+export function childFracOf(genes) {
+  const mat = (genes.maturity && genes.maturity.mu) || 1;
+  return Math.min(0.6, Math.max(0.05, 0.25 / mat));
+}
+
 // Hranice stádií z průměrných genů (stáří vždy ≥ 10 % života).
 export function stageBoundaries(genes) {
   const life = genes.lifespan.mu;
-  const childFrac = genes.childhoodFrac.mu;
+  const childFrac = childFracOf(genes);
   const adultFrac = Math.min(genes.adultFrac.mu, 0.9 - childFrac);
   const childDur = life * childFrac;
   const adultDur = life * adultFrac;
