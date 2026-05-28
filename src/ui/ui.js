@@ -15,7 +15,7 @@ import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
 import { drawHerd } from '../render/canvas.js';
 
-let root, hud, tabsBar, panelEl, bannerEl, activeTab = 'herds';
+let root, hud, tabsBar, panelEl, bannerEl, activeTab = 'herds', lastTabSig = '';
 let onAction = () => {};   // callback, aby main mohl po akci uložit
 
 // --- DOM helpers -----------------------------------------------------------
@@ -363,7 +363,9 @@ export function rebuild() {
 export function updateUI(state, full) {
   S = state;
   updateHud(state);
-  buildTabs(); // zobrazí nově odemčené záložky
+  // překresli záložky jen když se změní jejich dostupnost (ne každý frame)
+  const sig = TABS.filter(t => t.avail(state)).map(t => t.id).join(',');
+  if (sig !== lastTabSig) { lastTabSig = sig; buildTabs(); }
   if (full) {
     // nepřekresluj, pokud uživatel právě ovládá vstup v panelu
     const a = document.activeElement;

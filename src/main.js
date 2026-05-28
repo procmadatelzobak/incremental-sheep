@@ -8,14 +8,19 @@ import { step } from './sim/simulation.js';
 import { initUI, updateUI, showBanner } from './ui/ui.js';
 import { fmt } from './format.js';
 
-let state = loadLocal() || newGame();
+const loaded = loadLocal();
+let state = loaded || newGame();
 const save = () => saveLocal(state);
 
 let earned = 0;
 try { earned = applyOffline(state); } catch (e) { /* ignore */ }
 
 initUI(state, 'app', save);
-if (earned > 1) showBanner(`Vítej zpět! Offline jsi vydělal ${fmt(earned)} kreditů.`);
+if (!loaded) {
+  showBanner('Vítej! Ovce dávají vlnu, ta se prodává za kredity. Kupuj ovce a vylepšení, rozšiřuj a zahušťuj pastviny; od fáze 2 šlechti stádo selekcí. Nahoře vždy vidíš cíl aktuální fáze.');
+} else if (earned > 1) {
+  showBanner(`Vítej zpět! Offline jsi vydělal ${fmt(earned)} kreditů.`);
+}
 
 // --- footer (export/import/reset) ------------------------------------------
 const $ = (id) => document.getElementById(id);
