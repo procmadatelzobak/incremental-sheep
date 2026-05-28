@@ -3,6 +3,7 @@ import { step } from '../src/sim/simulation.js';
 import { totalCount, totalPopulation } from '../src/sim/cohort.js';
 import { herdCapacity, locationCap } from '../src/content/locations.js';
 import { serialize, deserialize } from '../src/io/save.js';
+import { runAutobuy, setAutobuy } from '../src/econ/actions.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) { if (cond) pass++; else { fail++; console.error('  FAIL:', name); } }
@@ -34,6 +35,27 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   run(s, 600);
   check('populace přeroste kapacitu jedné louky', totalPopulation(s) > meadowCap + 1);
   check('populace nepřekročí celkovou kapacitu', totalPopulation(s) <= cap + 5);
+}
+
+// 1c) autobuyer: zapnuté kategorie nakupují; při nasávání černé díry je pozastaven
+{
+  const s = newGame();
+  s.resources.credits = 1e6;
+  setAutobuy(s, 'land', true);
+  const cr0 = s.resources.credits, lvl0 = s.locations[0].level;
+  runAutobuy(s);
+  check('autobuy pozemků utratil kredity', s.resources.credits < cr0);
+  check('autobuy pozemků něco koupil', s.locations[0].level > lvl0 || s.locations.length > 1);
+
+  const s2 = newGame(); s2.resources.credits = 1e6; setAutobuy(s2, 'upgrades', true);
+  runAutobuy(s2);
+  check('autobuy vylepšení něco koupil', Object.keys(s2.upgrades).length > 0);
+
+  const s3 = newGame(); s3.resources.credits = 1e6; setAutobuy(s3, 'land', true);
+  s3.phase = 10; s3.prestige.armed = true;
+  const c3 = s3.resources.credits;
+  runAutobuy(s3);
+  check('autobuy pozastaven při nasávání černé díry', s3.resources.credits === c3);
 }
 
 // 2) selekce zvedá μ a (čistě) drží σ omezenou

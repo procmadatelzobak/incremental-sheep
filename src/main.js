@@ -5,6 +5,7 @@ import { TIME_SCALE, AUTOSAVE_MS } from './config.js';
 import { newGame } from './io/state.js';
 import { loadLocal, saveLocal, clearLocal, serialize, deserialize, applyOffline } from './io/save.js';
 import { step } from './sim/simulation.js';
+import { runAutobuy } from './econ/actions.js';
 import { initUI, updateUI, showBanner } from './ui/ui.js';
 import { fmt } from './format.js';
 
@@ -49,6 +50,7 @@ function frame(now) {
   dt *= TIME_SCALE;
   let rem = dt;
   while (rem > 0) { const c = Math.min(0.1, rem); step(state, c); rem -= c; }
+  runAutobuy(state);               // automatické nákupy (zapnuté kategorie)
   saveAcc += dt;
   updateUI(state);                 // jen aktualizuje hodnoty na místě (bez blikání)
   if (saveAcc >= AUTOSAVE_MS / 1000) { save(); saveAcc = 0; }

@@ -69,6 +69,7 @@ button.act:disabled { opacity: .42; cursor: not-allowed; }
 /* Controls */
 .ctl-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
 .ck { display: flex; align-items: center; gap: 8px; margin: 5px 0; cursor: pointer; }
+.ck.auto { color: var(--gold); font-size: 12px; margin-top: 8px; }
 input[type=range] { flex: 1; min-width: 120px; }
 select, input[type=number] { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; }
 

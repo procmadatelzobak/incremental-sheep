@@ -53,6 +53,11 @@ function aBtn(label, enabledFn, actFn) {
   b.addEventListener('click', () => { if (actFn() !== false) { onAction(); rebuildPanel(); } });
   return reg(b, (el) => { el.disabled = !enabledFn(); });
 }
+function autobuyToggle(label, key) {
+  return h('label', { class: 'ck auto' },
+    h('input', { type: 'checkbox', ...(S.settings.autobuy[key] ? { checked: 'checked' } : {}), onchange: e => { A.setAutobuy(S, key, !!e.target.checked); onAction(); } }),
+    ' ⚙ ' + label);
+}
 function liveSpan(fn, cls) { const e = h('span', { class: cls || '' }); return reg(e, (el) => { el.textContent = fn(); }); }
 function liveBar(fracFn, labelFn, color = '#6aa84f') {
   const fill = h('div', { class: 'barfill', style: `background:${color}` });
@@ -160,7 +165,8 @@ function renderHerds(s) {
       liveSpan(() => `Staří ${fmt(group().counts.M.old + group().counts.F.old)}`)),
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => 'naplnění (všechny pozemky)'),
     h('div', { class: 'dim small' }, 'Kapacita = součet všech pozemků. Kupuj/rozšiřuj louky a pastviny v záložce Stanice.'),
-    cBtn('+ Ovce', () => A.costFor(s, 'addSheep'), () => A.buyAddSheep(s))));
+    cBtn('+ Ovce', () => A.costFor(s, 'addSheep'), () => A.buyAddSheep(s)),
+    autobuyToggle('Automaticky kupovat ovce', 'sheep')));
 
   const genes = h('div', { class: 'genes' });
   for (const k in GENES) if (GENES[k].phase <= s.phase) genes.appendChild(geneBar(k));
@@ -208,7 +214,9 @@ function renderUpgrades(s) {
       h('div', { class: 'dim small', text: u.desc }),
       cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k))));
   }
-  wrap.appendChild(section('Vylepšení', any ? list : h('div', { class: 'dim', text: 'Zatím nic.' })));
+  wrap.appendChild(section('Vylepšení',
+    autobuyToggle('Automaticky kupovat vylepšení', 'upgrades'),
+    any ? list : h('div', { class: 'dim', text: 'Zatím nic.' })));
   return wrap;
 }
 
@@ -235,12 +243,14 @@ function renderStations(s) {
     buys.appendChild(cBtn('+ Kyslík', () => A.costFor(s, 'oxygen'), () => A.buyOxygen(s)));
   }
   wrap.appendChild(section('Expanze', buys,
+    autobuyToggle('Automaticky rozšiřovat pozemky' + (s.phase >= 6 ? ' (+ stanice, sklad, kyslík)' : ' (louky, pastviny, hustota)'), 'land'),
     s.phase >= 6 ? liveSpan(() => `Kyslíková kapacita: ${fmt(s.buys.oxygen * BALANCE.oxygenPerLevel)} (pro Měsíc).`, 'dim small') : null));
 
   if (s.phase >= 7) {
     wrap.appendChild(section('Dysonova sféra',
       liveBar(() => s.projects.dyson.progress / dysonTarget(s), () => `${fmt(s.projects.dyson.progress)} / ${fmt(dysonTarget(s))}`, '#c9a227'),
       liveSpan(() => `Hotových sfér: ${s.projects.dyson.count} · stavitelů: ${s.projects.dyson.builders} · energie: ${fmt(s.resources.energy || 0)}`, 'dim small'),
+      autobuyToggle('Automaticky stavět (stavitelé + dokončovat sféry)', 'sphere'),
       h('div', { class: 'btn-row' },
         cBtn('+ Stavitel', () => A.costFor(s, 'builder'), () => A.buyBuilder(s)),
         aBtn('Dokončit sféru!', () => sphereReady(s), () => A.doClaimSphere(s)),

@@ -166,4 +166,42 @@ export function armBlackHole(state) {
 export function doIgnite(state) { return igniteBlackHole(state) > 0; }
 export function doSingularity(state) { return triggerSingularity(state); }
 
+// --- autobuyer -------------------------------------------------------------
+export function setAutobuy(state, key, on) {
+  state.settings.autobuy[key] = !!on;
+  return true;
+}
+
+// Kupuje nejlevnější dostupnou věc v zapnutých kategoriích, dokud je z čeho.
+// Pozastaveno při nasávání do černé díry (ať jde střádat).
+export function runAutobuy(state) {
+  const ab = state.settings.autobuy;
+  if (!ab || state.prestige.armed) return;
+  let guard = 0;
+  while (guard++ < 80) {
+    const opts = [];
+    if (ab.sheep) opts.push([costFor(state, 'addSheep'), () => buyAddSheep(state)]);
+    if (ab.land) {
+      for (const loc of state.locations) {
+        opts.push([costFor(state, 'expand', loc), () => buyExpand(state, loc.id)]);
+        if (loc.density < BALANCE.density.max) opts.push([costFor(state, 'density', loc), () => buyDensity(state, loc.id)]);
+      }
+      if (state.phase >= 2) opts.push([costFor(state, 'newPasture'), () => buyNewPasture(state)]);
+      if (state.phase >= 6) {
+        opts.push([costFor(state, 'station'), () => buyStation(state)]);
+        opts.push([costFor(state, 'warehouse'), () => buyWarehouse(state)]);
+        opts.push([costFor(state, 'oxygen'), () => buyOxygen(state)]);
+      }
+    }
+    if (ab.upgrades) for (const k in UPGRADES) if (UPGRADES[k].phase <= state.phase) opts.push([upgradeCost(state, k), () => buyUpgrade(state, k)]);
+    if (ab.sphere && state.phase >= 7) opts.push([costFor(state, 'builder'), () => buyBuilder(state)]);
+
+    let best = null;
+    const cr = credits(state);
+    for (const o of opts) if (o[0] <= cr && (!best || o[0] < best[0])) best = o;
+    if (!best || best[1]() === false) break;
+  }
+  if (ab.sphere && state.phase >= 7) doClaimSphere(state);
+}
+
 export { canIgnite, singularityAvailable, sphereReady };
