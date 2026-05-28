@@ -37,10 +37,8 @@ export function initUI(state, actions) {
   el.stages = hud('hud-stages');
 
   const buy = document.getElementById('buy-section');
-  el.starter = mkButton(buy, 'btn-starter');
   el.random = mkButton(buy, 'btn-random');
   el.premium = mkButton(buy, 'btn-premium');
-  el.starter.onclick = () => actions.buyStarter();
   el.random.onclick = () => actions.buyRandom();
   el.premium.onclick = () => actions.buyPremium();
 
@@ -129,15 +127,6 @@ export function updateUI(state) {
   el.pop.textContent = `${fmt(st.count)} / ${fmt(cap)}`;
   el.sex.textContent = `${fmt(st.male)} / ${fmt(st.female)}`;
   el.stages.textContent = `${fmt(st.child)} / ${fmt(st.adult)} / ${fmt(st.old)}`;
-
-  // starter
-  if (state.startedPair) {
-    el.starter.innerHTML = 'První pár pořízen ✓';
-    el.starter.disabled = true;
-  } else {
-    el.starter.innerHTML = btn('Koupit první pár — zdarma', null);
-    el.starter.disabled = false;
-  }
 
   const penFull = st.count >= cap;
   const cRandom = costRandomSheep(state.purchaseCount.random);

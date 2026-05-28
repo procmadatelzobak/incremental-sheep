@@ -1,7 +1,7 @@
 export function newGame() {
   return {
     version: 1,
-    credits: 0,
+    credits: 25,
     upgrades: { woolRate: 0, breedingSpeed: 0, salePrice: 0, fertility: 0 },
     penLevel: 0,
     purchaseCount: { random: 0, premium: 0 },

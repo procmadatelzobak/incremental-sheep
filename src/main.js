@@ -13,6 +13,15 @@ import { fmt } from './format.js';
 
 let state = loadLocal() || newGame();
 
+// Fresh game: auto-place the starter pair so the pen is never empty on arrival.
+// Also handles corrupt saves where startedPair=false but sheep got wiped.
+if (!state.startedPair || state.sheep.length === 0 && !state.aggregate) {
+  state.sheep = [];
+  state.sheep.push(randomSheep(0, 'M', true));
+  state.sheep.push(randomSheep(0, 'F', true));
+  state.startedPair = true;
+}
+
 const canvas = document.getElementById('pen');
 const ctx = canvas.getContext('2d');
 const wrap = document.getElementById('canvas-wrap');
