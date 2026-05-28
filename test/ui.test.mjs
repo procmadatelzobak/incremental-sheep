@@ -250,5 +250,30 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('ukazatel reaguje na zaplnění (≈100 %)', parseFloat(fill.style.width) > 90);
 }
 
+// --- #22/#28: počty samců/samic po stádiích + vysvětlení limitu samců ---
+{
+  const s = newGame(); s.resources.credits = 1e6; s.phase = 2;
+  s.groups[0].counts.M.adult = 3; s.groups[0].counts.F.adult = 5000;
+  initUI(s, 'app', () => {});
+  clickTab('Stáda');
+  check('panel ukazuje rozpad samci/samice', panel().textContent.includes('Samci') && panel().textContent.includes('Samice') && panel().textContent.includes('Dospělí'));
+  check('panel ukazuje řádek páření', panel().textContent.includes('Páření'));
+  check('málo samců → varování', panel().textContent.includes('málo samců'));
+  // limit samců: hint vysvětlí brzdění porodů
+  s.groups[0].policy.maxMales = 2; initUI(s, 'app', () => {}); clickTab('Stáda');
+  check('limit samců má vysvětlující hint', panel().textContent.includes('Limit') && panel().textContent.includes('za cyklus'));
+}
+
+// --- #21: počty ovcí jsou celá čísla (žádné desetinné) ---
+{
+  const s = newGame(); s.resources.credits = 1e6;
+  s.groups[0].counts.F.adult = 3.7; s.groups[0].counts.M.adult = 2.2;
+  initUI(s, 'app', () => {});
+  clickTab('Stáda');
+  const txt = panel().textContent;
+  // v sekci přehledu stáda nesmí být "3.7" ani "2.2"
+  check('počty ovcí jsou zaokrouhlené (#21)', !txt.includes('3.7') && !txt.includes('2.2'));
+}
+
 console.log(`ui: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

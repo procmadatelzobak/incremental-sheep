@@ -6,7 +6,7 @@
 // ===========================================================================
 import { fmt, fmtCount } from '../format.js';
 import * as A from '../econ/actions.js';
-import { upgradeCost, perkCost } from '../econ/economy.js';
+import { upgradeCost, perkCost, getMults } from '../econ/economy.js';
 import { UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { herdCapacity, totalArea, densityMult, densityMaxLevel, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
@@ -99,14 +99,18 @@ function segBtn(label, active, fn) {
   b.addEventListener('click', () => { fn(); onAction(); rebuildPanel(); });
   return b;
 }
-// Co stádo právě nejvíc brzdí (#9).
+// Co stádo právě nejvíc brzdí (#9). Bere v potaz i nedostatek samců (#22/#28).
 function limitText(s) {
   const pop = totalPopulation(s), cap = herdCapacity(s);
   if (pop >= cap * 0.95) return '⚠ Brzdí: kapacita pozemků — rozšiř rozlohu/hustotu (Pozemky)';
   const g = group();
   if (g.counts.F.adult < 2) return '⚠ Brzdí: málo dospělých samic — kup samice';
-  const fert = g.genes.fertility.mu + 0;
-  if (g.counts.M.adult * fert < g.counts.F.adult) return 'Brzdí: málo samců (nízká kapacita páření)';
+  const fert = Math.max(0.1, g.genes.fertility.mu + (getMults(s).fertBonus || 0));
+  const matable = g.counts.M.adult * fert;
+  if (matable < g.counts.F.adult * 0.9) {
+    const need = Math.ceil(g.counts.F.adult / fert);
+    return `⚠ Brzdí: málo samců — spáří se jen ~${fmtCount(matable)} z ${fmtCount(g.counts.F.adult)} samic (drž ~${fmtCount(need)} samců${g.policy.maxMales ? ', zvyš limit v Porážce' : ''})`;
+  }
   return 'Stádo roste — kup víc rozlohy/hustoty pro další růst';
 }
 function liveSpan(fn, cls) { const e = h('span', { class: cls || '' }); return reg(e, (el) => { el.textContent = fn(); }); }
@@ -228,7 +232,7 @@ function renderHerds(s) {
   if (s.groups.length > 1) {
     wrap.appendChild(section('Stádo',
       h('select', { onchange: e => { s.activeGroupId = +e.target.value; rebuildPanel(); } },
-        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmt(totalCount(x))})`)))));
+        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmtCount(totalCount(x))})`)))));
   }
 
   const cv = h('canvas', { class: 'herdcanvas', width: 280, height: 90 });
@@ -246,19 +250,33 @@ function renderHerds(s) {
     () => A.buyAddSheep(s),
     () => { const add = (s.settings.buy.qty || 1) * BALANCE.sheepPerUnit, pop = totalPopulation(s); return `+${fmtCount(add)} ${sexLbl[s.settings.buy.sex] || 'ovcí'} · stádo ${fmtCount(pop)}→${fmtCount(pop + add)}`; });
   buyBtn.addEventListener('click', () => flashEl(herdCanvasEl));
+  // přehled počtů po pohlaví × stádiu (#22) — hráč vidí, kde ovce jsou a kam mizí
+  const mfCell = (sex, stage) => liveSpan(() => fmtCount(group().counts[sex][stage]));
+  const mfTable = h('table', { class: 'mf' },
+    h('tr', {}, h('td', {}), h('th', { text: '🐏 Samci' }), h('th', { text: '🐑 Samice' })),
+    h('tr', {}, h('td', { class: 'dim', text: 'Děti' }), h('td', {}, mfCell('M', 'child')), h('td', {}, mfCell('F', 'child'))),
+    h('tr', {}, h('td', { class: 'dim', text: 'Dospělí' }), h('td', {}, mfCell('M', 'adult')), h('td', {}, mfCell('F', 'adult'))),
+    h('tr', {}, h('td', { class: 'dim', text: 'Staří' }), h('td', {}, mfCell('M', 'old')), h('td', {}, mfCell('F', 'old'))));
+  const breedLine = liveSpan(() => {
+    const gg = group();
+    const fert = Math.max(0.1, gg.genes.fertility.mu + (getMults(s).fertBonus || 0));
+    const eff = Math.min(gg.counts.F.adult, gg.counts.M.adult * fert);
+    let t = `Páření: ${fmtCount(gg.counts.M.adult)} samců spáří ~${fmtCount(eff)} z ${fmtCount(gg.counts.F.adult)} dospělých samic`;
+    if (gg.counts.M.adult * fert < gg.counts.F.adult * 0.95 && gg.counts.F.adult >= 2) t += ' ⚠ málo samců';
+    return t;
+  }, 'dim small');
   wrap.appendChild(section(g.name,
     cv,
     h('div', { class: 'stat-row' },
       liveSpan(() => `Ovce: ${fmtCount(totalPopulation(s))} / ${fmtCount(herdCapacity(s))}`),
       liveSpan(() => `Skóre: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`)),
-    h('div', { class: 'stat-row dim' },
-      liveSpan(() => `♂ ${fmtCount(group().counts.M.adult)} · ♀ ${fmtCount(group().counts.F.adult)} dospělých`),
-      liveSpan(() => `Děti ${fmtCount(group().counts.M.child + group().counts.F.child)} · Staří ${fmtCount(group().counts.M.old + group().counts.F.old)}`)),
+    mfTable,
+    breedLine,
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmtCount(p)} / ${fmtCount(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
     liveSpan(() => limitText(s), 'dim small'),
     sexRow, qtyRow, buyBtn,
     autobuyToggle('Automaticky dokupovat ovce', 'sheep'),
-    h('div', { class: 'dim small' }, 'Samice se množí, samci dávají kapacitu páření. Kapacitu pozemků zvětšuj v záložce Pozemky.')));
+    h('div', { class: 'dim small' }, 'Samice se množí, samci dávají kapacitu páření (1 samec spáří ≈ tolik samic, kolik je Plodnost). Kapacitu pozemků zvětšuj v záložce Pozemky.')));
 
   const genes = h('div', { class: 'genes' });
   for (const k in GENES) if (GENES[k].phase <= s.phase) genes.appendChild(geneBar(k));
@@ -295,9 +313,17 @@ function renderHerds(s) {
 
     wrap.appendChild(section('🥩 Porážka',
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killOld ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killOld'); onAction(); } }), ' Porážet staré (maso + části)'),
-      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killMaleChildren ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killMaleChildren'); onAction(); } }), ' Porážet samce-děti'),
+      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killMaleChildren ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killMaleChildren'); onAction(); } }), ' Porážet nadbytečné samce-mláďata (maso)'),
       h('div', { class: 'ctl-row' }, 'Max dospělých samců (0 = bez limitu): ',
-        h('input', { type: 'number', min: 0, value: g.policy.maxMales, style: 'width:80px', onchange: e => { A.setMaxMales(s, g.id, +e.target.value); } }))));
+        h('input', { type: 'number', min: 0, value: g.policy.maxMales, style: 'width:80px', onchange: e => { A.setMaxMales(s, g.id, +e.target.value); onAction(); } })),
+      liveSpan(() => {
+        const gg = group();
+        if (!gg.policy.maxMales) return 'Bez limitu — všichni samci zůstávají na množení.';
+        const fert = Math.max(0.1, gg.genes.fertility.mu + (getMults(s).fertBonus || 0));
+        const can = gg.policy.maxMales * fert;
+        const warn = can < gg.counts.F.adult * 0.95 ? ' ⚠ to brzdí porody — děti pak ubývají rychleji, než se rodí. Zvyš limit nebo dej 0.' : '';
+        return `Limit ${fmtCount(gg.policy.maxMales)} samců spáří ~${fmtCount(can)} samic za cyklus.${warn}`;
+      }, 'dim small')));
   }
 
   if (s.phase === 4 && !s.flags.immortal) {
@@ -357,7 +383,7 @@ function renderStations(s) {
 
   // přehled kapacity = rozloha × hustota × modifikátory
   wrap.appendChild(section('🌍 Pozemky',
-    liveSpan(() => `Kapacita: ${fmt(totalPopulation(s))} / ${fmt(herdCapacity(s))} ovcí`, 'dim'),
+    liveSpan(() => `Kapacita: ${fmtCount(totalPopulation(s))} / ${fmtCount(herdCapacity(s))} ovcí`, 'dim'),
     liveSpan(() => `Rozloha ${fmt(totalArea(s))} · hustota ×${fmt(densityMult(s))} · modifikátory ×${areaModMult(s).toFixed(2)}`, 'dim small'),
     autobuyToggle('Automaticky rozšiřovat pozemky a hustotu', 'land')));
 
@@ -447,7 +473,7 @@ function renderManager(s) {
   const list = h('div', { class: 'list' });
   for (const g of s.groups) {
     list.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: g.name }), liveSpan(() => `${fmt(totalCount(g))} ovcí`, 'dim')),
+      h('div', { class: 'item-h' }, h('b', { text: g.name }), liveSpan(() => `${fmtCount(totalCount(g))} ovcí`, 'dim')),
       liveSpan(() => `skóre ${(breedingScore(g.genes, s.world.ceilingMult) * 100).toFixed(0)} % · ${g.policy.cull.enabled ? 'selekce: ' + (GENES[g.policy.cull.gene] ? GENES[g.policy.cull.gene].label : 'skóre') : 'bez selekce'}`, 'dim small'),
       h('div', { class: 'btn-row' },
         aBtn('Vybrat', () => s.activeGroupId !== g.id, () => { s.activeGroupId = g.id; activeTab = 'herds'; buildTabs(); }),
@@ -509,10 +535,10 @@ function renderStats(s) {
     ['Mléko celkem', () => fmt(s.stats.milkLifetime)],
     ['Maso celkem', () => fmt(s.stats.meatLifetime)],
     ['Kredity celkem', () => fmt(s.stats.credLifetime)],
-    ['Narozeno celkem', () => fmt(s.stats.born)],
-    ['Uhynulo stářím', () => fmt(s.stats.died)],
-    ['Poraženo', () => fmt(s.stats.culled)],
-    ['Vrchol populace', () => fmt(s.stats.peakPop)],
+    ['Narozeno celkem', () => fmtCount(s.stats.born)],
+    ['Uhynulo stářím', () => fmtCount(s.stats.died)],
+    ['Poraženo', () => fmtCount(s.stats.culled)],
+    ['Vrchol populace', () => fmtCount(s.stats.peakPop)],
   ];
   return section('Statistiky', h('table', { class: 'stats' },
     ...rows.map(([a, fn]) => h('tr', {}, h('td', { class: 'dim', text: a }), h('td', {}, liveSpan(fn))))));
