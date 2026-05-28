@@ -1,13 +1,13 @@
 // ===========================================================================
-//  Herní tik. Jediná cesta, O(skupiny). Bez RNG v hot path.
+//  Herní tik. Jediná cesta, O(skupiny). Kapacita je sdílená přes všechny pozemky.
 // ===========================================================================
-import { BALANCE, LOCATION_KINDS } from '../config.js';
+import { BALANCE } from '../config.js';
 import { getMults } from '../econ/economy.js';
 import { applyProduced } from '../econ/storage.js';
 import { aging, births, totalCount } from './cohort.js';
 import { produce } from './production.js';
 import { applyPolicyKills, applySelectionCull } from './groups.js';
-import { locationCap, locEnv } from '../content/locations.js';
+import { herdCapacity, locEnv } from '../content/locations.js';
 import { stepProjects } from '../content/projects.js';
 import { checkPhase } from '../content/phases.js';
 import { locationById } from '../io/state.js';
@@ -20,27 +20,30 @@ export function step(state, dt) {
   state.meta.totalGameTime += dt;
   const ctx = getMults(state);
   const produced = {};
+  const cap = herdCapacity(state);
 
-  // kyslíková kapacita (fáze 6): podporovaný počet ovcí na lokacích bez vzduchu
-  let o2Remaining = state.buys.oxygen * BALANCE.oxygenPerLevel;
+  // 1) stárnutí všech stád
+  for (const g of state.groups) aging(g, dt);
 
+  // 2) porody ze SDÍLENÉ kapacity (víc pozemků = víc místa)
+  let pop = 0;
+  for (const g of state.groups) pop += totalCount(g);
   for (const g of state.groups) {
     const loc = locationById(state, g.locationId);
-    if (!loc) continue;
-    const env = locEnv(loc);
-    let cap = locationCap(loc);
-    if (env.oxygenRequired) {
-      cap = Math.min(cap, o2Remaining);
-      o2Remaining = Math.max(0, o2Remaining - totalCount(g));
-    }
-    aging(g, dt);
+    const env = loc ? locEnv(loc) : {};
     const bctx = env.birthMult ? Object.assign({}, ctx, { birthMult: ctx.birthMult * env.birthMult }) : ctx;
-    births(g, cap, dt, bctx);
+    const headroom = Math.max(0, cap - pop);
+    pop += births(g, headroom, dt, bctx);
+  }
+
+  // 3) automatika (porážky) + produkce
+  for (const g of state.groups) {
+    const loc = locationById(state, g.locationId);
     addInto(produced, applyPolicyKills(g, ctx, state));
     addInto(produced, produce(g, loc, dt, ctx, state));
   }
 
-  // selekční cyklus (každých cullPeriod s)
+  // 4) selekční cyklus (každých cullPeriod s)
   state._cullAcc += dt;
   let guard = 0;
   while (state._cullAcc >= BALANCE.cullPeriod && guard++ < 50) {
@@ -51,13 +54,13 @@ export function step(state, dt) {
   applyProduced(state, produced, ctx);
   stepProjects(state, dt, ctx);
 
-  let pop = 0;
-  for (const g of state.groups) pop += totalCount(g);
-  if (pop > state.stats.peakPop) state.stats.peakPop = pop;
+  let total = 0;
+  for (const g of state.groups) total += totalCount(g);
+  if (total > state.stats.peakPop) state.stats.peakPop = total;
 
   checkPhase(state);
 
   state.rates = {};
   for (const k in produced) state.rates[k] = produced[k] / dt;
-  state.rates._pop = pop;
+  state.rates._pop = total;
 }

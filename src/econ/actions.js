@@ -30,7 +30,7 @@ export function costFor(state, kind, ref) {
     case 'oxygen':     return costOf(BALANCE.cost.oxygen, state.buys.oxygen);
     case 'builder':    return costOf(BALANCE.cost.builder, state.projects.dyson.builders);
     case 'laser':      return costOf(BALANCE.cost.laser, state.projects.laser.level);
-    case 'immortality':return 1e7;
+    case 'immortality':return 1e9;
     default: return Infinity;
   }
 }

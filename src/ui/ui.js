@@ -8,8 +8,8 @@ import { fmt } from '../format.js';
 import * as A from '../econ/actions.js';
 import { upgradeCost, perkCost } from '../econ/economy.js';
 import { UPGRADES, PERKS, GENES, RESOURCES, BALANCE } from '../config.js';
-import { totalCount } from '../sim/cohort.js';
-import { locationCap, locKind } from '../content/locations.js';
+import { totalCount, totalPopulation } from '../sim/cohort.js';
+import { locationCap, locKind, herdCapacity } from '../content/locations.js';
 import { phaseName, phaseHint } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax } from '../sim/genetics.js';
 import { combinedCap, storedTradeTotal, TRADEABLE, storageEnabled } from '../econ/storage.js';
@@ -152,13 +152,14 @@ function renderHerds(s) {
   wrap.appendChild(section(`${g.name} — ${loc.name}`,
     cv,
     h('div', { class: 'stat-row' },
-      liveSpan(() => `Ovcí: ${fmt(totalCount(group()))} / ${fmt(locationCap(loc))}`),
+      liveSpan(() => `Ovce: ${fmt(totalPopulation(s))} / ${fmt(herdCapacity(s))}`),
       liveSpan(() => `Skóre: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`)),
     h('div', { class: 'stat-row dim' },
       liveSpan(() => `Děti ${fmt(group().counts.M.child + group().counts.F.child)}`),
       liveSpan(() => `Dospělí ${fmt(group().counts.M.adult + group().counts.F.adult)}`),
       liveSpan(() => `Staří ${fmt(group().counts.M.old + group().counts.F.old)}`)),
-    liveBar(() => totalCount(group()) / locationCap(loc), () => 'naplnění ohrady'),
+    liveBar(() => totalPopulation(s) / herdCapacity(s), () => 'naplnění (všechny pozemky)'),
+    h('div', { class: 'dim small' }, 'Kapacita = součet všech pozemků. Kupuj/rozšiřuj louky a pastviny v záložce Stanice.'),
     cBtn('+ Ovce', () => A.costFor(s, 'addSheep'), () => A.buyAddSheep(s))));
 
   const genes = h('div', { class: 'genes' });
@@ -217,15 +218,14 @@ function renderStations(s) {
   for (const loc of s.locations) {
     list.appendChild(h('div', { class: 'item' },
       h('div', { class: 'item-h' }, h('b', { text: loc.name }), h('span', { class: 'dim', text: locKind(loc).label })),
-      liveSpan(() => {
-        const pop = s.groups.filter(g => g.locationId === loc.id).reduce((t, g) => t + totalCount(g), 0);
-        return `Ovcí ${fmt(pop)} / ${fmt(locationCap(loc))} · hustota ${loc.density}`;
-      }, 'dim small'),
+      liveSpan(() => `Kapacita +${fmt(locationCap(loc))} · úroveň ${loc.level} · hustota ${loc.density}`, 'dim small'),
       h('div', { class: 'btn-row' },
         cBtn('Rozšířit', () => A.costFor(s, 'expand', loc), () => A.buyExpand(s, loc.id)),
         loc.density < BALANCE.density.max ? cBtn('Hustota', () => A.costFor(s, 'density', loc), () => A.buyDensity(s, loc.id)) : h('span', { class: 'dim', text: 'hustota max' }))));
   }
-  wrap.appendChild(section('Lokace', list));
+  wrap.appendChild(section('Lokace',
+    liveSpan(() => `Celková kapacita: ${fmt(totalPopulation(s))} / ${fmt(herdCapacity(s))} ovcí`, 'dim'),
+    list));
 
   const buys = h('div', { class: 'btn-row' });
   if (s.phase >= 2) buys.appendChild(cBtn('+ Pastvina', () => A.costFor(s, 'newPasture'), () => A.buyNewPasture(s)));

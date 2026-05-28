@@ -16,6 +16,7 @@ export function totalCount(group) {
   const c = group.counts;
   return c.M.child + c.M.adult + c.M.old + c.F.child + c.F.adult + c.F.old;
 }
+export const totalPopulation = (state) => state.groups.reduce((t, g) => t + totalCount(g), 0);
 export function adultCount(group) { return group.counts.M.adult + group.counts.F.adult; }
 export function stageTotal(group, stage) { return group.counts.M[stage] + group.counts.F[stage]; }
 
@@ -50,9 +51,9 @@ export function aging(group, dt) {
 }
 
 // Porody: limitované plodností samců, dospělými samicemi, březostí a kapacitou.
-// ctx: { fertBonus, breedMult, birthMult, ceilingMult }. cap = kapacita lokace.
-// Vrací počet narozených (pro statistiky).
-export function births(group, cap, dt, ctx) {
+// ctx: { fertBonus, breedMult, birthMult }. headroom = volné místo (sdílené přes
+// všechny pozemky). Vrací počet narozených (pro statistiky).
+export function births(group, headroom, dt, ctx) {
   const g = group.genes, c = group.counts;
   const total = totalCount(group);
   const fert = Math.max(0, g.fertility.mu + (ctx.fertBonus || 0));
@@ -60,8 +61,7 @@ export function births(group, cap, dt, ctx) {
   const maleCap = c.M.adult * fert;
   const mated = Math.min(c.F.adult, maleCap);
   let b = (mated / gest) * dt * (ctx.birthMult || 1);
-  const headroom = Math.max(0, cap - total);
-  b = Math.min(b, headroom);
+  b = Math.min(b, Math.max(0, headroom));
   if (b > 0) {
     c.M.child += b / 2;
     c.F.child += b / 2;

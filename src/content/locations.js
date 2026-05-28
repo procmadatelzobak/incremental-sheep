@@ -17,3 +17,15 @@ export function locationCap(loc) {
 export function totalCap(state) {
   return state.locations.reduce((t, l) => t + locationCap(l), 0);
 }
+
+// Sdílená kapacita stáda = součet všech pozemků. Lokace vyžadující kyslík
+// (Měsíc) se započítají jen do výše dostupné kyslíkové kapacity.
+export function herdCapacity(state) {
+  const oxCap = (state.buys.oxygen || 0) * BALANCE.oxygenPerLevel;
+  let normal = 0, oxReq = 0;
+  for (const loc of state.locations) {
+    const c = locationCap(loc);
+    if (locEnv(loc).oxygenRequired) oxReq += c; else normal += c;
+  }
+  return normal + Math.min(oxReq, oxCap);
+}

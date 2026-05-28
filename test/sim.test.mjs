@@ -1,6 +1,7 @@
 import { newGame, activeGroup } from '../src/io/state.js';
 import { step } from '../src/sim/simulation.js';
-import { totalCount } from '../src/sim/cohort.js';
+import { totalCount, totalPopulation } from '../src/sim/cohort.js';
+import { herdCapacity, locationCap } from '../src/content/locations.js';
 import { serialize, deserialize } from '../src/io/save.js';
 
 let pass = 0, fail = 0;
@@ -17,6 +18,22 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   check('credits earned', s.resources.credits > 25);
   check('wool lifetime > 0', s.stats.woolLifetime > 0);
   check('no NaN credits', isFinite(s.resources.credits));
+}
+
+// 1b) kapacita je sdílená přes pozemky (oprava: pastviny se započítají)
+{
+  const s = newGame();
+  const meadowCap = locationCap(s.locations[0]);
+  // přidej 2 pastviny (jako v hlášeném save)
+  s.locations.push({ id: 2, kind: 'pasture', name: 'P1', level: 0, density: 0 });
+  s.locations.push({ id: 3, kind: 'pasture', name: 'P2', level: 0, density: 0 });
+  const cap = herdCapacity(s);
+  check('celková kapacita = součet pozemků', cap > meadowCap * 2);
+  check('pastviny přidávají kapacitu', cap === s.locations.reduce((t, l) => t + locationCap(l), 0));
+  // stádo na louce poroste nad kapacitu samotné louky (do pastvin)
+  run(s, 600);
+  check('populace přeroste kapacitu jedné louky', totalPopulation(s) > meadowCap + 1);
+  check('populace nepřekročí celkovou kapacitu', totalPopulation(s) <= cap + 5);
 }
 
 // 2) selekce zvedá μ a (čistě) drží σ omezenou

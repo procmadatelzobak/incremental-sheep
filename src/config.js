@@ -96,9 +96,9 @@ export const BALANCE = {
     newPasture: { base: 5e3,  growth: 2.0  },   // nová lokace (fáze 2+)
     warehouse:  { base: 1e5,  growth: 1.8  },   // +strop skladu (fáze 6)
     oxygen:     { base: 8e4,  growth: 1.8  },   // +kyslík (fáze 6)
-    builder:    { base: 1e5,  growth: 1.18 },   // stavitel sféry (fáze 7)
+    builder:    { base: 1e7,  growth: 1.18 },   // stavitel sféry (fáze 7)
     laser:      { base: 5e6,  growth: 1.6  },   // laser (fáze 8)
-    station:    { base: 1e6,  growth: 2.4  },   // nová planetární stanice (fáze 6)
+    station:    { base: 1e8,  growth: 2.4  },   // nová planetární stanice (fáze 6)
   },
   density: { per: 0.35, max: 25 },              // každá úroveň hustoty +35 % kapacity
   warehouse: { capInc: 5000 },                  // +strop za úroveň skladu
@@ -106,11 +106,11 @@ export const BALANCE = {
   // zpracování (fáze 3+): poměr raw → processed
   processing: { wool: { to: 'cloth', ratio: 1 }, milk: { to: 'cheese', ratio: 1 } },
   // projekty
-  dyson: { target: 5e4, builderRate: 0.8, energyPerSphere: 1e4 },
+  dyson: { target: 1.6e6, builderRate: 0.8, energyPerSphere: 1e4 },
   laser: { rangePerLevel: 1 },
   // prestiž
   prestige: {
-    blackHoleBase: 1e10,    // strop centrálního skladu pro 1. zažehnutí
+    blackHoleBase: 1e12,    // strop centrálního skladu pro 1. zažehnutí
     thresholdGrowth: 1.3,   // mírný růst stropu každý reset
     // odměna roste s počtem běhů (+ log z velikosti běhu) → ~8 smyček k singularitě
     award: (cw, base, runs) => Math.max(1, Math.floor(8 * (runs + 1) + 4 * Math.log10(Math.max(10, cw / (base / 100))))),
