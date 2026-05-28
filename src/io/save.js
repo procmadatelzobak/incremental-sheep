@@ -4,6 +4,7 @@
 import { SAVE_KEY, VERSION, MAX_OFFLINE_SECONDS, TIME_SCALE } from '../config.js';
 import { newGame } from './state.js';
 import { step } from '../sim/simulation.js';
+import { totalCount } from '../sim/cohort.js';
 
 function replacer(key, value) {
   if (key.startsWith('_')) return undefined;   // _cullAcc apod.
@@ -54,12 +55,21 @@ export function clearLocal() {
 }
 
 // Offline progres: dožeň reálný čas od posledního uložení (strop 8 h), po krocích.
+// Vrací souhrn pro návratovou obrazovku (nebo null, když je čas zanedbatelný).
 export function applyOffline(state) {
   const elapsed = Math.min(MAX_OFFLINE_SECONDS, ((Date.now() - state.meta.lastSaved) / 1000) * TIME_SCALE);
-  if (elapsed < 1) return 0;
-  const before = state.stats.credLifetime;
+  if (elapsed < 1) return null;
+  const popOf = () => state.groups.reduce((t, g) => t + totalCount(g), 0);
+  const b = { cred: state.stats.credLifetime, wool: state.stats.woolLifetime, milk: state.stats.milkLifetime, meat: state.stats.meatLifetime, born: state.stats.born, pop: popOf() };
   const steps = Math.min(3000, Math.ceil(elapsed));
   const chunk = elapsed / steps;
   for (let i = 0; i < steps; i++) step(state, chunk);
-  return state.stats.credLifetime - before;
+  return {
+    seconds: elapsed,
+    credits: state.stats.credLifetime - b.cred,
+    wool: state.stats.woolLifetime - b.wool,
+    milk: state.stats.milkLifetime - b.milk,
+    meat: state.stats.meatLifetime - b.meat,
+    popDelta: popOf() - b.pop,
+  };
 }

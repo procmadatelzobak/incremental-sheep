@@ -2,7 +2,7 @@ import { newGame, activeGroup, prestigeCarry } from '../src/io/state.js';
 import { step } from '../src/sim/simulation.js';
 import { totalCount, totalPopulation } from '../src/sim/cohort.js';
 import { herdCapacity, locationCap } from '../src/content/locations.js';
-import { serialize, deserialize } from '../src/io/save.js';
+import { serialize, deserialize, applyOffline } from '../src/io/save.js';
 import { runAutobuy, setAutobuy, suggestStep } from '../src/econ/actions.js';
 import { checkAchievements, updateRecords } from '../src/content/achievements.js';
 
@@ -86,6 +86,15 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   const s = newGame(); s.stats.credLifetime = 1e6;  // překročí gate fáze 1
   step(s, 0.1);
   check('postup fáze naplní _phaseUp', s.phase > 1 && (s._phaseUp || []).length > 0);
+}
+
+// 1g) offline souhrn
+{
+  const s = newGame();
+  s.meta.lastSaved = Date.now() - 600000;   // 10 minut zpět
+  const o = applyOffline(s);
+  check('offline vrací souhrn', !!o && o.seconds > 300 && o.credits > 0);
+  check('offline má pole vlna/maso', !!o && typeof o.wool === 'number' && typeof o.meat === 'number');
 }
 
 // 2) selekce zvedá μ a (čistě) drží σ omezenou

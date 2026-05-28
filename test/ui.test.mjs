@@ -1,6 +1,6 @@
 import { installDom, buttonsByText, allButtons } from './dom-stub.mjs';
 const { document } = installDom();
-const { initUI, updateUI, notifyPhase, notifyAchievement } = await import('../src/ui/ui.js');
+const { initUI, updateUI, notifyPhase, notifyAchievement, showOfflineModal } = await import('../src/ui/ui.js');
 import { newGame } from '../src/io/state.js';
 import { totalCount } from '../src/sim/cohort.js';
 import { serialize, deserialize } from '../src/io/save.js';
@@ -156,6 +156,15 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   let ok = true;
   try { clickTab('Prestiž'); } catch (e) { ok = false; console.error(e); }
   check('náhled prestige (fáze 7) se vykreslí', ok && panel().textContent.includes('Černá díra'));
+}
+
+// --- Batch C: offline návratová obrazovka ---
+{
+  const s = newGame();
+  initUI(s, 'app', () => {});
+  let ok = true;
+  try { showOfflineModal({ seconds: 600, credits: 1234, wool: 50, milk: 0, meat: 5, popDelta: 10 }, s); } catch (e) { ok = false; console.error(e); }
+  check('offline modal nespadne', ok);
 }
 
 console.log(`ui: ${pass} passed, ${fail} failed`);

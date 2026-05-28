@@ -487,3 +487,21 @@ export function notifyAchievement(id) {
   if (!a) return;
   showToast(`🏆 ${a.name}` + (a.bonus ? `  (+${Math.round(a.bonus * 100)} %)` : ''));
 }
+
+// Návratová obrazovka po offline (souhrn z applyOffline).
+export function showOfflineModal(o, state) {
+  if (!o) return;
+  const mins = Math.max(1, Math.round(o.seconds / 60));
+  const row = (label, val) => h('div', { class: 'stat-row' }, h('span', { class: 'dim', text: label }), h('span', { text: val }));
+  const content = h('div', {},
+    h('div', { class: 'modal-tag', text: 'Vítej zpět' }),
+    h('h2', { text: `Byl jsi pryč ~${mins} min` }),
+    row('Vyděláno kreditů', '+' + fmt(o.credits)),
+    o.popDelta ? row('Změna stáda', (o.popDelta >= 0 ? '+' : '') + fmt(o.popDelta)) : null,
+    row('Vlna', '+' + fmt(o.wool)),
+    state.phase >= 2 ? row('Mléko', '+' + fmt(o.milk)) : null,
+    row('Maso', '+' + fmt(o.meat)),
+    h('div', { class: 'modal-lore', text: '➤ ' + A.suggestStep(state) }));
+  modalQueue.push(content);
+  showNextModal();
+}
