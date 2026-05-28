@@ -3,10 +3,10 @@ import { step } from '../src/sim/simulation.js';
 import { totalCount, totalPopulation } from '../src/sim/cohort.js';
 import { herdCapacity, locationCap } from '../src/content/locations.js';
 import { serialize, deserialize, applyOffline } from '../src/io/save.js';
-import { runAutobuy, setAutobuy, suggestStep } from '../src/econ/actions.js';
+import { runAutobuy, setAutobuy, suggestStep, costFor, setProtect } from '../src/econ/actions.js';
 import { checkAchievements, updateRecords } from '../src/content/achievements.js';
 import { getMults } from '../src/econ/economy.js';
-import { costFor } from '../src/econ/actions.js';
+import { applySelectionCull } from '../src/sim/groups.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) { if (cond) pass++; else { fail++; console.error('  FAIL:', name); } }
@@ -109,6 +109,29 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   const voy = newGame({ perks: { voyage: 4 } });
   check('perk voyage zlevňuje stavitele', costFor(voy, 'builder') < costFor(base, 'builder'));
   check('perk foresight zapne autobuy', newGame({ perks: { foresight: 1 } }).settings.autobuy.land === true);
+}
+
+// 1i) autoculling: ochrana chovného jádra + záznam poslední selekce
+{
+  const s = newGame();
+  const g = s.groups[0];
+  g.counts.M.adult = 10; g.counts.F.adult = 10;
+  g.policy.cull = { enabled: true, gene: 'woolRate', cutFrac: 0.85, stage: 'adult' };
+  g.policy.protect = { enabled: true, minF: 8, minM: 2 };
+  applySelectionCull(g, getMults(s), s);
+  check('ochrana drží min. samic', g.counts.F.adult >= 8 - 1e-6);
+  check('ochrana drží min. samců', g.counts.M.adult >= 2 - 1e-6);
+  check('poslední selekce zaznamenána', g._lastSel && g._lastSel.muAfter >= g._lastSel.muBefore);
+
+  const g2 = newGame().groups[0];
+  g2.counts.M.adult = 10; g2.counts.F.adult = 10;
+  g2.policy.cull = { enabled: true, gene: 'woolRate', cutFrac: 0.85, stage: 'adult' };
+  g2.policy.protect = { enabled: false };
+  applySelectionCull(g2, getMults(s), s);
+  check('bez ochrany klesne pod jádro', g2.counts.F.adult < 8);
+
+  const sp = newGame(); setProtect(sp, sp.groups[0].id, { minF: 20 });
+  check('setProtect funguje', sp.groups[0].policy.protect.minF === 20);
 }
 
 // 2) selekce zvedá μ a (čistě) drží σ omezenou

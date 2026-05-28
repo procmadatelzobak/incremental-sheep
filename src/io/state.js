@@ -11,6 +11,7 @@ export function defaultPolicy() {
     killMaleChildren: false,
     maxMales: 0,                 // 0 = bez limitu
     cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2, stage: 'adult' },
+    protect: { enabled: true, minF: 8, minM: 2 },   // chovné jádro (bezpečnostní brzda)
   };
 }
 

@@ -12,6 +12,7 @@ import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { locationCap, locKind, herdCapacity } from '../content/locations.js';
 import { phaseName, phaseHint, PHASE_INFO, PHASES } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax } from '../sim/genetics.js';
+import { selectTruncate } from '../sim/distribution.js';
 import { combinedCap, storedTradeTotal, TRADEABLE, storageEnabled } from '../econ/storage.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
@@ -209,22 +210,47 @@ function renderHerds(s) {
     const geneOpts = [h('option', { value: 'breedingScore', ...(cull.gene === 'breedingScore' ? { selected: 'selected' } : {}) }, 'Celkové skóre'),
       ...Object.keys(GENES).filter(k => GENES[k].phase <= s.phase).map(k => h('option', { value: k, ...(cull.gene === k ? { selected: 'selected' } : {}) }, GENES[k].label))];
     const stageOpts = ['adult', 'old', 'child'].map(st => h('option', { value: st, ...(cull.stage === st ? { selected: 'selected' } : {}) }, { adult: 'dospělí', old: 'staří', child: 'děti' }[st]));
-    wrap.appendChild(section('Šlechtění (selekce)',
-      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(cull.enabled ? { checked: 'checked' } : {}), onchange: e => { A.setCull(s, g.id, { enabled: !!e.target.checked }); onAction(); } }), ' Zapnout selekci'),
+    const pr = g.policy.protect || { enabled: true, minF: 8, minM: 2 };
+    wrap.appendChild(section('🧬 Selekce',
+      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(cull.enabled ? { checked: 'checked' } : {}), onchange: e => { A.setCull(s, g.id, { enabled: !!e.target.checked }); onAction(); } }), ' Zapnout selekci (vybírat nejlepší do chovu)'),
+      h('div', { class: 'ctl-row' }, 'Strategie: ',
+        presetBtn('🧶 Vlna', 'woolRate', g.id), presetBtn('🥛 Mléko', 'milkRate', g.id), presetBtn('🥩 Maso', 'size', g.id),
+        presetBtn('🐇 Množení', 'gestation', g.id), s.phase >= 5 ? presetBtn('🧠 Mozek', 'intelligence', g.id) : null, presetBtn('⚖️ Vše', 'breedingScore', g.id)),
       h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value }); } }, ...geneOpts),
         ' ve stádiu ', h('select', { onchange: e => { A.setCull(s, g.id, { stage: e.target.value }); } }, ...stageOpts)),
       h('div', { class: 'ctl-row' },
-        liveSpan(() => `Useknout nejhorších: ${(group().policy.cull.cutFrac * 100).toFixed(0)} %`),
+        liveSpan(() => `Agresivita selekce: ${(group().policy.cull.cutFrac * 100).toFixed(0)} %`),
         h('input', { type: 'range', min: 0, max: BALANCE.maxCutFrac, step: 0.05, value: cull.cutFrac, oninput: e => { A.setCull(s, g.id, { cutFrac: +e.target.value }); } })),
-      h('div', { class: 'ctl-row' }, 'Strategie: ',
-        presetBtn('Vlna', 'woolRate', g.id), presetBtn('Množení', 'gestation', g.id), presetBtn('Maso', 'size', g.id),
-        s.phase >= 5 ? presetBtn('Inteligence', 'intelligence', g.id) : null, presetBtn('Vše', 'breedingScore', g.id)),
-      h('div', { class: 'dim small' }, 'Selekce zvedá μ a utahuje σ; mutace ji doplňuje → šlechtit lze napořád. Rychlá březost množí rychleji, kvalitní vlna nese víc kreditů; ve fázi 9 rozděl stáda a specializuj je (Manažer).')));
+      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(pr.enabled ? { checked: 'checked' } : {}), onchange: e => { A.setProtect(s, g.id, { enabled: !!e.target.checked }); onAction(); } }), ' 🛡 Chránit chovné jádro'),
+      h('div', { class: 'ctl-row' }, 'Min. samic ', h('input', { type: 'number', min: 0, value: pr.minF, style: 'width:64px', onchange: e => { A.setProtect(s, g.id, { minF: +e.target.value }); } }),
+        ' · min. samců ', h('input', { type: 'number', min: 0, value: pr.minM, style: 'width:64px', onchange: e => { A.setProtect(s, g.id, { minM: +e.target.value }); } })),
+      liveSpan(() => {
+        const gg = group(), cl = gg.policy.cull;
+        if (!cl.enabled) return 'Selekce je vypnutá.';
+        const p = Math.min(BALANCE.maxCutFrac, cl.cutFrac);
+        const stageLbl = { adult: 'dospělých', old: 'starých', child: 'dětí' }[cl.stage] || cl.stage;
+        let eff = ' · zlepší celkové skóre';
+        if (cl.gene !== 'breedingScore' && gg.genes[cl.gene]) {
+          const d = gg.genes[cl.gene], spec = GENES[cl.gene];
+          const r = selectTruncate(d.mu, d.sigma, p, !!spec.lowerBetter, spec.mut * BALANCE.sigmaFloorMut);
+          const dpct = d.mu > 0 ? Math.abs((r.mu - d.mu) / d.mu * 100) : 0;
+          eff = ` · ${spec.label} ${spec.lowerBetter ? '−' : '+'}${dpct.toFixed(1)} %/cyklus`;
+        }
+        return `Odhad: každých ${BALANCE.cullPeriod}s vyřadí ~${(p * 100).toFixed(0)} % ${stageLbl}${eff}`;
+      }, 'dim small'),
+      liveSpan(() => {
+        const ls = group()._lastSel;
+        if (!ls || !ls.n) return 'Poslední selekce: zatím žádná.';
+        let gtxt = '';
+        if (ls.muBefore != null && GENES[ls.gene]) gtxt = ` · ${GENES[ls.gene].label} μ ${ls.muBefore.toFixed(2)}→${ls.muAfter.toFixed(2)}, σ ${ls.sigBefore.toFixed(2)}→${ls.sigAfter.toFixed(2)}`;
+        return `Poslední selekce: vyřazeno ${fmt(ls.n)} · maso +${fmt(ls.meat)}${gtxt}`;
+      }, 'dim small'),
+      h('div', { class: 'dim small' }, 'Pastýř pravil: měkká vlna zůstane, hrubá odejde. (Selekce zvedá μ a utahuje σ; mutace ji doplňuje → šlechtit lze napořád.)')));
 
-    wrap.appendChild(section('Automatika',
-      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killOld ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killOld'); onAction(); } }), ' Porážet staré (maso)'),
+    wrap.appendChild(section('🥩 Porážka',
+      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killOld ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killOld'); onAction(); } }), ' Porážet staré (maso + části)'),
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killMaleChildren ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killMaleChildren'); onAction(); } }), ' Porážet samce-děti'),
-      h('div', { class: 'ctl-row' }, 'Max samců (0 = bez limitu): ',
+      h('div', { class: 'ctl-row' }, 'Max dospělých samců (0 = bez limitu): ',
         h('input', { type: 'number', min: 0, value: g.policy.maxMales, style: 'width:80px', onchange: e => { A.setMaxMales(s, g.id, +e.target.value); } }))));
   }
 
