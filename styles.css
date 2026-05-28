@@ -104,6 +104,7 @@ button.act.preset { padding: 5px 9px; font-size: 12px; }
 @keyframes tabpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(201,162,39,0); } 50% { box-shadow: 0 0 0 3px rgba(201,162,39,.45); } }
 /* Kronika */
 .item.done { border-color: var(--accent-2); }
+.branch-h { margin: 12px 0 4px; font-weight: 600; color: var(--gold); }
 /* modál vstupu do fáze */
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: flex; align-items: center; justify-content: center; z-index: 50; }
 .modal { background: var(--panel); border: 1px solid var(--accent-2); border-radius: 14px; padding: 18px 22px; max-width: 440px; width: 90%; }

@@ -37,7 +37,8 @@ export function getMults(state) {
     breedMult: Math.max(0.15, 1 - U.courtship.per * lvl('courtship')) * speed,
     fertBonus: U.ram.per * lvl('ram'),
     birthMult: 1 + U.cloning.per * lvl('cloning'),
-    ceilingMult: state.world.ceilingMult * (1 + U.genetics.per * lvl('genetics')),
+    ceilingMult: state.world.ceilingMult * (1 + U.genetics.per * lvl('genetics')) * (1 + 0.05 * plvl('geneCeiling')),
+    spaceMult: 1 + 0.25 * plvl('cosmos'),
     globalProd,
   };
 }

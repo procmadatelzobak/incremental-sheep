@@ -5,6 +5,8 @@ import { herdCapacity, locationCap } from '../src/content/locations.js';
 import { serialize, deserialize, applyOffline } from '../src/io/save.js';
 import { runAutobuy, setAutobuy, suggestStep } from '../src/econ/actions.js';
 import { checkAchievements, updateRecords } from '../src/content/achievements.js';
+import { getMults } from '../src/econ/economy.js';
+import { costFor } from '../src/econ/actions.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) { if (cond) pass++; else { fail++; console.error('  FAIL:', name); } }
@@ -95,6 +97,18 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   const o = applyOffline(s);
   check('offline vrací souhrn', !!o && o.seconds > 300 && o.credits > 0);
   check('offline má pole vlna/maso', !!o && typeof o.wool === 'number' && typeof o.meat === 'number');
+}
+
+// 1h) perky (5 větví) mají efekt a buildy se liší
+{
+  const base = newGame();
+  check('perk flock zvyšuje kapacitu', herdCapacity(newGame({ perks: { flock: 5 } })) > herdCapacity(base));
+  check('perk geneCeiling zvyšuje strop genů', getMults(newGame({ perks: { geneCeiling: 5 } })).ceilingMult > getMults(base).ceilingMult);
+  check('perk cosmos zvyšuje rychlost sfér', getMults(newGame({ perks: { cosmos: 4 } })).spaceMult > 1);
+  check('perk vigor zvyšuje produkci', getMults(newGame({ perks: { vigor: 3 } })).globalProd > getMults(base).globalProd);
+  const voy = newGame({ perks: { voyage: 4 } });
+  check('perk voyage zlevňuje stavitele', costFor(voy, 'builder') < costFor(base, 'builder'));
+  check('perk foresight zapne autobuy', newGame({ perks: { foresight: 1 } }).settings.autobuy.land === true);
 }
 
 // 2) selekce zvedá μ a (čistě) drží σ omezenou

@@ -21,15 +21,16 @@ function spend(state, amount) {
 
 // --- ceny pro UI -----------------------------------------------------------
 export function costFor(state, kind, ref) {
+  const voyage = Math.max(0.3, 1 - 0.15 * ((state.prestige.perks && state.prestige.perks.voyage) || 0));
   switch (kind) {
     case 'addSheep':   return costOf(BALANCE.cost.addSheep, state.buys.addSheep);
     case 'expand':     return costOf(BALANCE.cost.expand, ref ? ref.level : 0);
     case 'density':    return costOf(BALANCE.cost.density, ref ? ref.density : 0);
     case 'newPasture': return costOf(BALANCE.cost.newPasture, state.buys.newPasture);
-    case 'station':    return costOf(BALANCE.cost.station, state.buys.station);
+    case 'station':    return Math.floor(costOf(BALANCE.cost.station, state.buys.station) * voyage);
     case 'warehouse':  return costOf(BALANCE.cost.warehouse, state.buys.warehouse);
     case 'oxygen':     return costOf(BALANCE.cost.oxygen, state.buys.oxygen);
-    case 'builder':    return costOf(BALANCE.cost.builder, state.projects.dyson.builders);
+    case 'builder':    return Math.floor(costOf(BALANCE.cost.builder, state.projects.dyson.builders) * voyage);
     case 'laser':      return costOf(BALANCE.cost.laser, state.projects.laser.level);
     case 'immortality':return 1e9;
     default: return Infinity;

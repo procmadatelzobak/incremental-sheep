@@ -60,13 +60,25 @@ export const UPGRADES = {
   computeOpt:{ label: 'Optimalizace',  phase: 5, base: 1e5,  growth: 1.9,  per: 0.25, kind: 'computeMult',desc:'+25 % výpočet' },
 };
 
-// --- PERKY (trvalé, kupují se za Vědění; přežijí reset) --------------------
+// --- PERKY (trvalé, kupují se za Vědění; přežijí reset) — 5 větví -----------
+export const PERK_BRANCHES = {
+  shepherd: { label: 'Pastýřství', icon: '🐑', desc: 'rychlejší začátek, víc ovcí' },
+  genetics: { label: 'Genetika',   icon: '🧬', desc: 'vyšší genové stropy, lepší start' },
+  industry: { label: 'Průmysl',    icon: '🏭', desc: 'levnější vylepšení, víc produkce' },
+  cosmos:   { label: 'Kosmos',     icon: '🚀', desc: 'rychlejší stanice a sféry' },
+  prophecy: { label: 'Proroctví',  icon: '🔮', desc: 'automatizace a rychlost' },
+};
 export const PERKS = {
-  headstart: { label: 'Náskok',        base: 1,  growth: 1.6, per: 0.5,  kind: 'startCredits', desc: '+50 % start. kreditů / lvl' },
-  vigor:     { label: 'Plodná krev',   base: 2,  growth: 1.7, per: 0.15, kind: 'globalProd',   desc: '+15 % veškerá produkce' },
-  haste:     { label: 'Spěch',         base: 3,  growth: 1.8, per: 0.12, kind: 'globalSpeed',  desc: '+12 % rychlost cyklu' },
-  legacy:    { label: 'Dědictví genů', base: 5,  growth: 1.9, per: 0.08, kind: 'startGenes',   desc: 'lepší startovní geny' },
-  foreknow:  { label: 'Předvídání',    base: 8,  growth: 2.0, per: 0.2,  kind: 'cheaper',      desc: '-20 % ceny vylepšení' },
+  headstart:   { branch: 'shepherd', label: 'Náskok',             base: 1,  growth: 1.6,  per: 0.5,  kind: 'startCredits', desc: '+50 % startovních kreditů / lvl' },
+  flock:       { branch: 'shepherd', label: 'Velké stádo',        base: 3,  growth: 1.7,  per: 0.10, kind: 'capMult',      desc: '+10 % kapacity všech pozemků / lvl' },
+  geneCeiling: { branch: 'genetics', label: 'Prolomené stropy',   base: 5,  growth: 1.9,  per: 0.05, kind: 'ceilingMult',  desc: '+5 % strop genů / lvl' },
+  legacy:      { branch: 'genetics', label: 'Dědictví genů',      base: 4,  growth: 1.85, per: 0.10, kind: 'startGenes',   desc: 'lepší startovní geny' },
+  vigor:       { branch: 'industry', label: 'Plodná krev',        base: 2,  growth: 1.7,  per: 0.15, kind: 'globalProd',   desc: '+15 % veškerá produkce / lvl' },
+  foreknow:    { branch: 'industry', label: 'Předvídání',         base: 3,  growth: 1.8,  per: 0.20, kind: 'cheaper',      desc: '−20 % ceny vylepšení / lvl' },
+  cosmos:      { branch: 'cosmos',   label: 'Hvězdné inženýrství',base: 6,  growth: 1.9,  per: 0.25, kind: 'spaceMult',    desc: '+25 % rychlost stavby sfér / lvl' },
+  voyage:      { branch: 'cosmos',   label: 'Laserový dosah',     base: 6,  growth: 1.9,  per: 0.15, kind: 'cheaperSpace', desc: '−15 % cena stavitelů a stanic / lvl' },
+  haste:       { branch: 'prophecy', label: 'Spěch',              base: 4,  growth: 1.8,  per: 0.12, kind: 'globalSpeed',  desc: '+12 % rychlost cyklu / lvl' },
+  foresight:   { branch: 'prophecy', label: 'Prozřetelnost',      base: 10, growth: 2.2,  per: 1,    kind: 'autostart',    desc: 'každý běh začíná se zapnutými autobuyery' },
 };
 
 // --- EPITETA HRDINY dle fáze -----------------------------------------------

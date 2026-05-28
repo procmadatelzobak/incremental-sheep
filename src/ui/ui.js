@@ -7,7 +7,7 @@
 import { fmt } from '../format.js';
 import * as A from '../econ/actions.js';
 import { upgradeCost, perkCost } from '../econ/economy.js';
-import { UPGRADES, PERKS, GENES, RESOURCES, BALANCE } from '../config.js';
+import { UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { locationCap, locKind, herdCapacity } from '../content/locations.js';
 import { phaseName, phaseHint, PHASE_INFO, PHASES } from '../content/phases.js';
@@ -51,6 +51,12 @@ function setClass(el, cls, on) {
 }
 function flashEl(el) { if (!el) return; setClass(el, 'flash', true); setTimeout(() => setClass(el, 'flash', false), 350); }
 function flashChip(key) { const c = hudChips[key]; if (c) flashEl(c.chip); }
+function etaStr(sec) {
+  if (!isFinite(sec)) return '∞';
+  if (sec < 90) return Math.round(sec) + ' s';
+  if (sec < 5400) return Math.round(sec / 60) + ' min';
+  return (sec / 3600).toFixed(1) + ' h';
+}
 
 // --- "živé" prvky: postaví se jednou, hodnota se obnoví v refreshPanel() ----
 function reg(el, fn) { updaters.push(() => fn(el)); return el; }
@@ -330,6 +336,14 @@ function renderPrestige(s) {
       h('div', { class: 'dim small', text: 'Nasávej surovou produkci do centrálního skladu, dokud nevznikne černá díra.' }),
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(s.prestige.armed ? { checked: 'checked' } : {}), onchange: () => { A.armBlackHole(s); onAction(); } }), ' Nasávat produkci do skladu'),
       liveBar(() => s.prestige.centralWarehouse / s.prestige.threshold, () => `${fmt(s.prestige.centralWarehouse)} / ${fmt(s.prestige.threshold)}`, '#8a5bef'),
+      liveSpan(() => {
+        let rate = 0; for (const k of TRADEABLE) rate += (s.rates[k] || 0) * (RESOURCES[k].value || 0);
+        const remain = Math.max(0, s.prestige.threshold - s.prestige.centralWarehouse);
+        const award = BALANCE.prestige.award(s.prestige.threshold, BALANCE.prestige.blackHoleBase, s.prestige.runs);
+        return s.prestige.armed
+          ? `Plní se ${fmt(rate)}/s → zažehnutí za ~${etaStr(rate > 0 ? remain / rate : Infinity)} · získáš ~${fmt(award)} ${ICONS.knowledge}`
+          : `Po zažehnutí získáš ~${fmt(award)} ${ICONS.knowledge} Vědění`;
+      }, 'dim small'),
       aBtn('Zažehnout černou díru (RESET)', () => canIgnite(s), () => A.doIgnite(s)),
       singularityAvailable(s) ? aBtn('★ Dosáhnout singularity (NG+)', () => true, () => A.doSingularity(s)) : null));
   } else {
@@ -340,15 +354,19 @@ function renderPrestige(s) {
       h('div', { class: 'dim small' }, 'Za Vědění pak kupuješ trvalé perky níže — každý další běh je rychlejší.')));
   }
   const perks = h('div', {});
-  perks.appendChild(liveSpan(() => `Vědění: ${fmt(s.prestige.knowledge || 0)} · resetů: ${s.prestige.runs}`, 'dim'));
-  for (const k in PERKS) {
-    const p = PERKS[k];
-    perks.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: p.label }), liveSpan(() => `Lv ${s.prestige.perks[k] || 0}`, 'dim')),
-      h('div', { class: 'dim small', text: p.desc }),
-      aBtn(`Koupit`, () => (s.prestige.knowledge || 0) >= perkCost(s, k), () => A.buyPerk(s, k))));
+  perks.appendChild(liveSpan(() => `${ICONS.knowledge} Vědění: ${fmt(s.prestige.knowledge || 0)} · resetů: ${s.prestige.runs}`, 'dim'));
+  for (const bk in PERK_BRANCHES) {
+    const br = PERK_BRANCHES[bk];
+    perks.appendChild(h('div', { class: 'branch-h' }, `${br.icon} ${br.label}`, h('span', { class: 'dim small', text: ' — ' + br.desc })));
+    for (const k of Object.keys(PERKS).filter(x => PERKS[x].branch === bk)) {
+      const p = PERKS[k];
+      perks.appendChild(h('div', { class: 'item' },
+        h('div', { class: 'item-h' }, h('b', { text: p.label }), liveSpan(() => `Lv ${s.prestige.perks[k] || 0}`, 'dim')),
+        h('div', { class: 'dim small', text: p.desc }),
+        aBtn(`Koupit (${fmt(perkCost(s, k))} ${ICONS.knowledge})`, () => (s.prestige.knowledge || 0) >= perkCost(s, k), () => A.buyPerk(s, k))));
+    }
   }
-  wrap.appendChild(section('Vědění a perky', perks));
+  wrap.appendChild(section('Větve perků (různé buildy pro příští běh)', perks));
   return wrap;
 }
 

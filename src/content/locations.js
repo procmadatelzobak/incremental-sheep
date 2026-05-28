@@ -27,5 +27,6 @@ export function herdCapacity(state) {
     const c = locationCap(loc);
     if (locEnv(loc).oxygenRequired) oxReq += c; else normal += c;
   }
-  return normal + Math.min(oxReq, oxCap);
+  const flock = 1 + 0.10 * ((state.prestige && state.prestige.perks && state.prestige.perks.flock) || 0);
+  return (normal + Math.min(oxReq, oxCap)) * flock;
 }

@@ -72,7 +72,12 @@ export function newGame(carry = null) {
       threshold: BALANCE.prestige.blackHoleBase * Math.pow(BALANCE.prestige.thresholdGrowth, carry?.runs || 0),
       singularity: carry?.singularity || false,
     },
-    settings: { timeScale: 1, autobuy: carry?.autobuy || { sheep: false, land: false, upgrades: false, sphere: false } },
+    settings: {
+      timeScale: 1,
+      autobuy: carry?.perks?.foresight
+        ? { sheep: true, land: true, upgrades: true, sphere: true }
+        : (carry?.autobuy || { sheep: false, land: false, upgrades: false, sphere: false }),
+    },
     stats: { born: 0, died: 0, culled: 0, woolLifetime: 0, milkLifetime: 0, meatLifetime: 0, credLifetime: 0, peakPop: 0 },
     achievements: carry?.achievements || {},
     world: {

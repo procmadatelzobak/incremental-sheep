@@ -10,7 +10,7 @@ export function stepProjects(state, dt, ctx) {
   const d = state.projects.dyson;
   const target = dysonTarget(state);
   if (state.phase >= 7 && d.progress < target) {
-    const rate = (1 + d.builders * BALANCE.dyson.builderRate) * (1 + state.projects.laser.level * 0.5) * (ctx.globalProd || 1);
+    const rate = (1 + d.builders * BALANCE.dyson.builderRate) * (1 + state.projects.laser.level * 0.5) * (ctx.globalProd || 1) * (ctx.spaceMult || 1);
     d.progress = Math.min(target, d.progress + rate * dt);
   }
   if (d.count > 0) {
