@@ -17,6 +17,7 @@ import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
 import { ACHIEVEMENTS, unlockedTitles } from '../content/achievements.js';
 import { drawHerd } from '../render/canvas.js';
+import { ICONS, PHASE_ICONS, RES_ICONS, KIND_ICONS } from '../icons.js';
 
 let root, hud, tabsBar, panelEl, bannerEl, activeTab = 'herds', lastTabSig = '', structSig = '';
 let updaters = [];           // aktualizace hodnot aktivního panelu (běží každý frame)
@@ -113,7 +114,7 @@ function buildHud() {
   hudStep = h('div', { class: 'hud-step' });
   const chips = h('div', { class: 'chips' });
   hudChips = {};
-  for (const [k, lab] of [['credits', 'Kredity'], ['pop', 'Ovce'], ['wool', 'Vlna/s'], ['milk', 'Mléko/s'], ['meat', 'Maso/s'], ['compute', 'Výpočet/s'], ['knowledge', 'Vědění']]) {
+  for (const [k, lab] of [['credits', ICONS.credits + ' Kredity'], ['pop', ICONS.sheep + ' Ovce'], ['wool', ICONS.wool + ' Vlna/s'], ['milk', ICONS.milk + ' Mléko/s'], ['meat', ICONS.meat + ' Maso/s'], ['compute', ICONS.compute + ' Výpočet/s'], ['knowledge', ICONS.knowledge + ' Vědění']]) {
     const val = h('span', { class: 'chip-v', text: '0' });
     const chip = h('div', { class: 'chip' }, h('span', { class: 'chip-l', text: lab }), val);
     hudChips[k] = { chip, val }; chips.appendChild(chip);
@@ -124,7 +125,7 @@ function buildHud() {
 function updateHud(s) {
   if (!hud) return;
   hudEp.textContent = s.meta.epithet;
-  hudPhase.textContent = `  •  Fáze ${s.phase}: ${phaseName(s)}`;
+  hudPhase.textContent = `  •  ${PHASE_ICONS[s.phase] || ''} Fáze ${s.phase}: ${phaseName(s)}`;
   hudHint.textContent = '› ' + phaseHint(s);
   hudStep.textContent = '➤ ' + A.suggestStep(s);
   const r = s.rates || {};
@@ -140,14 +141,14 @@ function updateHud(s) {
 
 // --- ZÁLOŽKY ---------------------------------------------------------------
 const TABS = [
-  { id: 'herds', label: 'Stáda', avail: () => true, render: renderHerds },
-  { id: 'upgrades', label: 'Vylepšení', avail: () => true, render: renderUpgrades },
-  { id: 'stations', label: 'Stanice', avail: () => true, render: renderStations },
-  { id: 'storage', label: 'Sklad', avail: s => s.phase >= 6, render: renderStorage },
-  { id: 'manager', label: 'Manažer', avail: s => s.phase >= 9, render: renderManager },
-  { id: 'prestige', label: 'Prestiž', avail: s => s.phase >= 7 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
-  { id: 'kronika', label: 'Kronika', avail: () => true, render: renderKronika },
-  { id: 'stats', label: 'Staty', avail: () => true, render: renderStats },
+  { id: 'herds', label: ICONS.sheep + ' Stáda', avail: () => true, render: renderHerds },
+  { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
+  { id: 'stations', label: ICONS.station + ' Stanice', avail: () => true, render: renderStations },
+  { id: 'storage', label: ICONS.storage + ' Sklad', avail: s => s.phase >= 6, render: renderStorage },
+  { id: 'manager', label: ICONS.manager + ' Manažer', avail: s => s.phase >= 9, render: renderManager },
+  { id: 'prestige', label: ICONS.prestige + ' Prestiž', avail: s => s.phase >= 7 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
+  { id: 'kronika', label: ICONS.kronika + ' Kronika', avail: () => true, render: renderKronika },
+  { id: 'stats', label: ICONS.stats + ' Staty', avail: () => true, render: renderStats },
 ];
 function buildTabs() {
   clear(tabsBar);
@@ -177,7 +178,7 @@ function renderHerds(s) {
   const cv = h('canvas', { class: 'herdcanvas', width: 280, height: 90 });
   herdCanvasEl = cv;
   reg(cv, (el) => drawHerd(el, group()));
-  const sheepBtn = cBtn('+ Ovce', () => A.costFor(s, 'addSheep'), () => A.buyAddSheep(s));
+  const sheepBtn = cBtn(`${ICONS.sheep} + Ovce`, () => A.costFor(s, 'addSheep'), () => A.buyAddSheep(s));
   sheepBtn.addEventListener('click', () => flashEl(herdCanvasEl));
   wrap.appendChild(section(`${g.name} — ${loc.name}`,
     cv,
@@ -224,7 +225,7 @@ function renderHerds(s) {
   if (s.phase === 4 && !s.flags.immortal) {
     wrap.appendChild(section('Nápoj nesmrtelnosti',
       h('div', { class: 'dim' }, 'Z ovčího mléka. Po vypití získáš čas na pokročilou genetiku.'),
-      cBtn('Vyrobit nápoj nesmrtelnosti', () => A.costFor(s, 'immortality'), () => A.craftImmortality(s))));
+      cBtn(`${ICONS.immortality} Vyrobit nápoj nesmrtelnosti`, () => A.costFor(s, 'immortality'), () => A.craftImmortality(s))));
   }
   return wrap;
 }
@@ -253,7 +254,7 @@ function renderStations(s) {
   const list = h('div', { class: 'list' });
   for (const loc of s.locations) {
     list.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: loc.name }), h('span', { class: 'dim', text: locKind(loc).label })),
+      h('div', { class: 'item-h' }, h('b', { text: (KIND_ICONS[loc.kind] || '') + ' ' + loc.name }), h('span', { class: 'dim', text: locKind(loc).label })),
       liveSpan(() => `Kapacita +${fmt(locationCap(loc))} · úroveň ${loc.level} · hustota ${loc.density}`, 'dim small'),
       h('div', { class: 'btn-row' },
         cBtn('Rozšířit', () => A.costFor(s, 'expand', loc), () => A.buyExpand(s, loc.id)),
@@ -264,11 +265,11 @@ function renderStations(s) {
     list));
 
   const buys = h('div', { class: 'btn-row' });
-  if (s.phase >= 2) buys.appendChild(cBtn('+ Pastvina', () => A.costFor(s, 'newPasture'), () => A.buyNewPasture(s)));
+  if (s.phase >= 2) buys.appendChild(cBtn(`${ICONS.pasture} + Pastvina`, () => A.costFor(s, 'newPasture'), () => A.buyNewPasture(s)));
   if (s.phase >= 6) {
-    buys.appendChild(cBtn('+ Stanice (planeta)', () => A.costFor(s, 'station'), () => A.buyStation(s)));
-    buys.appendChild(cBtn('+ Sklad', () => A.costFor(s, 'warehouse'), () => A.buyWarehouse(s)));
-    buys.appendChild(cBtn('+ Kyslík', () => A.costFor(s, 'oxygen'), () => A.buyOxygen(s)));
+    buys.appendChild(cBtn(`${ICONS.station} + Stanice`, () => A.costFor(s, 'station'), () => A.buyStation(s)));
+    buys.appendChild(cBtn(`${ICONS.storage} + Sklad`, () => A.costFor(s, 'warehouse'), () => A.buyWarehouse(s)));
+    buys.appendChild(cBtn(`${ICONS.oxygen} + Kyslík`, () => A.costFor(s, 'oxygen'), () => A.buyOxygen(s)));
   }
   wrap.appendChild(section('Expanze', buys,
     autobuyToggle('Automaticky rozšiřovat pozemky' + (s.phase >= 6 ? ' (+ stanice, sklad, kyslík)' : ' (louky, pastviny, hustota)'), 'land'),
@@ -280,9 +281,9 @@ function renderStations(s) {
       liveSpan(() => `Hotových sfér: ${s.projects.dyson.count} · stavitelů: ${s.projects.dyson.builders} · energie: ${fmt(s.resources.energy || 0)}`, 'dim small'),
       autobuyToggle('Automaticky stavět (stavitelé + dokončovat sféry)', 'sphere'),
       h('div', { class: 'btn-row' },
-        cBtn('+ Stavitel', () => A.costFor(s, 'builder'), () => A.buyBuilder(s)),
-        aBtn('Dokončit sféru!', () => sphereReady(s), () => A.doClaimSphere(s)),
-        s.phase >= 8 ? cBtn('+ Laser', () => A.costFor(s, 'laser'), () => A.buyLaser(s)) : null)));
+        cBtn(`${ICONS.builder} + Stavitel`, () => A.costFor(s, 'builder'), () => A.buyBuilder(s)),
+        aBtn(`${ICONS.sphere} Dokončit sféru!`, () => sphereReady(s), () => A.doClaimSphere(s)),
+        s.phase >= 8 ? cBtn(`${ICONS.laser} + Laser`, () => A.costFor(s, 'laser'), () => A.buyLaser(s)) : null)));
   }
   return wrap;
 }
@@ -297,7 +298,7 @@ function renderStorage(s) {
     if (RESOURCES[k].phase > s.phase) continue;
     const frac = s.storage.autotrade[k] ?? 1;
     list.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: RESOURCES[k].label }), liveSpan(() => fmt(s.resources[k] || 0), 'dim')),
+      h('div', { class: 'item-h' }, h('b', { text: (RES_ICONS[k] || '') + ' ' + RESOURCES[k].label }), liveSpan(() => fmt(s.resources[k] || 0), 'dim')),
       h('div', { class: 'ctl-row' },
         liveSpan(() => `Prodávat: ${((s.storage.autotrade[k] ?? 1) * 100).toFixed(0)} %`),
         h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: frac, oninput: e => { A.setAutotrade(s, k, +e.target.value); } }))));
@@ -467,7 +468,7 @@ export function notifyPhase(phase) {
   const name = (PHASES[phase] && PHASES[phase].name) || '';
   const content = h('div', {},
     h('div', { class: 'modal-tag', text: `Fáze ${phase}` }),
-    h('h2', { text: name }),
+    h('h2', { text: (PHASE_ICONS[phase] || '') + ' ' + name }),
     info ? h('div', { class: 'modal-lore', text: info.lore }) : null,
     info && info.unlocks ? h('div', {}, h('div', { class: 'dim small', text: 'Nově odemčeno:' }),
       h('ul', { class: 'unlocks' }, ...info.unlocks.map(u => h('li', { text: u })))) : null);
