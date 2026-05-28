@@ -42,17 +42,15 @@ $('btn-reset')?.addEventListener('click', () => {
 });
 
 // --- smyčka ----------------------------------------------------------------
-let prev = performance.now(), uiAcc = 0, saveAcc = 0;
+let prev = performance.now(), saveAcc = 0;
 function frame(now) {
   let dt = (now - prev) / 1000; prev = now;
   if (dt > 60) dt = 60;            // delší nepřítomnost dožene offline po reloadu
   dt *= TIME_SCALE;
   let rem = dt;
   while (rem > 0) { const c = Math.min(0.1, rem); step(state, c); rem -= c; }
-  uiAcc += dt; saveAcc += dt;
-  const full = uiAcc >= 0.25;
-  if (full) uiAcc = 0;
-  updateUI(state, full);
+  saveAcc += dt;
+  updateUI(state);                 // jen aktualizuje hodnoty na místě (bez blikání)
   if (saveAcc >= AUTOSAVE_MS / 1000) { save(); saveAcc = 0; }
   requestAnimationFrame(frame);
 }

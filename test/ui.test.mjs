@@ -91,5 +91,25 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('pozdní fáze: panely bez chyby', ok);
 }
 
+// --- oprava blikání: bez strukturální změny se panel NEPŘEKRESLUJE ---
+{
+  const s3 = newGame();
+  s3.resources.credits = 1e6;
+  initUI(s3, 'app', () => {});
+  const btnBefore = buttonsByText(panel(), '+ Ovce')[0];
+  const wrapBefore = panel().children[0];
+  // simuluj 20 frejmů, kde se mění jen čísla (kredity, rychlosti), ne struktura
+  for (let i = 0; i < 20; i++) { s3.resources.credits += 1000; s3.rates = { wool: 5, meat: 1, _pop: 20 }; updateUI(s3); }
+  const btnAfter = buttonsByText(panel(), '+ Ovce')[0];
+  check('panel se nepřekresluje bez strukturální změny (= žádné blikání)', btnBefore && btnBefore === btnAfter);
+  check('struktura panelu zůstává stejná', wrapBefore === panel().children[0]);
+  // při strukturální změně (nová lokace) se panel překreslí
+  clickTab('Stanice');
+  const before = panel().children[0];
+  s3.locations.push({ id: 999, kind: 'pasture', name: 'Test', level: 0, density: 0 });
+  updateUI(s3);
+  check('panel se překreslí při strukturální změně', before !== panel().children[0]);
+}
+
 console.log(`ui: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
