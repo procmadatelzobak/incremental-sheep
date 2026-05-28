@@ -158,16 +158,19 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('HUD ukazuje doporučený krok', document.getElementById('hud').textContent.includes('➤'));
 }
 
-// --- Batch B: šlechtící presety + náhled prestige ---
+// --- Batch B: šlechtící presety (#30: v záložce Genetika) + náhled prestige ---
 {
   const s = newGame(); s.resources.credits = 1e6; s.phase = 2;
   initUI(s, 'app', () => {});
-  clickTab('Stáda');
+  clickTab('Genetika');
   const vlna = buttonsByText(panel(), 'Vlna')[0];
-  check('preset Vlna existuje', !!vlna);
+  check('preset Vlna existuje (v Genetice)', !!vlna);
   if (vlna) vlna.click();
   check('preset nastaví selekci na woolRate', s.groups[0].policy.cull.gene === 'woolRate' && s.groups[0].policy.cull.enabled);
-  check('panel Výběr při narození i Porážka jsou oddělené', panel().textContent.includes('Výběr při narození') && panel().textContent.includes('Porážka') && panel().textContent.includes('Přísnost výběru'));
+  check('Genetika obsahuje geny + výběr při narození', panel().textContent.includes('Geny stáda') && panel().textContent.includes('Výběr při narození') && panel().textContent.includes('Přísnost výběru'));
+  clickTab('Stáda');
+  check('genom a šlechtění už nejsou na dashboardu Stáda (#30)', !panel().textContent.includes('Výběr při narození') && !panel().textContent.includes('Geny stáda'));
+  check('Porážka zůstává na Stádech', panel().textContent.includes('Porážka'));
 
   const sp = newGame(); sp.phase = 7; sp.resources.credits = 1e6;
   initUI(sp, 'app', () => {});
