@@ -224,4 +224,25 @@ body.cosmic .fx-float { color: oklch(0.85 0.12 150); text-shadow: 0 0 8px oklch(
 .fx-pulse { animation: fxPulse .35s ease-out; }
 @keyframes fxPulse { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 
+/* ---- doplňky UI: #22 tabulka M/F · #24 rozpad příjmů · #25 delta · #29 nota - */
+table.mf { border-collapse: collapse; margin: 4px 0 8px; font-variant-numeric: tabular-nums; }
+table.mf th { font-size: 11px; font-weight: 600; color: var(--ink-faint); text-align: right; padding: 2px 0 4px 22px; }
+table.mf td { padding: 2px 0 2px 22px; text-align: right; color: var(--ink); }
+table.mf td:first-child, table.mf th:first-child { text-align: left; padding-left: 0; color: var(--ink-faint); }
+
+table.income td:nth-child(2) { text-align: right; color: var(--ink-soft); padding-right: 14px; }
+table.income tr.income-total td { border-bottom: none; border-top: 2px solid var(--line); padding-top: 6px; color: var(--green-deep); font-weight: 700; }
+body.cosmic table.income tr.income-total td { color: oklch(0.85 0.12 150); }
+
+.note { color: var(--gold-deep); font-weight: 600; }
+body.cosmic .note { color: var(--gold); }
+
+/* delta bublina po nákupu (#25) */
+.chip { position: relative; }
+.chip-d { position: absolute; top: 4px; right: 10px; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; opacity: 0; pointer-events: none; }
+.chip-d.show { animation: deltapop 1.4s ease-out; }
+.chip-d.bad { color: var(--bad); }
+.chip-d.good { color: var(--green-deep); }
+@keyframes deltapop { 0% { opacity: 0; transform: translateY(7px); } 14% { opacity: 1; transform: translateY(0); } 78% { opacity: 1; } 100% { opacity: 0; transform: translateY(-7px); } }
+
 @media (max-width: 640px) { .genes { grid-template-columns: 1fr; } #app { padding: 12px; } }

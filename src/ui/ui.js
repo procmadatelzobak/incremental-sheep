@@ -151,7 +151,7 @@ function geneBar(key) {
 let hudChips = {}, hudEp, hudPhase, hudHint, hudStep, hudCap, hudGate;
 function buildHud() {
   clear(hud);
-  hudEp = h('b', {}); hudPhase = h('span', { class: 'dim' });
+  hudEp = h('b', {}); hudPhase = h('span', { class: 'dim', id: 'hud-phase' });
   hudHint = h('div', { class: 'hud-hint' });
   hudStep = h('div', { class: 'hud-step' });
   const chips = h('div', { class: 'chips' });
