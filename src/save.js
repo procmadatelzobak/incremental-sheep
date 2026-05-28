@@ -1,9 +1,8 @@
 import { SAVE_KEY, MAX_OFFLINE_SECONDS, TIME_SCALE } from './config.js';
-import { newGame } from './state.js';
+import { newGame, cullDefaults } from './state.js';
 import { seedIdCounter } from './genetics.js';
 import { step } from './simulation.js';
 
-// Skip transient render/runtime fields when serializing.
 function replacer(key, value) {
   if (key.startsWith('_')) return undefined;
   if (key === 'income') return undefined;
@@ -24,8 +23,19 @@ export function deserialize(str) {
 }
 
 function hydrate(data) {
-  const state = Object.assign(newGame(), data);
+  const fresh = newGame();
+  const state = Object.assign(fresh, data);
   state.income = { credits: 0, wool: 0, meat: 0 };
+
+  // Migrate v1 saves: autoSlaughter → cull
+  if (!data.cull && data.autoSlaughter) {
+    state.cull = Object.assign({}, fresh.cull);
+    if (data.autoSlaughter.killOld)          state.cull.killOld = true;
+    if (data.autoSlaughter.killMaleChildren) state.cull.killMaleChildren = true;
+  }
+  // Ensure all cull fields exist (fills missing keys in partial saves)
+  state.cull = Object.assign({}, cullDefaults(), state.cull || {});
+
   let maxId = 0;
   for (const s of state.sheep || []) if (s.id > maxId) maxId = s.id;
   seedIdCounter(maxId);
@@ -46,8 +56,6 @@ export function clearLocal() {
   try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
 }
 
-// Fast-forward the simulation by the real time elapsed since lastSaved.
-// Returns credits earned offline (0 if none). Runs in bounded sub-steps.
 export function applyOffline(state) {
   const elapsed = Math.min(MAX_OFFLINE_SECONDS, ((Date.now() - state.lastSaved) / 1000) * TIME_SCALE);
   if (elapsed < 1) return 0;
