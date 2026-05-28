@@ -9,7 +9,7 @@ export const totalSheep = (state) => state.groups.reduce((t, g) => t + totalCoun
 
 // gate(state) -> lze postoupit z této fáze do další?
 export const PHASES = {
-  1:  { name: 'Stvoření',        gate: s => s.stats.credLifetime >= 5e5,   hint: 'Prodávej vlnu a maso. Vydělej 200 tis. kreditů.' },
+  1:  { name: 'Stvoření',        gate: s => s.stats.credLifetime >= 1500,  hint: 'Prodávej vlnu, dokupuj ovce. Vydělej 1 500 kreditů.' },
   2:  { name: 'Množení',         gate: s => s.stats.credLifetime >= 3e7,   hint: 'Šlechti stádo a prodávej mléko. Vydělej 10 mil. kreditů.' },
   3:  { name: 'Královská',       gate: s => s.stats.credLifetime >= 5e9, hint: 'Ovládni trh (Monopol). Vydělej 1,5 mld. kreditů.'  },
   4:  { name: 'Nesmrtelnosti',   gate: s => !!s.flags.immortal,            hint: 'Vyrob nápoj nesmrtelnosti (panel Stáda).' },

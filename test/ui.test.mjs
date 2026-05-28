@@ -61,6 +61,8 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
 
 // --- rozšíření lokace ---
 {
+  s.phase = 2;   // Pozemky se odemykají od fáze 2 (#14)
+  initUI(s, 'app', () => {});
   clickTab('Pozemky');
   const b = buttonsByText(panel(), 'Zahrada')[0];
   check('tlačítko koupě území existuje', !!b);
@@ -119,8 +121,8 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   const btnAfter = buttonsByText(panel(), 'Koupit ovce')[0];
   check('panel se nepřekresluje bez strukturální změny (= žádné blikání)', btnBefore && btnBefore === btnAfter);
   check('struktura panelu zůstává stejná', wrapBefore === panel().children[0]);
-  // při strukturální změně (nová lokace) se panel překreslí
-  clickTab('Pozemky');
+  // při strukturální změně se panel překreslí
+  s3.phase = 2; updateUI(s3); clickTab('Pozemky');
   const before = panel().children[0];
   s3.land.density += 1;
   updateUI(s3);
@@ -135,7 +137,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('hydrate doplní chybějící settings.autobuy', !!loaded.settings.autobuy);
   let ok = true;
   try {
-    loaded.resources.credits = 1e6;
+    loaded.resources.credits = 1e6; loaded.phase = 2;   // Pozemky od fáze 2
     initUI(loaded, 'app', () => {});
     for (const L of ['Stáda', 'Vylepšení', 'Pozemky']) { clickTab(L); updateUI(loaded); }
   } catch (e) { ok = false; console.error('  pád UI na starém save:', e.message); }
@@ -145,7 +147,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
 // --- Kronika + událost fáze + toast milníku (nesmí spadnout) ---
 {
   const s = newGame();
-  s.resources.credits = 1e6;
+  s.resources.credits = 1e6; s.phase = 2;       // Kronika od fáze 2
   s.achievements = { sheep10: 1, phase2: 1 };   // něco odemčeno
   initUI(s, 'app', () => {});
   clickTab('Kronika');
@@ -192,6 +194,15 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('nedostupné tlačítko ukazuje „chybí"', !!b && b.textContent.includes('chybí'));
   s.resources.credits = 1e6; updateUI(s);
   check('dostupné tlačítko ukazuje efekt (%)', buttonsByText(panel(), 'Koupit')[0].textContent.includes('%'));
+}
+
+// --- #14: méně záložek na začátku, víc jak hra roste ---
+{
+  const a = newGame(); initUI(a, 'app', () => {});
+  const vis1 = allButtons(tabs()).filter(b => b.style.display !== 'none').length;
+  const b = newGame(); b.phase = 9; initUI(b, 'app', () => {});
+  const vis9 = allButtons(tabs()).filter(x => x.style.display !== 'none').length;
+  check('fáze 1 má méně záložek než fáze 9', vis1 < vis9);
 }
 
 console.log(`ui: ${pass} passed, ${fail} failed`);

@@ -178,11 +178,11 @@ function updateHud(s) {
 const TABS = [
   { id: 'herds', label: ICONS.sheep + ' Stáda', avail: () => true, render: renderHerds },
   { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
-  { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: () => true, render: renderStations },
+  { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: s => s.phase >= 2, render: renderStations },
   { id: 'storage', label: ICONS.storage + ' Sklad', avail: s => s.phase >= 6, render: renderStorage },
   { id: 'manager', label: ICONS.manager + ' Manažer', avail: s => s.phase >= 9, render: renderManager },
   { id: 'prestige', label: ICONS.prestige + ' Prestiž', avail: s => s.phase >= 7 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
-  { id: 'kronika', label: ICONS.kronika + ' Kronika', avail: () => true, render: renderKronika },
+  { id: 'kronika', label: ICONS.kronika + ' Kronika', avail: s => s.phase >= 2, render: renderKronika },
   { id: 'stats', label: ICONS.stats + ' Staty', avail: () => true, render: renderStats },
 ];
 function buildTabs() {
