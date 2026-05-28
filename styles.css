@@ -1,0 +1,107 @@
+:root {
+  --bg: #1c2128;
+  --panel: #262c36;
+  --panel-2: #2f3744;
+  --text: #e6e6e6;
+  --muted: #9aa4b2;
+  --accent: #7bc47f;
+  --accent-2: #5a9d5f;
+  --danger: #c0554f;
+  --border: #3a424f;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+}
+
+body { display: flex; flex-direction: column; }
+
+#hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.hud-item { display: flex; flex-direction: column; min-width: 70px; }
+.hud-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.hud-item span:last-child { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#hud-credits { color: var(--accent); }
+
+#game { flex: 1; display: flex; min-height: 0; }
+
+#canvas-wrap { flex: 1; position: relative; min-width: 0; padding: 12px; }
+#pen { width: 100%; height: 100%; display: block; border-radius: 12px; cursor: crosshair; }
+
+#welcome {
+  position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,.75); padding: 10px 16px; border-radius: 8px;
+  border: 1px solid var(--accent-2); color: var(--accent);
+}
+.hidden { display: none; }
+
+#controls {
+  width: 340px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.panel h3 { margin: 0 0 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+button {
+  width: 100%;
+  text-align: left;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin-bottom: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.3;
+  transition: background .12s, border-color .12s;
+}
+button:hover:not(:disabled) { background: #394251; border-color: var(--accent-2); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button .cost { float: right; color: var(--accent); font-variant-numeric: tabular-nums; }
+button:disabled .cost { color: var(--danger); }
+button .lvl { color: var(--muted); font-size: 11px; }
+
+.danger { border-color: var(--danger); }
+.danger:hover:not(:disabled) { background: #4a2826; border-color: var(--danger); }
+
+.auto-row { margin-bottom: 7px; }
+.auto-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 0; }
+
+.cull-toggle { display: flex; align-items: center; gap: 8px; margin-top: 4px; color: var(--muted); cursor: pointer; }
+
+#genes-section table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+#genes-section td { padding: 2px 0; }
+#genes-section td:last-child { text-align: right; color: var(--accent); }
+#genes-section td.gname { color: var(--muted); }
+
+textarea {
+  width: 100%; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px;
+  font-family: ui-monospace, monospace; font-size: 11px; resize: vertical;
+}
+.save-buttons { display: flex; gap: 6px; margin-top: 6px; }
+.save-buttons button { margin-bottom: 0; text-align: center; }
+.save-msg { display: block; margin-top: 6px; font-size: 12px; color: var(--accent); min-height: 16px; }
