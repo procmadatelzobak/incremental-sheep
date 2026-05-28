@@ -269,5 +269,26 @@ function autoPlayer() {
   check('rostoucí stádo má kladný příjem', s.rates._income > 0);
 }
 
+// 8) stárnutí: statistiky born/died a konzervace populace
+{
+  const s = newGame();
+  const start = totalCount(activeGroup(s));
+  run(s, 600);                                  // > délka života → child→adult→old→smrt proběhne
+  const g = activeGroup(s);
+  check('born se počítá (>0)', s.stats.born > 0);
+  check('died (úhyn stářím) je konečné číslo ≥0', isFinite(s.stats.died) && s.stats.died >= 0);
+  check('staré ovce uhynuly stářím (died>0)', s.stats.died > 0);
+  // default policy neporáží → culled musí být 0
+  check('bez politiky se neporáží (culled=0)', s.stats.culled === 0);
+  // konzervace: konec = start + narození − úhyn − poražení
+  const expected = start + s.stats.born - s.stats.died - s.stats.culled;
+  check('konzervace populace (start+born−died−culled)', Math.abs(totalCount(g) - expected) < 1e-6 * Math.max(1, s.stats.born + s.stats.died));
+  // offline souhrn hlásí narozené
+  const s2 = newGame();
+  s2.meta.lastSaved = Date.now() - 120000;      // 120 s zpět
+  const off = applyOffline(s2);
+  check('offline souhrn obsahuje born', off && typeof off.born === 'number' && off.born > 0);
+}
+
 console.log(`sim: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

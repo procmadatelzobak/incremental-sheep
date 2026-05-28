@@ -31,7 +31,7 @@ export function step(state, dt) {
   for (const g of state.groups) popStart += totalCount(g);
 
   // 1) stárnutí všech stád
-  for (const g of state.groups) aging(g, edt);
+  for (const g of state.groups) state.stats.died += aging(g, edt);
 
   // 2) porody ze SDÍLENÉ kapacity (rozloha × hustota × modifikátory)
   let pop = 0;
@@ -39,7 +39,9 @@ export function step(state, dt) {
   const bctx = (ctx.env.birthMult && ctx.env.birthMult !== 1) ? Object.assign({}, ctx, { birthMult: ctx.birthMult * ctx.env.birthMult }) : ctx;
   for (const g of state.groups) {
     const headroom = Math.max(0, cap - pop);
-    pop += births(g, headroom, edt, bctx);
+    const nb = births(g, headroom, edt, bctx);
+    pop += nb;
+    state.stats.born += nb;
   }
 
   // 3) automatika (porážky) + produkce

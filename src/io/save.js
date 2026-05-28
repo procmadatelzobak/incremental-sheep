@@ -36,6 +36,7 @@ function hydrate(data) {
   state.settings.autobuy = Object.assign({}, defaults.settings.autobuy, (data.settings || {}).autobuy || {});
   state.settings.buy = Object.assign({}, defaults.settings.buy, (data.settings || {}).buy || {});
   state.world = Object.assign({}, defaults.world, data.world || {});
+  state.stats = Object.assign({}, defaults.stats, data.stats || {});
   state.achievements = data.achievements || {};
   // pozemky: doplň nový model (staré savy měly locations → začnou s default rozlohou)
   const dl = (data.land && typeof data.land === 'object') ? data.land : {};
@@ -99,6 +100,7 @@ export function applyOffline(state) {
     wool: state.stats.woolLifetime - b.wool,
     milk: state.stats.milkLifetime - b.milk,
     meat: state.stats.meatLifetime - b.meat,
+    born: state.stats.born - b.born,
     popDelta: popOf() - b.pop,
   };
 }

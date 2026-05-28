@@ -524,6 +524,8 @@ function renderStats(s) {
     ['Mléko celkem', () => fmt(s.stats.milkLifetime)],
     ['Maso celkem', () => fmt(s.stats.meatLifetime)],
     ['Kredity celkem', () => fmt(s.stats.credLifetime)],
+    ['Narozeno celkem', () => fmt(s.stats.born)],
+    ['Uhynulo stářím', () => fmt(s.stats.died)],
     ['Poraženo', () => fmt(s.stats.culled)],
     ['Vrchol populace', () => fmt(s.stats.peakPop)],
   ];
@@ -661,6 +663,7 @@ export function showOfflineModal(o, state) {
     h('h2', { text: `Byl jsi pryč ~${mins} min` }),
     row('Vyděláno kreditů', '+' + fmt(o.credits)),
     o.popDelta ? row('Změna stáda', (o.popDelta >= 0 ? '+' : '') + fmt(o.popDelta)) : null,
+    o.born ? row('Narozeno', '+' + fmt(o.born)) : null,
     row('Vlna', '+' + fmt(o.wool)),
     state.phase >= 2 ? row('Mléko', '+' + fmt(o.milk)) : null,
     row('Maso', '+' + fmt(o.meat)),
