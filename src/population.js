@@ -77,11 +77,12 @@ export function stepAggregate(state, dt) {
   c.F.child += births / 2;
   born += births;
 
-  // auto-slaughter as cohort flows
-  if (state.autoSlaughter.killOld || state.autoSlaughter.capCull) {
+  // auto-slaughter cohort flows (uses new cull object, falls back gracefully)
+  const cull = state.cull || {};
+  if (cull.killOld) {
     for (const sex of ['M', 'F']) { meatGain += c[sex].old * ECON.oldMeatMult * g.size; slaughtered += c[sex].old; c[sex].old = 0; }
   }
-  if (state.autoSlaughter.killMaleChildren) {
+  if (cull.killMaleChildren) {
     meatGain += c.M.child * ECON.childMeatMult * g.size; slaughtered += c.M.child; c.M.child = 0;
   }
   creditsGain += meatGain * ECON.meatPriceBase * pMult;

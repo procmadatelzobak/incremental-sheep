@@ -1,5 +1,6 @@
 import { STAGE, GENES } from './config.js';
 import { stageOf, stageBoundaries } from './sheep.js';
+import { breedingScore } from './genetics.js';
 import { aggCount } from './population.js';
 import { fmt } from './format.js';
 
@@ -58,6 +59,7 @@ export function render(ctx, state, mousePos) {
     s._sx = cx; s._sy = cy; s._sr = r;
 
     ctx.fillStyle = STAGE_COLOR[st];
+    const isStud = s.id === (state.cull?.studId);
     if (s.sex === 'F') {
       ctx.beginPath();
       ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
@@ -70,6 +72,14 @@ export function render(ctx, state, mousePos) {
     } else {
       const half = r * 0.5;
       ctx.fillRect(cx - half, cy - half, half * 2, half * 2);
+    }
+    // Star indicator on pinned stud
+    if (isStud) {
+      ctx.fillStyle = '#ffd700';
+      ctx.font = `bold ${Math.max(8, r * 1.1)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('★', cx, cy - r * 0.6 - 2);
+      ctx.textAlign = 'left';
     }
   }
 
@@ -119,10 +129,13 @@ function drawTooltip(ctx, state, { x, y }, W, H) {
 
     const st = stageOf(s);
     const { life } = stageBoundaries(s.genes);
+    const score = (breedingScore(s.genes) * 100).toFixed(1);
+    const isStud = s.id === (state.cull?.studId);
 
     const lines = [
-      `${s.sex === 'F' ? '♀ Samice' : '♂ Samec'} — ${STAGE_LABEL[st]}`,
+      `${s.sex === 'F' ? '♀ Samice' : '♂ Samec'} — ${STAGE_LABEL[st]}${isStud ? ' ★' : ''}`,
       `Věk: ${s.age.toFixed(0)} / ${life.toFixed(0)} s`,
+      `Breeding score: ${score}%`,
       ...(s.pregnant ? [`  Březost: ${Math.max(0, s.gestationLeft).toFixed(0)} s`] : []),
       '',
     ];

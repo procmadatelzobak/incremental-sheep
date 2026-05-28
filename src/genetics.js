@@ -4,7 +4,6 @@ let _idCounter = 1;
 export function nextId() { return _idCounter++; }
 export function seedIdCounter(n) { if (n >= _idCounter) _idCounter = n + 1; }
 
-// Box-Muller normal sample.
 export function gaussian(mean = 0, sd = 1) {
   let u = 0, v = 0;
   while (u === 0) u = Math.random();
@@ -14,7 +13,6 @@ export function gaussian(mean = 0, sd = 1) {
 
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
-// Fresh sheep genes. quality 0 = baseline; quality>0 shifts each mean toward its "good" end.
 export function randomGenes(quality = 0) {
   const g = {};
   for (const k in GENES) {
@@ -29,8 +27,6 @@ export function randomGenes(quality = 0) {
   return g;
 }
 
-// Offspring = parent average + gaussian mutation that can exceed both parents,
-// so player selection (who breeds / who is culled) keeps pushing the frontier.
 export function inherit(a, b) {
   const g = {};
   for (const k in GENES) {
@@ -38,4 +34,17 @@ export function inherit(a, b) {
     g[k] = clamp((a[k] + b[k]) / 2 + gaussian(0, spec.mut), spec.min, spec.max);
   }
   return g;
+}
+
+// Aggregate breeding value: average of normalized genes (0 = worst, 1 = best).
+// Lower-is-better genes are inverted so higher score always means "better sheep".
+export function breedingScore(genes) {
+  let total = 0, n = 0;
+  for (const k in GENES) {
+    const spec = GENES[k];
+    const norm = (genes[k] - spec.min) / (spec.max - spec.min);
+    total += spec.lowerBetter ? (1 - norm) : norm;
+    n++;
+  }
+  return total / n;
 }
