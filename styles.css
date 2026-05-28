@@ -1,148 +1,227 @@
+/* ===========================================================================
+   Incremental Sheep — REDESIGN stylesheet (drop-in náhrada styles.css)
+   Teplý pastorální vzhled, zelená + zlatá, premium karty.
+   Pozadí + panely se plynule mění z louky do vesmíru dle proměnné --cosmic
+   (nastavuje ji src/redesign.js podle čísla fáze). Cílí na STÁVAJÍCÍ třídy
+   z src/ui/ui.js — žádná změna v logice hry není potřeba.
+   =========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
+
+@property --cosmic { syntax: '<number>'; initial-value: 0; inherits: true; }
+
 :root {
-  --bg: #161a20;
-  --panel: #20262f;
-  --panel-2: #2a313c;
-  --text: #e6e6e6;
-  --muted: #98a2b3;
-  --accent: #7bc47f;
-  --accent-2: #5a9d5f;
-  --gold: #c9a227;
-  --danger: #c0554f;
-  --border: #333b47;
+  --cosmic: 0;
+  --m: calc(var(--cosmic) * 100%);
+
+  /* konstantní akcenty (zelená ovce + zlaté bohatství) */
+  --green:      oklch(0.62 0.11 150);
+  --green-deep: oklch(0.50 0.10 150);
+  --gold:       oklch(0.78 0.105 84);
+  --gold-deep:  oklch(0.62 0.108 70);
+  --warn:       oklch(0.72 0.115 58);
+  --bad:        oklch(0.62 0.135 35);
+
+  /* proměnlivá paleta: mix pastorální (světlá) ↔ kosmická (tmavá) dle --cosmic */
+  --paper:    color-mix(in oklch, oklch(0.992 0.008 90), oklch(0.30 0.045 288) var(--m));
+  --paper-2:  color-mix(in oklch, oklch(0.965 0.013 88), oklch(0.27 0.045 286) var(--m));
+  --sunk:     color-mix(in oklch, oklch(0.925 0.016 86), oklch(0.22 0.045 285) var(--m));
+  --ink:      color-mix(in oklch, oklch(0.31 0.022 68),  oklch(0.95 0.012 90) var(--m));
+  --ink-soft: color-mix(in oklch, oklch(0.47 0.022 72),  oklch(0.86 0.03 320) var(--m));
+  --ink-faint:color-mix(in oklch, oklch(0.63 0.018 78),  oklch(0.78 0.04 320) var(--m));
+  --line:     color-mix(in oklch, oklch(0.89 0.016 84),  oklch(0.80 0.05 320 / .25) var(--m));
+  --panel:    color-mix(in oklch, oklch(0.992 0.008 90), oklch(0.31 0.045 290 / .55) var(--m));
+  --panel-2:  color-mix(in oklch, oklch(0.955 0.012 88), oklch(0.27 0.045 288 / .55) var(--m));
+  --card-shadow: 0 1px 0 oklch(1 0 0 / calc(0.6 - var(--cosmic) * 0.55)) inset,
+                 0 8px 22px oklch(0.3 0.04 280 / calc(0.10 + var(--cosmic) * 0.25));
+
+  --serif: "Spectral", Georgia, serif;
+  --sans:  "Hanken Grotesk", system-ui, -apple-system, sans-serif;
+
+  --r-lg: 18px; --r-md: 13px; --r-sm: 9px;
+  transition: --cosmic 1.4s cubic-bezier(.4,0,.2,1);
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px; }
-body { display: flex; flex-direction: column; min-height: 100vh; }
 
-#app { flex: 1; max-width: 880px; width: 100%; margin: 0 auto; padding: 12px; }
-
-/* HUD */
-.hud { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
-.hud-title { font-size: 18px; }
-.hud-title .dim { font-size: 13px; }
-.hud-hint { color: var(--gold); font-size: 13px; margin: 4px 0 10px; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { position: relative; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; display: flex; flex-direction: column; min-width: 72px; }
-/* delta bublina po nákupu (#25) */
-.chip-d { position: absolute; top: 2px; right: 8px; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; opacity: 0; pointer-events: none; }
-.chip-d.show { animation: deltapop 1.4s ease-out; }
-.chip-d.bad { color: var(--danger); }
-.chip-d.good { color: var(--accent); }
-@keyframes deltapop { 0% { opacity: 0; transform: translateY(7px); } 14% { opacity: 1; transform: translateY(0); } 78% { opacity: 1; } 100% { opacity: 0; transform: translateY(-7px); } }
-.chip-l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.chip-v { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.chip:first-child .chip-v { color: var(--accent); }
-.chip-t { font-size: 10px; color: var(--accent); font-variant-numeric: tabular-nums; min-height: 12px; }
-
-/* Tabs */
-.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.tab { background: var(--panel); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
-.tab:hover { background: var(--panel-2); }
-.tab.active { color: var(--text); border-color: var(--accent-2); background: var(--panel-2); }
-
-/* Panel + sections */
-.panel { display: flex; flex-direction: column; gap: 12px; }
-.sect { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
-.sect h3 { margin: 0 0 10px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-
-/* Buttons */
-button.act, .footer-btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 13px; margin: 3px 6px 3px 0;
-  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; }
-.b-sub { font-size: 11px; opacity: .72; }
-button.act:disabled .b-sub { color: var(--danger); opacity: .9; }
-button.act.danger { border-color: var(--danger); }
-button.act.danger:hover:not(:disabled) { background: #4a2826; }
-button.act:hover:not(:disabled) { background: #354051; border-color: var(--accent-2); }
-button.act:disabled { opacity: .42; cursor: not-allowed; }
-.btn-row { display: flex; flex-wrap: wrap; gap: 4px; }
-
-/* Items / lists */
-.list { display: flex; flex-direction: column; gap: 8px; }
-.item { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
-.item-h { display: flex; justify-content: space-between; align-items: baseline; }
-.stat-row { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0; font-variant-numeric: tabular-nums; }
-.dim { color: var(--muted); }
-.small { font-size: 12px; }
-.note { color: var(--gold); }
-
-/* Bars */
-.bar { position: relative; height: 18px; background: #11151b; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin: 6px 0; }
-.barfill { position: absolute; left: 0; top: 0; bottom: 0; }
-.barlabel { position: absolute; left: 0; right: 0; text-align: center; font-size: 11px; line-height: 18px; color: var(--text); font-variant-numeric: tabular-nums; }
-
-/* Gene bars */
-.genes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
-.gene-h { display: flex; justify-content: space-between; font-size: 12px; }
-.gene-track { position: relative; height: 8px; background: #11151b; border-radius: 4px; margin: 3px 0 2px; }
-.gene-sigma { position: absolute; top: 0; bottom: 0; background: rgba(255,255,255,.13); border-radius: 4px; }
-.gene-mu { position: absolute; top: -2px; width: 4px; height: 12px; border-radius: 2px; transform: translateX(-2px); }
-
-/* Controls */
-.ctl-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
-.ck { display: flex; align-items: center; gap: 8px; margin: 5px 0; cursor: pointer; }
-.ck.auto { color: var(--gold); font-size: 12px; margin-top: 8px; }
-input[type=range] { flex: 1; min-width: 120px; }
-select, input[type=number] { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; }
-
-.herdcanvas { width: 100%; height: 90px; border-radius: 8px; display: block; margin-bottom: 8px; background: #1b2a1b; }
-
-table.stats { width: 100%; border-collapse: collapse; }
-table.stats td { padding: 3px 0; font-variant-numeric: tabular-nums; }
-table.stats td:last-child { text-align: right; }
-
-/* přehled počtů ovcí po pohlaví × stádiu (#22) */
-table.mf { border-collapse: collapse; margin: 4px 0 6px; font-variant-numeric: tabular-nums; }
-table.mf th { font-weight: 600; font-size: 11px; color: var(--muted); text-align: right; padding: 2px 0 2px 18px; }
-table.mf td { padding: 2px 0 2px 18px; text-align: right; }
-table.mf td:first-child, table.mf th:first-child { text-align: left; padding-left: 0; }
-
-/* rozpad příjmů (#24) */
-table.income td { text-align: right; }
-table.income td:first-child { text-align: left; }
-table.income tr.income-total td { border-top: 1px solid var(--border); padding-top: 5px; color: var(--accent); font-weight: 600; }
-
-.banner { background: rgba(0,0,0,.6); border: 1px solid var(--accent-2); color: var(--accent);
-  padding: 10px 14px; border-radius: 10px; margin-bottom: 10px; }
-
-#footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 16px;
-  background: var(--panel); border-top: 1px solid var(--border); font-size: 12px; }
-#footer button { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
-#footer .danger { border-color: var(--danger); }
-#footer input { flex: 1; min-width: 120px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-family: ui-monospace, monospace; }
-#footer .spacer { flex: 1; }
-#footer a { color: var(--muted); }
-#save-msg { color: var(--accent); }
-
-/* další nejlepší krok */
-.hud-step { color: var(--accent); font-size: 13px; margin-bottom: 8px; }
-/* zvýraznění nejlevnějšího dostupného nákupu */
-button.act.best { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(123,196,127,.4); }
-button.act.preset { padding: 5px 9px; font-size: 12px; }
-button.act.seg { padding: 5px 10px; font-size: 12px; }
-button.act.seg.on { border-color: var(--accent); background: #354051; }
-/* šťáva u nákupů */
-.chip.flash, .herdcanvas.flash { animation: flash .4s ease; }
-@keyframes flash { 0% { box-shadow: 0 0 0 3px rgba(123,196,127,.7); } 100% { box-shadow: 0 0 0 0 rgba(123,196,127,0); } }
-/* zvýraznění nové záložky */
-.tab.pulse { border-color: var(--gold); animation: tabpulse 1.2s ease-in-out infinite; }
-@keyframes tabpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(201,162,39,0); } 50% { box-shadow: 0 0 0 3px rgba(201,162,39,.45); } }
-/* Kronika */
-.item.done { border-color: var(--accent-2); }
-.branch-h { margin: 12px 0 4px; font-weight: 600; color: var(--gold); }
-/* modál vstupu do fáze */
-.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: flex; align-items: center; justify-content: center; z-index: 50; }
-.modal { background: var(--panel); border: 1px solid var(--accent-2); border-radius: 14px; padding: 18px 22px; max-width: 440px; width: 90%; }
-.modal h2 { margin: 4px 0 10px; }
-.modal-tag { color: var(--gold); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-.modal-lore { color: var(--muted); font-style: italic; margin: 0 0 10px; }
-.modal .unlocks { margin: 6px 0 12px; padding-left: 18px; }
-.modal .unlocks li { margin: 2px 0; color: var(--accent); }
-/* toasty milníků */
-.toasts { position: fixed; right: 14px; bottom: 56px; display: flex; flex-direction: column; gap: 6px; z-index: 40; }
-.toast { background: var(--panel-2); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 12px; font-size: 13px; animation: flash .5s ease; }
-
-@media (max-width: 640px) {
-  .genes { grid-template-columns: 1fr; }
+/* ---- pozadí: louka → soumrak → vesmír ---------------------------------- */
+html, body { margin: 0; min-height: 100%; }
+html {
+  background:
+    radial-gradient(120% 90% at 50% -15%,
+      color-mix(in oklch, oklch(0.86 0.06 230), oklch(0.20 0.06 280) var(--m)),
+      color-mix(in oklch, oklch(0.95 0.02 95),  oklch(0.12 0.05 285) var(--m)))
+    fixed;
 }
+body {
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+}
+body::before { /* hvězdné pole jen v kosmu */
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: var(--cosmic);
+  transition: opacity 1.4s ease;
+  background-image:
+    radial-gradient(1.3px 1.3px at 12% 18%, #fff, transparent),
+    radial-gradient(1.1px 1.1px at 68% 12%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 84% 42%, oklch(0.9 0.05 320), transparent),
+    radial-gradient(1px 1px at 32% 56%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 52% 78%, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 22% 88%, oklch(0.9 0.06 90), transparent),
+    radial-gradient(1px 1px at 90% 72%, #fff, transparent);
+}
+
+#app { position: relative; z-index: 1; flex: 1; max-width: 880px; width: 100%; margin: 0 auto; padding: 16px 14px; }
+h2, h3 { margin: 0; }
+
+/* ---- HUD ---------------------------------------------------------------- */
+.hud {
+  background: linear-gradient(180deg, var(--paper), var(--panel-2));
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--card-shadow);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.hud-title { font-size: 22px; font-family: var(--serif); font-weight: 600; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.hud-title .dim { font-size: 12px; color: var(--ink-faint); font-family: var(--sans); font-weight: 500; }
+.hud-hint { color: var(--gold-deep); font-size: 12.5px; margin: 5px 0 12px; }
+:root[style*="--cosmic"] .hud-hint, body.cosmic .hud-hint { color: var(--gold); }
+.chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
+.chip {
+  background: linear-gradient(180deg, var(--paper), var(--paper-2));
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 7px 11px; display: flex; flex-direction: column; min-width: 0; box-shadow: var(--card-shadow);
+}
+.chip-l { font-size: 9.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
+.chip-v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+.chip:first-child {
+  background: linear-gradient(180deg,
+    color-mix(in oklch, oklch(0.97 0.04 88), oklch(0.33 0.05 290) var(--m)),
+    color-mix(in oklch, oklch(0.92 0.055 86), oklch(0.30 0.05 290) var(--m)));
+  border-color: var(--gold);
+}
+.chip:first-child .chip-v { color: var(--gold-deep); }
+body.cosmic .chip:first-child .chip-v { color: var(--gold); }
+
+/* ---- záložky ------------------------------------------------------------ */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tab {
+  background: var(--panel-2); color: var(--ink-faint); border: 1px solid var(--line);
+  border-radius: 999px; padding: 8px 15px; cursor: pointer; font-size: 13px; font-family: var(--sans);
+  box-shadow: inset 0 1px 2px oklch(0.4 0.03 70 / .07); transition: color .2s, background .2s, transform .1s;
+}
+.tab:hover { color: var(--ink); background: var(--panel); }
+.tab.active {
+  background: linear-gradient(180deg, var(--green), var(--green-deep));
+  color: oklch(0.98 0.02 150); border-color: transparent;
+  box-shadow: 0 2px 8px oklch(0.6 0.1 150 / .4);
+}
+
+/* ---- panely / sekce ----------------------------------------------------- */
+.panel { display: flex; flex-direction: column; gap: 12px; }
+.sect {
+  background: linear-gradient(180deg, var(--paper), var(--panel-2));
+  border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px;
+  box-shadow: var(--card-shadow); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.sect h3 { margin: 0 0 11px; font-size: 12px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+
+/* ---- tlačítka ----------------------------------------------------------- */
+button.act, .footer-btn {
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: var(--r-md); padding: 9px 14px; cursor: pointer; font-size: 13px; font-family: var(--sans);
+  font-weight: 600; margin: 3px 6px 3px 0; box-shadow: var(--card-shadow); transition: transform .08s, filter .15s, background .15s;
+}
+button.act:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--green), var(--green-deep)); color: oklch(0.98 0.02 150);
+  border-color: transparent; box-shadow: 0 2px 8px oklch(0.6 0.1 150 / .4);
+}
+button.act:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+button.act:disabled { opacity: .45; cursor: not-allowed; filter: saturate(.5); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* hlavní/akcentní tlačítko: dej třídu .act + .primary, kde chceš zlatý CTA */
+button.act.primary {
+  background: linear-gradient(180deg, oklch(0.80 0.10 84), var(--gold-deep)); color: oklch(0.99 0.02 90);
+  border-color: transparent; box-shadow: 0 2px 0 oklch(0.54 0.10 68), 0 6px 16px oklch(0.7 0.11 80 / .42), inset 0 1px 0 oklch(1 0 0/.4);
+}
+button.act.primary:hover:not(:disabled) { filter: brightness(1.05); background: linear-gradient(180deg, oklch(0.80 0.10 84), var(--gold-deep)); color: oklch(0.99 0.02 90); }
+
+/* ---- položky / seznamy -------------------------------------------------- */
+.list { display: flex; flex-direction: column; gap: 9px; }
+.item { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; }
+.item-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.stat-row { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.dim { color: var(--ink-faint); }
+.small { font-size: 12px; }
+
+/* ---- pruhy (bar) -------------------------------------------------------- */
+.bar { position: relative; height: 18px; background: var(--sunk); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; margin: 7px 0;
+  box-shadow: inset 0 1px 2px oklch(0.4 0.03 70/.12); }
+.barfill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px 0 0 7px;
+  background: linear-gradient(180deg, oklch(0.68 0.11 150), var(--green-deep)); box-shadow: 0 0 10px oklch(0.6 0.1 150/.3); transition: width .4s cubic-bezier(.4,0,.2,1); }
+.barlabel { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ---- genové lišty ------------------------------------------------------- */
+.genes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+.gene-h { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-soft); }
+.gene-track { position: relative; height: 8px; background: var(--sunk); border-radius: 4px; margin: 4px 0 2px;
+  box-shadow: inset 0 1px 2px oklch(0.4 0.03 70/.12); }
+.gene-sigma { position: absolute; top: 0; bottom: 0; background: color-mix(in oklch, oklch(0.5 0.02 150 / .14), oklch(0.9 0.05 320 / .18) var(--m)); border-radius: 4px; }
+.gene-mu { position: absolute; top: -2px; width: 4px; height: 12px; border-radius: 2px; transform: translateX(-2px); box-shadow: 0 0 6px currentColor; }
+
+/* ---- ovládací prvky ----------------------------------------------------- */
+.ctl-row { display: flex; align-items: center; gap: 8px; margin: 7px 0; flex-wrap: wrap; }
+.ck { display: flex; align-items: center; gap: 8px; margin: 6px 0; cursor: pointer; }
+input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 120px; height: 6px; border-radius: 3px;
+  background: var(--sunk); box-shadow: inset 0 1px 2px oklch(0.4 0.03 70/.12); cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 17px; height: 17px; border-radius: 50%; cursor: pointer;
+  background: linear-gradient(180deg, var(--gold), var(--gold-deep)); border: 2px solid var(--paper); box-shadow: 0 2px 5px rgba(0,0,0,.25); }
+select, input[type=number] { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 5px 8px; font-family: var(--sans); box-shadow: var(--card-shadow); }
+
+/* ---- plátno stáda ------------------------------------------------------- */
+.herdcanvas { width: 100%; height: 90px; border-radius: var(--r-md); display: block; margin-bottom: 8px;
+  border: 1px solid var(--line); box-shadow: inset 0 1px 3px oklch(0.3 0.04 280/.2); }
+
+/* ---- tabulka statistik -------------------------------------------------- */
+table.stats { width: 100%; border-collapse: collapse; }
+table.stats td { padding: 5px 0; font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--line); }
+table.stats td:first-child { color: var(--ink-faint); }
+table.stats td:last-child { text-align: right; font-weight: 600; }
+
+/* ---- banner ------------------------------------------------------------- */
+.banner {
+  background: linear-gradient(180deg, var(--gold), var(--gold-deep)); color: oklch(0.99 0.02 90);
+  border: none; padding: 11px 16px; border-radius: var(--r-md); margin-bottom: 12px; font-size: 13px; font-weight: 500;
+  box-shadow: 0 6px 18px oklch(0.6 0.1 80/.4);
+}
+
+/* ---- footer ------------------------------------------------------------- */
+#footer {
+  position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 18px; background: var(--panel); border-top: 1px solid var(--line); font-size: 12px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+#footer button { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 7px 11px; cursor: pointer; font-family: var(--sans); }
+#footer button:hover { background: var(--panel); }
+#footer .danger { border-color: var(--bad); color: var(--bad); }
+#footer .danger:hover { background: var(--bad); color: oklch(0.99 0.02 30); }
+#footer input { flex: 1; min-width: 120px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 7px 9px; font-family: ui-monospace, monospace; }
+#footer .spacer { flex: 1; }
+#footer a { color: var(--ink-faint); text-decoration: none; }
+#footer a:hover { color: var(--gold-deep); }
+#save-msg { color: var(--green-deep); }
+
+/* ---- juice vrstva (přidává redesign.js) -------------------------------- */
+.fxlayer { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; }
+.fx-float { position: absolute; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums;
+  color: var(--green-deep); text-shadow: 0 1px 2px oklch(1 0 0/.6); animation: fxFloat 1.1s ease-out forwards; transform: translateX(-50%); }
+body.cosmic .fx-float { color: oklch(0.85 0.12 150); text-shadow: 0 0 8px oklch(0.6 0.1 150/.8); }
+@keyframes fxFloat { 0% { opacity: 0; transform: translate(-50%, 0) scale(.7); } 15% { opacity: 1; transform: translate(-50%, -6px) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
+.fx-particle { position: absolute; width: 7px; height: 7px; border-radius: 50%; animation: fxPart .8s ease-out forwards; }
+@keyframes fxPart { 0% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.3); } }
+.fx-pulse { animation: fxPulse .35s ease-out; }
+@keyframes fxPulse { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+
+@media (max-width: 640px) { .genes { grid-template-columns: 1fr; } #app { padding: 12px; } }
