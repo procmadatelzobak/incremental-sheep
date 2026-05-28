@@ -54,8 +54,9 @@ function aBtn(label, enabledFn, actFn) {
   return reg(b, (el) => { el.disabled = !enabledFn(); });
 }
 function autobuyToggle(label, key) {
+  const on = (S.settings.autobuy || {})[key];
   return h('label', { class: 'ck auto' },
-    h('input', { type: 'checkbox', ...(S.settings.autobuy[key] ? { checked: 'checked' } : {}), onchange: e => { A.setAutobuy(S, key, !!e.target.checked); onAction(); } }),
+    h('input', { type: 'checkbox', ...(on ? { checked: 'checked' } : {}), onchange: e => { A.setAutobuy(S, key, !!e.target.checked); onAction(); } }),
     ' ⚙ ' + label);
 }
 function liveSpan(fn, cls) { const e = h('span', { class: cls || '' }); return reg(e, (el) => { el.textContent = fn(); }); }

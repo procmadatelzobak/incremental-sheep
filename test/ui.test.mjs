@@ -3,6 +3,7 @@ const { document } = installDom();
 const { initUI, updateUI } = await import('../src/ui/ui.js');
 import { newGame } from '../src/io/state.js';
 import { totalCount } from '../src/sim/cohort.js';
+import { serialize, deserialize } from '../src/io/save.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) { if (cond) pass++; else { fail++; console.error('  FAIL:', name); } }
@@ -109,6 +110,21 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   s3.locations.push({ id: 999, kind: 'pasture', name: 'Test', level: 0, density: 0 });
   updateUI(s3);
   check('panel se překreslí při strukturální změně', before !== panel().children[0]);
+}
+
+// --- regrese: starý save (bez settings.autobuy) se načte a UI nespadne ---
+{
+  const old = newGame();
+  delete old.settings.autobuy;          // save z doby před autobuyerem
+  const loaded = deserialize(serialize(old));
+  check('hydrate doplní chybějící settings.autobuy', !!loaded.settings.autobuy);
+  let ok = true;
+  try {
+    loaded.resources.credits = 1e6;
+    initUI(loaded, 'app', () => {});
+    for (const L of ['Stáda', 'Vylepšení', 'Stanice']) { clickTab(L); updateUI(loaded); }
+  } catch (e) { ok = false; console.error('  pád UI na starém save:', e.message); }
+  check('UI se starým save nespadne (zamrznutí opraveno)', ok);
 }
 
 console.log(`ui: ${pass} passed, ${fail} failed`);

@@ -27,7 +27,11 @@ export function deserialize(str) {
 }
 
 function hydrate(data) {
-  const state = Object.assign(newGame(), data);
+  const defaults = newGame();
+  const state = Object.assign({}, defaults, data);
+  // doplň vnořená nastavení (staré savy nemají nová pole jako autobuy → jinak pád UI)
+  state.settings = Object.assign({}, defaults.settings, data.settings || {});
+  state.settings.autobuy = Object.assign({}, defaults.settings.autobuy, (data.settings || {}).autobuy || {});
   state.rates = {};
   if (typeof state._cullAcc !== 'number') state._cullAcc = 0;
   return state;

@@ -168,6 +168,7 @@ export function doSingularity(state) { return triggerSingularity(state); }
 
 // --- autobuyer -------------------------------------------------------------
 export function setAutobuy(state, key, on) {
+  if (!state.settings.autobuy) state.settings.autobuy = { sheep: false, land: false, upgrades: false, sphere: false };
   state.settings.autobuy[key] = !!on;
   return true;
 }
