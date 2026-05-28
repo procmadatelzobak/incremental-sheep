@@ -1,0 +1,479 @@
+INCREMENTAL SHEEP — HERNÍ MECHANIKY
+====================================
+Stav dokumentu: aktuální k verzi 2 (commit 76b7396)
+Platforma: prohlížeč, vanilla JS + Canvas, žádný build step
+Hosting: sinuhetcloud, python3 -m http.server, port 8093
+URL: incremental-sheep.sinuhetcloud.coitus.cz
+
+
+PŘEHLED
+-------
+Inkrementální/idle hra. Hráč chová ovce, šlechtí jejich geny,
+automatizuje chov a expanduje stádo od jedné ohrádky až po (plánovaně)
+galaktické rozměry. Jde o kombinaci idle mechanik (automatický příjem,
+offline progress) a selekčního šlechtění (hráč rozhoduje, kdo se množí
+a kdo jde na porážku).
+
+Měna: kredity. Vyrábí se prodejem vlny a masa, vše automaticky.
+Za kredity se kupují ovce, rozšíření ohrádky a vylepšení.
+
+
+=======================================================================
+HOTOVÉ MECHANIKY (implementováno)
+=======================================================================
+
+
+1. OVCE — ŽIVOTNÍ CYKLUS
+-------------------------
+Každá ovce má tři stádia: dítě → dospělec → starý.
+
+Hranice stádií jsou odvozeny z genů:
+  childEnd  = lifespan * childhoodFrac
+  adultEnd  = lifespan * (childhoodFrac + adultFrac)
+  Stáří     = zbytek do lifespan
+
+adultFrac je při výpočtu zastropován tak, aby stáří tvořilo vždy
+alespoň 10 % života (adultFrac se zkrátí, pokud by to překročilo).
+
+Přirozená smrt nastane v okamžiku age >= lifespan. Smrt stářím
+nedává maso. Vlnu dávají dospělci a staří; dospělec plnou sazbu,
+starý 50 % (ECON.oldWoolMult = 0.5). Dítě vlnu nedává.
+
+Pohlaví: samec (M), samice (F). Vizuálně: samice = kolečko,
+samec = čtvereček. Barvy stádií: dítě = zelená, dospělec = krémová,
+starý = šedá.
+
+Samice se mohou množit jen jako dospělé (ne staré). Samci totéž.
+
+
+2. GENY
+--------
+Každá ovce nese 8 numerických genů. Všechny jsou plovoucí čísla
+s pevnými mezemi [min, max] a výchozí základní distribucí.
+
+  gen            min    max    základ  SD    mutSD  poznámka
+  fertility      4      24     8       1.5   0.6    plodnost samce (počet samic)
+  gestation      8      60     25      4     1.5    délka březosti v sekundách; nižší = lepší
+  woolRate       0.3    6      1       0.25  0.12   vlna za sekundu (dospělec)
+  woolQuality    0.4    4      1       0.2   0.10   koeficient kvality vlny
+  size           0.4    5      1       0.2   0.10   velikost těla; ovlivňuje maso
+  lifespan       60     600    180     20    8      celkový věk v sekundách
+  childhoodFrac  0.10   0.45   0.25    0.03  0.02   podíl života strávený jako dítě
+  adultFrac      0.30   0.60   0.45    0.04  0.02   podíl života strávený jako dospělec
+
+Kvalitní vlna = woolQuality * (0.75 + childhoodFrac)
+  → delší dětství zlepšuje kvalitu vlny
+
+Breeding score = průměr normalizovaných genů (0–1); pro geny kde nižší
+je lepší (gestation) se normalizace invertuje. Takže score 1.0 = ideální
+ve všech genech. Zobrazuje se v tooltipu a v panelu stáda.
+
+
+3. DĚDIČNOST A GENETIKA
+------------------------
+Náhodná ovce při koupi: pro každý gen gaussian(základ, SD) oříznutý do [min, max].
+Prémiová ovce (quality=0.6): střed distribuce posunut 60 % směrem k optimu.
+
+Dědičnost potomka:
+  gene_offspring = clamp(
+    (gene_matka + gene_otec) / 2 + gaussian(0, mutSD),
+    min, max
+  )
+
+Mutace (gaussian(0, mutSD)) může posunout gen za hranici obou rodičů.
+To je záměr: selekce (kdo se množí, kdo jde na porážku) tlačí populaci
+trvale nahoru. Bez možnosti překročit rodiče by vše regredovalo k průměru.
+
+Stud (preferovaný beran): hráč může připnout konkrétního dospělého samce.
+Stud pak dostane přednost při párování — obslouží tolik samic, kolik
+odpovídá jeho genu fertility (+ bonus z vylepšení). Ostatní samci
+doplní zbývající kapacitu. Genová krev studa tak dominuje potomkům.
+
+
+4. PÁŘENÍ A PORODY
+------------------
+Každý dospělý samec má kapacitu: floor(fertility + fertilityBonus) samic.
+Celková kapacita stáda = součet přes všechny dospělé samce.
+Slot pro párování = kapacita − počet již těhotných samic.
+
+Párovací pořadí:
+  1. Stud dostane přednost (až do vyčerpání jeho individuální kapacity).
+  2. Zbývající volné samice jsou párovány s náhodným samcem.
+
+Březí samice čeká gestationLeft sekund (= gestation * breedingMult).
+Po uplynutí se narodí jedno jehně s pohlavím 50/50 a zděděnými geny.
+Pokud je pero plné, jehně se podrží (gestationLeft = 0) a čeká na místo.
+
+Novorozenci přicházejí jako děti (age = 0). Koupené ovce přicházejí
+jako mladí dospělci (age = childEnd + 0.5).
+
+
+5. VLNA A MASO
+---------------
+Vlna se produkuje kontinuálně každý tik:
+  wool = woolRate * woolMult * stageFactor * dt
+  credits += wool * woolPriceBase * qualityScore * priceMult
+
+  woolPriceBase = 1.0
+  stageFactor: dospělec = 1.0, starý = 0.5, dítě = 0
+
+Maso vzniká pouze z porážky (manuální nebo auto-cull):
+  meat = size * stageMult
+  credits += meat * meatPriceBase * priceMult
+
+  meatPriceBase = 6.0
+  stageMult: dospělec = 1.0, starý = 0.6, dítě = 0.25
+
+Přirozená smrt stářím maso nedává.
+Vlna a maso se prodávají okamžitě za kredity (žádný sklad).
+
+
+6. EKONOMIKA — CENY A NÁKUP
+-----------------------------
+Počáteční kredity: 25.
+
+Nákup ovcí (cena roste exponenciálně s počtem koupených):
+  Náhodná ovce:    cena(n) = floor(50  * 1.18^n)  kde n = počet dosud koupených náhodných
+  Prémiová ovce:   cena(n) = floor(400 * 1.30^n)
+  Výběr pohlaví:   násobí cenu × 1.15
+
+Rozšíření ohrádky:
+  cena(lvl) = floor(100 * 1.55^lvl)
+  kapacita  = 12 + lvl * 10
+  Základ: 12 míst
+
+Vylepšení (cena roste per úroveň, efekty kumulativní):
+  Nůžky (woolRate):       cena(lvl) = floor(80  * 1.70^lvl), každý Lv +15 % vlna
+  Námluvy (breedSpeed):   cena(lvl) = floor(120 * 1.80^lvl), každý Lv −10 % gestation
+                          (minimum 15 % původní doby, tedy max 85% zkrácení)
+  Obchod (salePrice):     cena(lvl) = floor(150 * 1.75^lvl), každý Lv +12 % ceny
+  Beran (fertility):      cena(lvl) = floor(300 * 2.00^lvl), každý Lv +2 plodnost všech samců
+
+
+7. PANEL STÁDO & ŠLECHTĚNÍ — CULLING SYSTÉM
+---------------------------------------------
+Celý panel sdružuje všechna pravidla pro automatické řízení stáda.
+
+a) Preferovaný beran (stud)
+   Hráč klikne na dospělého samce v ohrádce (mimo porážecí mód).
+   Samec je označen hvězdičkou (★). Opakovaný klik nebo tlačítko
+   "Odepnout" zruší výběr. Stud je imunní vůči max-samci pravidlu.
+   Pokud stud zemře přirozeně, výběr se smaže.
+
+b) Max samců (vždy zdarma)
+   Hráč nastaví maximální počet dospělých samců.
+   Při překročení limitu jsou nejhorší samci (nejnižší breeding score)
+   automaticky poraženi. Hráč si vybere, zda k porážce dochází
+   v dětství nebo v dospělosti.
+
+c) Poraž staré (vždy zdarma)
+   Přepínač. Pokud zapnut, všechny ovce ve stadiu "starý" jsou
+   automaticky poraženy (dávají maso).
+
+d) Poraž samce-děti (vždy zdarma)
+   Přepínač. Pokud zapnut, všichni samci ve stadiu "dítě" jsou
+   automaticky poraženi. Určeno pro čistě meatové optimalizace
+   nebo omezení počtu samců od narození.
+
+e) Při přeplnění (odemknout za 800 kreditů)
+   Výběr ze čtyř možností (aktivní jen při penLevel >= cap):
+     - nic: jahňata se drží, čekají na místo (výchozí stav)
+     - nejstarší: poraž ovci s nejvyšším age
+     - nejhorší samec: poraž samce s nejnižším breeding score (stud chráněn)
+     - nejhorší geny: poraž kteroukoli ovci s nejnižším breeding score
+                      (stud chráněn)
+
+f) Genetický filtr jehňat (odemknout za 3 000 kreditů)
+   Přepínač + výběr genu + prahová hodnota v % rozsahu.
+   Jehňata narozená s daným genem pod prahem jsou okamžitě poražena
+   (dostávají 25 % maso za dítě). Příklad: woolRate na 30 % znamená,
+   cull lamb if woolRate < 0.3 + (6.0−0.3) * 0.30 = 2.01
+
+Culling pořadí v jednom tiku:
+   1. Pass 1: přirozená smrt stářím (bez masa)
+   2. Pass 2: porody + gene floor kontrola novorozenců
+   3. Pass 3: páření
+   4. Pass 4: max-samci + killOld + killMaleChildren
+   5. Pass 5: při-plném pravidlo
+
+
+8. VIZUALIZACE — PERO A TOOLTIP
+---------------------------------
+Pero (canvas):
+  - Zelené pozadí s ohradníkem
+  - Každá ovce je tečka: samice = kruh, samec = čtverec
+  - Velikost odpovídá genu size
+  - Barva odpovídá stádiu (zelená/krémová/šedá)
+  - Těhotné samice: růžový obrys
+  - Stud: zlatá hvězdička ★ nad symbolem
+  - Ovce se pomalu pohybují (brownian drift)
+  - Prázdné pero: hint "Koupit první pár →"
+  - Legenda barev v dolním levém rohu
+
+Tooltip (hover):
+  - Pohlaví + stádium + hvězdička pro studa
+  - Věk / celkový věk [s]
+  - Breeding score [%]
+  - Zbývající březost [s] pokud těhotná
+  - Všechny geny s hodnotami
+
+Agregátní režim (nad 800 individuálních ovcí):
+  - Pero zobrazí heatmapu hustoty + celkový počet
+  - Panel ukazuje kohortové součty, nelze klikat na jednotlivce
+
+
+9. SIMULACE — TECHNICKÉ DETAILY
+---------------------------------
+Herní čas = reálný čas (TIME_SCALE = 1, laditelné).
+Tik = requestAnimationFrame + wall-clock akumulátor.
+Simulace se spouští v krocích max. 0.1 s/krok, max 5 000 kroků/frame.
+
+Hybridní simulace:
+  - Pod INDIVIDUAL_CAP (800): plná individuální simulace
+  - Nad: agregátní kohorty { sex × stádium → count + průměrné geny }
+    Kohortový model počítá birth/death/wool statisticky, O(1).
+    Přechod z individuální na kohortovou je jednosměrný (v1).
+
+Offline progress:
+  - Při načtení se zjistí delta = now − lastSaved
+  - Zastropováno na 8 hodin
+  - Simuluje se max. 3 000 kroků (chunked)
+  - Zobrazí se přivítací banner s výdělkem
+
+Autosave:
+  - Každých 5 sekund do localStorage
+  - Také při beforeunload a visibilitychange
+
+
+10. SAVE SYSTÉM
+----------------
+Formát: JSON serializovaný stav → base64 string (btoa).
+Pole začínající "_" a "income" se nevkládají (jsou tranzientní).
+Import: base64 → JSON → hydrate() → validace přítomnosti "credits".
+
+Migrace:
+  - v1 (autoSlaughter objekt) → v2 (cull objekt):
+    killOld, killMaleChildren se přenesou
+  - Chybějící pole cull objektu se doplní výchozími hodnotami
+
+Uložené stádo zachovává:
+  id, sex, genes, age, pregnant, gestationLeft, mateGenes, x, y
+  (pozice pro render)
+
+
+11. HUD — HORNÍ PANEL
+-----------------------
+Zobrazuje živě: kredity, příjem/s, vlna/s, maso/s, počet/kapacita,
+♂/♀ počty, dítě/dospělec/starý počty.
+Hodnoty se průměrují přes 0.5 s okno pro stabilní zobrazení.
+
+
+=======================================================================
+PLÁNOVANÉ MECHANIKY (neimplementováno)
+=======================================================================
+
+Poznámka: vše níže je návrh, může se změnit. Priorita klesá s pořadím.
+
+
+P1. EXPANDUJÍCÍ SVĚT — TIERY
+------------------------------
+Mechanika "zoom-out": každý tier odemkne vyšší kapacitní strop
+a nové sinky pro kredity (nebo nové suroviny).
+
+Plánované tiery:
+  Tier 0 — Ohrádka (hotovo): základní pero, max kapacita omezena penLevel
+  Tier 1 — Pastviny: větší pozemky, mírně levnější per-ovce kapacita
+  Tier 2 — Ostrovy: první expanze mimo pevninu, nový vizuální styl per a
+  Tier 3 — Kontinenty: masivní stáda, první pohled na aggregate mode
+  Tier 4 — Hroucení Země: hmotnost ovcí deformuje planetu, hráč musí
+            řešit zemskou krizi (speciální suroviny, inženýrské upgrady)
+  Tier 5 — Oceány / voda: voda jako nová surovina/překážka
+  Tier 6 — Jiné planety a měsíce
+  Tier 7 — Hvězdný systém
+  Tier 8 — Galaxie
+
+Přechod mezi tiery by měl měnit pravidla, ne jen násobit čísla (vzor:
+Universal Paperclips). Každý tier může přinést nový druh suroviny
+nebo novou mechaniku, ne jen „stejné ale 1000×".
+
+
+P2. SUROVINY
+------------
+v1 má pouze kredity. Plán: více surovin se specifickými sktruktůrami.
+
+  Vlna (wool): kontinuální, aktuálně se ihned prodává za kredity.
+    Plán: uchovávat jako surovinu, zpracovávat (tkalcovský stav) na
+    tkaninu za vyšší cenu, nebo exportovat surově.
+
+  Maso (meat): z porážky, aktuálně se ihned prodává.
+    Plán: totéž, uchovávat / zpracovávat.
+
+  Hnůj / půda: vedlejší produkt chovu, fertilizace pastvin.
+
+  Voda: od Tieru 5, spotřeba na ovci, těžba nebo nákup.
+
+  Energie: od Tieru 6, pohon vesmírných transportů.
+
+Sklad (capacity cap à la Kittens Game): hráč musí stavět sklady
+aby mohl akumulovat velká množství surovin.
+
+
+P3. HROUCENÍ ZEMĚ
+-----------------
+Speciální event po dosažení určitého celkového počtu ovcí/hmotnosti.
+Planeta se začne deformovat, hráč musí investovat do protiváhy.
+Mechanicky jde o nový "sklad" problémů: posilování infrastruktury,
+gravitační kotvení, přesun části stáda do vesmíru.
+Záměr: aby hra nerostla jen lineárně, ale měla dramatické zlomy.
+
+
+P4. PRESTIGE RESET
+------------------
+Hráč může resetovat hru výměnou za trvalý bonus (nové plemeno,
+permanentní genový bonus, kosmetická změna vizuálu per).
+Smysl: umožnit opakované hraní s efektivnějším startem.
+
+
+P5. ACHIEVEMENTY
+----------------
+Jednosměrné milníky za průběh hry (vzor: Cookie Clicker).
+Příklady:
+  "První jehně" — první porod
+  "Šlechtitel" — první generace se všemi geny nad průměrem
+  "Porážeč" — první manuální porážka
+  "Stotisícové stádo" — 100 000 ovcí celkem
+Achievementy by mohly odemykat kosmetické efekty nebo malé bonusy.
+
+
+P6. LUCKY SHEEP / EVENTY
+--------------------------
+Náhodné události à la Cookie Clicker golden cookies.
+Příklady:
+  Zlatá ovce — kliknutelný event, 2× příjem po dobu 30 s
+  Mutant — narozené jehně s jedním genem na maximu
+  Nemoc — část stáda nedává vlnu po dobu X (negativní event)
+  Bouřka — přerušení chovu na krátký čas
+Eventy by měly odpovídající vizuální indikaci (blikání v peru).
+
+
+P7. POJMENOVÁNÍ A SLEDOVÁNÍ LINIÍ
+-----------------------------------
+Každá ovce by mohla dostat procedurálně generované jméno
+(kombinace slabik, nebo "dcera #12 a #7").
+Sledování genové linie — tooltip by ukazoval rodiče a prarodiče.
+Hráč by tak mohl vidět výsledek svého šlechtění napříč generacemi.
+
+
+P8. POKROČILÝ VÝBĚR SAMIC
+--------------------------
+Aktuálně: samice jsou párovány v pořadí jak jsou uloženy.
+Plán: hráč může označit konkrétní samice jako "privilegované"
+(první na párování se studem) nebo "vyřazené" (nepáří se vůbec,
+jen vyrábí vlnu nebo čekají na porážku).
+Kombinace se studem a gene floor by dala kompletní control nad
+tím, kdo do dalšího kola přejde.
+
+
+P9. DETAILNÍ STATISTIKY
+------------------------
+Samostatný panel se životními statistikami hry:
+  - Celkem narozeno / uhynulo / poraženo
+  - Průměrná délka generace
+  - Nejlepší dosažené hodnoty genů (hall of fame)
+  - Graf vývoje breeding score v čase
+  - Doba hraní (gameTime)
+
+
+P10. VIZUÁLNÍ VYLEPŠENÍ
+-----------------------
+  - Animace porodu (nová tečka "vyskočí" z matky)
+  - Animace páření (samec a samice se na chvíli přiblíží)
+  - Animace porážky (tečka zmizí s efektem)
+  - Barevné kódování na základě breeding score (ne jen stádium)
+  - Mini-mapa při větším peru
+  - Zoom in/out
+
+
+P11. VÍCENÁSOBNÉ OHRÁDKY A SEPARACE STÁDA
+------------------------------------------
+Hráč by mohl rozdělit stádo do více per s různými pravidly culling.
+Pero A: šlechtění vlny (selekce na woolRate)
+Pero B: maso (selekce na size)
+Samostatný beran per pero.
+
+
+P12. AGREGÁTNÍ REŽIM — ZLEPŠENÍ
+---------------------------------
+Aktuálně: přechod na agregát je jednosměrný a ztratí se individuální
+data. Plán: "přiblížení" — hráč si vybere N nejlepších ovcí z kohorty
+a vrátí je do individuálního zobrazení pro jemnější šlechtění.
+Kohorta pak obsahuje zbytek bez těchto N jedinců.
+
+
+P13. MODULÁRNÍ UPGRADY — STROM
+--------------------------------
+Aktuálně: 4 upgrady jako lineární úrovně.
+Plán: strom (vzor: Trimps, NGU Idle) s větvemi pro různé strategie.
+  Větev vlna: woolRate → woolQuality → automatic shearing interval
+  Větev maso: size → fat content → butcher efficiency
+  Větev chov: fertility boost → gestation cut → twin births
+  Větev genomika: mutation rate control → gene locking → directed evolution
+
+
+P14. GALAKTICKÁ FÁZE
+--------------------
+Ovce na různých planetách s odlišnými fyzikálními podmínkami
+(jiná gravitace = jiná size distribuce, jiná teplota = jiná wool).
+Meziplanetární transport ovcí jako strategická mechanika.
+
+
+=======================================================================
+TECHNICKÁ ARCHITEKTURA (pro rekonstrukci)
+=======================================================================
+
+Soubory:
+  index.html       — HTML kostra, canvas, side panel, script type=module
+  styles.css       — dark theme CSS, flex layout
+  src/config.js    — všechny konstanty (GENES, COSTS, UPGRADES, ECON)
+  src/state.js     — tvar stavu, newGame(), cullDefaults()
+  src/genetics.js  — randomGenes(), inherit(), breedingScore(), IDs
+  src/sheep.js     — makeSheep(), stageBoundaries(), stageOf(), qualityScore()
+  src/simulation.js — step() (5 pasů), slaughter(), meatFromSheep()
+  src/population.js — toAggregate(), stepAggregate(), aggCount()
+  src/economy.js   — cost funkce, multiplikátory
+  src/save.js      — serialize(), deserialize(), hydrate(), offline
+  src/render.js    — Canvas render, tooltip, legenda, stud indikátor
+  src/ui.js        — initUI(), updateUI(), sex toggle, cull panel
+  src/main.js      — bootstrap, herní smyčka, mouse, drift, akce
+  src/format.js    — fmt() pro velká čísla (K/M/B/T/...)
+  sinuhetcloud.conf — deploy config (name, port, start command)
+
+Herní smyčka:
+  requestAnimationFrame → wall-clock dt → simulation steps → render → updateUI
+
+Časování:
+  TIME_SCALE = 1 → 1 reálná sekunda = 1 herní sekunda
+  lifespan default ~180 s → ovce žije ~3 reálné minuty
+  Lze škálovat zrychlením TIME_SCALE pro testování nebo rychlejší hru
+
+Savový formát:
+  JSON → UTF-8 → base64 (btoa/atob)
+  Verze: state.version (aktuálně 2)
+  Migrace z v1 (autoSlaughter → cull) v hydrate()
+
+Čísla:
+  Všechna čísla jsou JavaScriptové float64.
+  Při galaktických počtech přejde hra na vědecký zápis přes fmt().
+  Kredity, vlna, maso — neexistuje overflow (JS number je dostatečný).
+
+
+ZÁVĚR
+------
+Základní smyčka (koupit → množit → šlechtit → prodávat → expandovat)
+je plně funkční. Genetická mechanika je smysluplná: selekce skutečně
+posouvá populaci k lepším genům díky mutaci, která může překročit
+oba rodiče. Culling panel dává hráči nástroje pro efektivní šlechtění
+bez nutnosti manuálního klikání.
+
+Hlavní prázdná místa v1: žádné tiery (jen jedna ohrádka), žádný
+prestige, žádné eventy, statistiky jen v HUDu.
