@@ -1,7 +1,7 @@
 // ===========================================================================
 //  Bootstrap + herní smyčka.
 // ===========================================================================
-import { TIME_SCALE, AUTOSAVE_MS } from './config.js';
+import { TIME_SCALE, AUTOSAVE_MS, MAX_OFFLINE_SECONDS } from './config.js';
 import { newGame } from './io/state.js';
 import { loadLocal, saveLocal, clearLocal, serialize, deserialize, applyOffline } from './io/save.js';
 import { step } from './sim/simulation.js';
@@ -33,13 +33,19 @@ if (!loaded) {
 }
 
 // --- smyčka ----------------------------------------------------------------
-let prev = performance.now(), saveAcc = 0;
-function frame(now) {
-  let dt = (now - prev) / 1000; prev = now;
-  if (dt > 60) dt = 60;            // delší nepřítomnost dožene offline po reloadu
-  dt *= TIME_SCALE;
+let prev = performance.now(), prevWall = Date.now(), saveAcc = 0;
+function advance(dt, maxStep = 0.1) {
   let rem = dt;
-  while (rem > 0) { const c = Math.min(0.1, rem); step(state, c); rem -= c; }
+  while (rem > 0) { const c = Math.min(maxStep, rem); step(state, c); rem -= c; }
+}
+function frame(now) {
+  const wallNow = Date.now();
+  let dt = (now - prev) / 1000; prev = now;
+  const wallDt = (wallNow - prevWall) / 1000; prevWall = wallNow;
+  const longGap = dt > 60;
+  if (longGap) dt = Math.min(MAX_OFFLINE_SECONDS, Math.max(dt, wallDt)); // dlouhý suspend dožeň i bez reloadu
+  dt *= TIME_SCALE;
+  advance(dt, longGap ? dt / Math.min(3000, Math.ceil(dt)) : 0.1);
   runAutobuy(state);               // automatické nákupy (zapnuté kategorie)
   saveAcc += dt;
   updateUI(state);                 // jen aktualizuje hodnoty na místě (bez blikání)

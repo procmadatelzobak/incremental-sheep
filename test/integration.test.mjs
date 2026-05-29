@@ -11,6 +11,7 @@ document.hidden = false;
 let raf = null;
 globalThis.requestAnimationFrame = (cb) => { raf = cb; return 1; };
 globalThis.performance = { now: () => globalThis.__clock || 0 };
+globalThis.Date.now = () => globalThis.__wallClock || 0;
 const store = {};
 globalThis.localStorage = {
   getItem: (k) => (k in store ? store[k] : null),
@@ -33,6 +34,7 @@ ok = true;
 try {
   for (let i = 1; i <= 80; i++) {       // 8 s herního času (přes práh autosave 5 s)
     globalThis.__clock = i * 100;       // +100 ms/frame
+    globalThis.__wallClock = i * 100;
     if (i === 3) credBefore = hud() ? hud().textContent : '';
     raf(i * 100);                        // frame() se sám přeplánuje (znovu nastaví raf)
   }
@@ -49,6 +51,18 @@ try {
   const s2 = deserialize(store['incremental-sheep-v3']);
   check('uložený stav jde načíst', s2 && s2.version === 3 && Array.isArray(s2.groups));
 } catch (e) { ok = false; console.error(e); check('uložený stav jde načíst', false); }
+
+// dlouhý suspend tabu se po návratu nesmí potichu zkrátit na 60 s (#46)
+ok = true;
+try {
+  const { deserialize } = await import('../src/io/save.js');
+  const before = deserialize(store['incremental-sheep-v3']).meta.gameTime;
+  globalThis.__clock += 120000;
+  globalThis.__wallClock += 120000;
+  raf(globalThis.__clock);
+  const after = deserialize(store['incremental-sheep-v3']).meta.gameTime;
+  check('dlouhý frame gap dopočítá suspend nad 60 s', after - before > 119);
+} catch (e) { ok = false; console.error(e); check('dlouhý frame gap dopočítá suspend nad 60 s', false); }
 
 console.log(`integration: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
