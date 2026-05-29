@@ -155,7 +155,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   let ok = true;
   try { notifyPhase(2); notifyAchievement('sheep10'); updateUI(s); } catch (e) { ok = false; console.error('  notifikace spadly:', e.message); }
   check('modál fáze + toast milníku nespadnou', ok);
-  check('HUD ukazuje doporučený krok', document.getElementById('hud').textContent.includes('➤'));
+  check('HUD má nástroj rady (💡)', buttonsByText(document.getElementById('hud'), '💡').length > 0);
 }
 
 // --- Batch B: šlechtící presety (#30: v záložce Genetika) + náhled prestige ---
@@ -170,7 +170,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('Genetika obsahuje geny + výběr při narození', panel().textContent.includes('Geny stáda') && panel().textContent.includes('Výběr při narození') && panel().textContent.includes('Přísnost výběru'));
   clickTab('Stáda');
   check('genom a šlechtění už nejsou na dashboardu Stáda (#30)', !panel().textContent.includes('Výběr při narození') && !panel().textContent.includes('Geny stáda'));
-  check('Porážka zůstává na Stádech', panel().textContent.includes('Porážka'));
+  check('Porážka už není na Stádech (přesun do Jatek #33)', !panel().textContent.includes('Porážet'));
 
   const sp = newGame(); sp.phase = 7; sp.resources.credits = 1e6;
   initUI(sp, 'app', () => {});
@@ -262,9 +262,12 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('panel ukazuje rozpad samci/samice', panel().textContent.includes('Samci') && panel().textContent.includes('Samice') && panel().textContent.includes('Dospělí'));
   check('panel ukazuje řádek páření', panel().textContent.includes('Páření'));
   check('málo samců → varování', panel().textContent.includes('málo samců'));
-  // limit samců: hint vysvětlí brzdění porodů
-  s.groups[0].policy.maxMales = 2; initUI(s, 'app', () => {}); clickTab('Stáda');
-  check('limit samců má vysvětlující hint', panel().textContent.includes('Limit') && panel().textContent.includes('za cyklus'));
+  // poměr samic/samec se nově řeší v Jatkách (#33): vysoký poměr varuje, že brzdí porody
+  const sj = newGame(); sj.resources.credits = 1e6; sj.phase = 3; sj.land.worlds.earth.tier = 4;
+  sj.groups[0].counts.F.adult = 100; sj.groups[0].counts.M.adult = 100;
+  sj.groups[0].policy.autoMales = true; sj.groups[0].policy.femalesPerMale = 50;   // >> plodnost → brzdí porody
+  initUI(sj, 'app', () => {}); clickTab('Jatka');
+  check('vysoký poměr samic/samec v Jatkách varuje, že brzdí porody', panel().textContent.includes('porody klesnou'));
 }
 
 // --- #29: signál „trh ovcí se vyčerpává" když množení předstihne nákup ---
@@ -343,6 +346,62 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   buttonsByText(panel(), 'Koupit')[0].click();
   const d = hud().querySelector('.chip-d');
   check('po nákupu se ukáže delta kreditů', !!d && d.textContent.includes('−'));
+}
+
+// --- #32: horní nástroje (💡 rada/tip, ⚙ nastavení export/import, ❓ o hře) ---
+{
+  const s = newGame(); s.resources.credits = 1e6;
+  const hooks = { exportSave: () => 'SAVESTRING123', importSave: () => {}, resetGame: () => {} };
+  initUI(s, 'app', () => {}, hooks);
+  const tipBtn = buttonsByText(hud(), '💡')[0];
+  const gearBtn = buttonsByText(hud(), '⚙')[0];
+  const infoBtn = buttonsByText(hud(), '❓')[0];
+  check('HUD má tři nástroje (💡 ⚙ ❓)', !!tipBtn && !!gearBtn && !!infoBtn);
+  tipBtn.click();
+  const m1 = document.body.querySelector('.modal');
+  check('💡 otevře radu s doporučeným krokem a tipem', !!m1 && m1.textContent.includes('➤') && m1.textContent.includes('Tip'));
+  document.body.querySelector('.modal-x').click();
+  check('× zavře modál', !document.body.querySelector('.modal'));
+  gearBtn.click();
+  const m2 = document.body.querySelector('.modal');
+  check('⚙ otevře nastavení (export i načtení)', !!m2 && m2.textContent.includes('Export') && m2.textContent.includes('Načíst'));
+  buttonsByText(m2, 'Export')[0].click();
+  const field = m2.querySelector('input');
+  check('Export naplní pole save stringem', !!field && field.value === 'SAVESTRING123');
+  document.body.querySelector('.modal-x').click();
+  infoBtn.click();
+  check('❓ otevře „O hře" s autorem a GitHubem', document.body.textContent.includes('O hře') && document.body.textContent.includes('GitHub'));
+  document.body.querySelector('.modal-x').click();
+}
+
+// --- #33: Jatka — odemčení městskými pozemky + dvě automatiky porážek ---
+{
+  const a = newGame(); a.phase = 3; a.resources.credits = 1e7;
+  initUI(a, 'app', () => {});
+  check('Jatka skrytá bez městských pozemků', !allButtons(tabs()).some(b => b.textContent.includes('Jatka') && b.style.display !== 'none'));
+
+  const s = newGame(); s.phase = 3; s.resources.credits = 1e7; s.land.worlds.earth.tier = 4;
+  initUI(s, 'app', () => {});
+  check('Jatka viditelná s městskými pozemky', allButtons(tabs()).some(b => b.textContent.includes('Jatka') && b.style.display !== 'none'));
+  clickTab('Jatka');
+  check('Jatka má obě automatiky vedle sebe', panel().textContent.includes('Samic na 1 samce') && panel().textContent.includes('před zestárnutím') && panel().querySelectorAll('.jatka-cols').length === 1);
+  const checks = panel().querySelectorAll('input').filter(i => i.attributes.type === 'checkbox');
+  checks[0].dispatch('change');
+  check('zapnutí porážky samců nastaví policy.autoMales', s.groups[0].policy.autoMales === true);
+  checks[1].dispatch('change');
+  check('zapnutí porážky před zestárnutím nastaví policy.slaughterBeforeOld', s.groups[0].policy.slaughterBeforeOld === true);
+}
+
+// --- #34: odznak „!" u nově odemčené záložky (persist v state.seenTabs) ---
+{
+  const s = newGame(); initUI(s, 'app', () => {});
+  check('startovní záložka (Genetika) nemá odznak', buttonsByText(tabs(), 'Genetika')[0].querySelectorAll('.tab-badge').length === 0);
+  s.phase = 2; updateUI(s);     // odemkne Pozemky + Kroniku
+  const poz = buttonsByText(tabs(), 'Pozemky')[0];
+  check('nově odemčená záložka má odznak !', !!poz && poz.querySelectorAll('.tab-badge').length === 1);
+  poz.click();
+  check('po otevření je záložka „viděná" (state.seenTabs)', s.seenTabs.stations === true);
+  check('odznak po otevření zmizí', buttonsByText(tabs(), 'Pozemky')[0].querySelectorAll('.tab-badge').length === 0);
 }
 
 console.log(`ui: ${pass} passed, ${fail} failed`);

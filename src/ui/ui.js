@@ -7,8 +7,9 @@
 import { fmt, fmtCount } from '../format.js';
 import * as A from '../econ/actions.js';
 import { upgradeCost, perkCost, getMults } from '../econ/economy.js';
-import { UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
+import { VERSION, UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
+import { maleCapOf } from '../sim/groups.js';
 import { herdCapacity, totalArea, densityMult, densityMaxLevel, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
 import { phaseName, phaseHint, phaseProgress, PHASE_INFO, PHASES } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax, selectedNewbornDist } from '../sim/genetics.js';
@@ -23,9 +24,12 @@ import { ICONS, PHASE_ICONS, RES_ICONS, KIND_ICONS } from '../icons.js';
 let root, hud, tabsBar, panelEl, bannerEl, activeTab = 'herds', lastTabSig = '', structSig = '';
 let updaters = [];           // aktualizace hodnot aktivního panelu (běží každý frame)
 let S, onAction = () => {};
-let modalEl = null; const modalQueue = []; let toastWrap = null; const visitedTabs = new Set();
+let hooks = {};              // callbacky z main.js (export/import/reset) pro ⚙ Nastavení (#32)
+let modalEl = null; const modalQueue = []; let toastWrap = null;
+let infoModalEl = null;      // dismissable overlay pro 💡/⚙/❓ (#32)
 let herdCanvasEl = null;
 let upgradeFilter = 'all';     // filtr v panelech vylepšení (#27): all|avail|soon|owned
+let tipIdx = 0;                // rotace tipů v 💡 (#32)
 
 // --- DOM helpers -----------------------------------------------------------
 function h(tag, props = {}, ...kids) {
@@ -114,7 +118,7 @@ function limitText(s) {
   const matable = g.counts.M.adult * fert;
   if (matable < g.counts.F.adult * 0.9) {
     const need = Math.ceil(g.counts.F.adult / fert);
-    return `⚠ Brzdí: málo samců — spáří se jen ~${fmtCount(matable)} z ${fmtCount(g.counts.F.adult)} samic (drž ~${fmtCount(need)} samců${g.policy.maxMales ? ', zvyš limit v Porážce' : ''})`;
+    return `⚠ Brzdí: málo samců — spáří se jen ~${fmtCount(matable)} z ${fmtCount(g.counts.F.adult)} samic (drž ~${fmtCount(need)} samců${g.policy.autoMales ? ', zmírni poměr v Jatkách' : ''})`;
   }
   return 'Stádo roste — kup víc rozlohy/hustoty pro další růst';
 }
@@ -148,12 +152,19 @@ function geneBar(key) {
 }
 
 // --- HUD (staví se jednou, aktualizuje na místě) ---------------------------
-let hudChips = {}, hudEp, hudPhase, hudHint, hudStep, hudCap, hudGate;
+let hudChips = {}, hudEp, hudPhase, hudHint, hudCap, hudGate, hudTools = {};
 function buildHud() {
   clear(hud);
   hudEp = h('b', {}); hudPhase = h('span', { class: 'dim', id: 'hud-phase' });
   hudHint = h('div', { class: 'hud-hint' });
-  hudStep = h('div', { class: 'hud-step' });
+  // nástroje vpravo nahoře (#32): rada/tip, nastavení (export/import), o hře
+  const tipBtn = h('button', { class: 'hud-tool', title: 'Rada pastýře a tip dne', onclick: openTipModal }, '💡');
+  const gearBtn = h('button', { class: 'hud-tool', title: 'Nastavení — export/import hry', onclick: openSettingsModal }, '⚙');
+  const infoBtn = h('button', { class: 'hud-tool', title: 'O hře', onclick: openAboutModal }, '❓');
+  hudTools = { tip: tipBtn, gear: gearBtn, info: infoBtn };
+  const topRow = h('div', { class: 'hud-top' },
+    h('div', { class: 'hud-title' }, hudEp, hudPhase),
+    h('div', { class: 'hud-tools' }, tipBtn, gearBtn, infoBtn));
   const chips = h('div', { class: 'chips' });
   hudChips = {};
   for (const [k, lab] of [['credits', ICONS.credits + ' Kredity'], ['pop', ICONS.sheep + ' Ovce'], ['wool', ICONS.wool + ' Vlna/s'], ['milk', ICONS.milk + ' Mléko/s'], ['meat', ICONS.meat + ' Maso/s'], ['compute', ICONS.compute + ' Výpočet/s'], ['knowledge', ICONS.knowledge + ' Vědění']]) {
@@ -173,8 +184,8 @@ function buildHud() {
   const capLab = h('span', { class: 'barlabel' });
   const capBar = h('div', { class: 'bar', title: 'Naplnění pastvin (ovce / kapacita)' }, capFill, capLab);
   hudCap = { fill: capFill, lab: capLab };
-  hud.appendChild(h('div', { class: 'hud-title' }, hudEp, hudPhase));
-  hud.appendChild(hudHint); hud.appendChild(hudStep); hud.appendChild(chips); hud.appendChild(gateBar); hud.appendChild(capBar);
+  hud.appendChild(topRow);
+  hud.appendChild(hudHint); hud.appendChild(chips); hud.appendChild(gateBar); hud.appendChild(capBar);
 }
 // Krátká delta bublina na kartě po akci (#25).
 function popDelta(key, text, good) {
@@ -190,7 +201,7 @@ function updateHud(s) {
   const sp = (s.rates && s.rates._speed) || 1;
   hudPhase.textContent = `  •  ${PHASE_ICONS[s.phase] || ''} Fáze ${s.phase}: ${phaseName(s)}` + (sp > 1 ? `  ⏩ čas ×${sp.toFixed(1)}` : '');
   hudHint.textContent = '› ' + phaseHint(s);
-  hudStep.textContent = '➤ ' + A.suggestStep(s);
+  if (hudTools.tip) setClass(hudTools.tip, 'lit', stepActionable(s));   // žárovka svítí, když je co výhodně koupit
   const r = s.rates || {};
   const set = (k, txt, show) => { const c = hudChips[k]; if (!c) return; c.chip.style.display = show ? '' : 'none'; c.val.textContent = txt; };
   set('credits', fmt(s.resources.credits || 0), true);
@@ -225,12 +236,14 @@ function updateHud(s) {
 }
 
 // --- ZÁLOŽKY ---------------------------------------------------------------
-// Laboratoř se odemkne, jakmile má hráč pozemky kolem prvního města (Země tier 4).
+// Laboratoř i Jatka se odemknou, jakmile má hráč pozemky kolem prvního města (Země tier 4).
 const labUnlocked = (s) => (s.land.worlds.earth.tier || 0) >= 4;
+const cityUnlocked = (s) => (s.land.worlds.earth.tier || 0) >= 4;
 
 const TABS = [
   { id: 'herds', label: ICONS.sheep + ' Stáda', avail: () => true, render: renderHerds },
   { id: 'genetics', label: ICONS.genes + ' Genetika', avail: () => true, render: renderGenetics },
+  { id: 'slaughter', label: '🔪 Jatka', avail: s => cityUnlocked(s), render: renderSlaughter },
   { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
   { id: 'lab', label: ICONS.lab + ' Laboratoř', avail: s => labUnlocked(s), render: renderLab },
   { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: s => s.phase >= 2, render: renderStations },
@@ -240,15 +253,25 @@ const TABS = [
   { id: 'kronika', label: ICONS.kronika + ' Kronika', avail: s => s.phase >= 2, render: renderKronika },
   { id: 'stats', label: ICONS.stats + ' Staty', avail: () => true, render: renderStats },
 ];
+// Notifikace nově odemčených záložek (#34): drž v state.seenTabs (přežije reload).
+// Při prvním spuštění/načtení označ vše aktuálně dostupné za viděné, aby se
+// odznak „!" objevil jen u záložek, které se odemknou až POZDĚJI.
+function ensureSeenTabs(s) {
+  if (!s.seenTabs) { s.seenTabs = {}; for (const t of TABS) if (t.avail(s)) s.seenTabs[t.id] = true; }
+  return s.seenTabs;
+}
 function buildTabs() {
   clear(tabsBar);
+  const seen = ensureSeenTabs(S);
   for (const t of TABS) {
-    const isNew = t.avail(S) && !visitedTabs.has(t.id) && t.id !== activeTab;
-    const b = h('button', { class: 'tab' + (t.id === activeTab ? ' active' : '') + (isNew ? ' pulse' : ''), onclick: () => { if (activeTab !== t.id) { visitedTabs.add(t.id); activeTab = t.id; buildTabs(); rebuildPanel(); } } }, t.label);
+    const isNew = t.avail(S) && !seen[t.id];
+    const b = h('button', { class: 'tab' + (t.id === activeTab ? ' active' : '') + (isNew ? ' new' : ''),
+      onclick: () => { S.seenTabs[t.id] = true; if (activeTab !== t.id) activeTab = t.id; buildTabs(); rebuildPanel(); onAction(); } },
+      t.label, isNew ? h('span', { class: 'tab-badge', text: '!' }) : null);
     if (!t.avail(S)) b.style.display = 'none';
     tabsBar.appendChild(b);
   }
-  visitedTabs.add(activeTab);
+  seen[activeTab] = true;   // aktivní záložka je vždy „viděná"
 }
 
 // --- PANELY (staví strukturu jednou; hodnoty přes reg()) -------------------
@@ -341,20 +364,8 @@ function renderHerds(s) {
 
   wrap.appendChild(incomeSection(s));
 
-  if (s.phase >= 2) {
-    wrap.appendChild(section('🥩 Porážka',
-      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killOld ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killOld'); onAction(); } }), ' Porážet staré (maso + části)'),
-      h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.killMaleChildren ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'killMaleChildren'); onAction(); } }), ' Porážet nadbytečné samce-mláďata (maso)'),
-      h('div', { class: 'ctl-row' }, 'Max dospělých samců (0 = bez limitu): ',
-        h('input', { type: 'number', min: 0, value: g.policy.maxMales, style: 'width:80px', onchange: e => { A.setMaxMales(s, g.id, +e.target.value); onAction(); } })),
-      liveSpan(() => {
-        const gg = group();
-        if (!gg.policy.maxMales) return 'Bez limitu — všichni samci zůstávají na množení.';
-        const fert = Math.max(0.1, gg.genes.fertility.mu + (getMults(s).fertBonus || 0));
-        const can = gg.policy.maxMales * fert;
-        const warn = can < gg.counts.F.adult * 0.95 ? ' ⚠ to brzdí porody — děti pak ubývají rychleji, než se rodí. Zvyš limit nebo dej 0.' : '';
-        return `Limit ${fmtCount(gg.policy.maxMales)} samců spáří ~${fmtCount(can)} samic za cyklus.${warn}`;
-      }, 'dim small')));
+  if (cityUnlocked(s)) {
+    wrap.appendChild(h('div', { class: 'dim small', text: '🔪 Automatika porážek (přebyteční samci, porážka před zestárnutím) je v záložce Jatka.' }));
   }
 
   if (s.phase === 4 && !s.flags.immortal) {
@@ -412,6 +423,47 @@ function renderGenetics(s) {
   } else {
     wrap.appendChild(h('div', { class: 'dim small' }, 'Šlechtění (výběr nejlepších jehňat při narození) se odemkne ve fázi 2.'));
   }
+  return wrap;
+}
+
+// Jatka (#33): automatika porážek, odemčená s městskými pozemky. Dvě sekce vedle sebe —
+// porážka přebytečných samců (poměr samic/samec) a porážka těsně před zestárnutím.
+function renderSlaughter(s) {
+  const g = group();
+  const wrap = h('div', {});
+  if (s.groups.length > 1) {
+    wrap.appendChild(section('Stádo',
+      h('select', { onchange: e => { s.activeGroupId = +e.target.value; rebuildPanel(); } },
+        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmtCount(totalCount(x))})`)))));
+  }
+  const fertOf = () => Math.max(0.1, group().genes.fertility.mu + (getMults(s).fertBonus || 0));
+
+  const malesCard = h('div', { class: 'jcard' },
+    h('h4', { text: '🐏 Přebyteční samci' }),
+    h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.autoMales ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'autoMales'); onAction(); rebuildPanel(); } }), ' Automaticky porážet přebytečné dospělé samce'),
+    h('div', { class: 'ctl-row' }, 'Samic na 1 samce: ',
+      h('input', { type: 'number', min: 1, value: g.policy.femalesPerMale ?? 8, style: 'width:80px', onchange: e => { A.setFemalesPerMale(s, g.id, +e.target.value); onAction(); } })),
+    liveSpan(() => {
+      const gg = group();
+      if (!gg.policy.autoMales) return 'Vypnuto — všichni samci zůstávají (víc kapacity páření, ale ujídají místo a krmení).';
+      const keep = maleCapOf(gg);
+      const f = fertOf();
+      const fpm = Math.max(1, gg.policy.femalesPerMale || 8);
+      const warn = fpm > f ? ` ⚠ poměr ${fmtCount(fpm)} je vyšší než plodnost (${f.toFixed(1)}) — samci nestihnou oplodnit všechny samice a porody klesnou.` : '';
+      return `Necháš ~${fmtCount(keep)} dospělých samců (z ${fmtCount(gg.counts.M.adult)}), zbytek (nejstarší) jde na maso. 1 samec oplodní ~${f.toFixed(1)} samic.${warn}`;
+    }, 'dim small'));
+
+  const oldCard = h('div', { class: 'jcard' },
+    h('h4', { text: '⏳ Porážka před zestárnutím' }),
+    h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(g.policy.slaughterBeforeOld ? { checked: 'checked' } : {}), onchange: () => { A.togglePolicy(s, g.id, 'slaughterBeforeOld'); onAction(); rebuildPanel(); } }), ' Porážet ovce těsně před zestárnutím'),
+    h('div', { class: 'dim small', text: 'Stará ovce dává míň masa i vlny a nakonec uhyne bez užitku. Porážkou těsně předtím získáš plný (dospělý) výnos masa.' }),
+    liveSpan(() => group().policy.slaughterBeforeOld
+      ? 'Zapnuto — žádná ovce nezestárne; všechny jdou na maso v plném výnosu.'
+      : 'Vypnuto — ovce stárnou a staré uhynou stářím bez masa.', 'dim small'));
+
+  wrap.appendChild(section('🔪 Jatka — automatika porážek',
+    h('div', { class: 'dim small', text: 'Automatické řízení porážek pro maso (a od fáze 5 i kosti, kůži a mozky). Odemčeno s městskými pozemky.' }),
+    h('div', { class: 'jatka-cols' }, malesCard, oldCard)));
   return wrap;
 }
 
@@ -707,9 +759,86 @@ function rebuildPanel() {
   refreshPanel();
 }
 
+// --- horní nástroje (#32): rada/tip, nastavení, o hře ----------------------
+// Žárovka „svítí", když doporučený krok jde rovnou provést (něco výhodného koupit).
+function stepActionable(s) { return /^(Kup:|★|Zažehni|Dokonči|Vyrob)/.test(A.suggestStep(s)); }
+
+const TIPS = [
+  'Zprvu dokupuj ovce — vlastní množení je pomalé. Jakmile vyšlechtíš nižší Březost a rozrosteš stádo, množení nákup předežene (a trh ovcí dojde).',
+  'Samec dává kapacitu páření: 1 samec spáří zhruba tolik samic, kolik je Plodnost. Drž poměr samců, ať porody nebrzdí nedostatek beranů.',
+  'Šlechtění (Genetika) zvedá průměr μ a utahuje rozptyl σ. Vyber gen a přísnost — nejhorší jehňata padnou rovnou na maso.',
+  'Kapacitu pastvin zvyšuješ rozlohou × hustotou × modifikátory (Pozemky). Když je skoro plno, ukazatel zezlátne.',
+  'S městskými pozemky se odemkne Laboratoř (zpracování, dojení, mozky) a Jatka (automatika porážek).',
+  'V Jatkách zapni „porážku před zestárnutím" — stará ovce dává míň masa, takhle z ní dostaneš plný výnos.',
+  'Zpracování v Laboratoři mění vlnu na sukno a mléko na sýr — prodá se dráž. Kupuj Tkalcovny.',
+  'Od fáze 6 funguje společný sklad s autotrade: vypni prodej a zboží se střádá. Pozor: jakýkoli nákup sklad vyprázdní.',
+  'Před černou dírou (fáze 10) zapni „Nasávat produkci" a nech sklad naplnit — pak zažehni a získáš Vědění na trvalé perky.',
+];
+
+function openModalNode(node) {
+  if (!root) return;
+  closeInfoModal();
+  const card = h('div', { class: 'modal' }, h('button', { class: 'modal-x', title: 'Zavřít', onclick: closeInfoModal }, '×'), node);
+  infoModalEl = h('div', { class: 'modal-bg', onclick: (e) => { if (e.target === infoModalEl) closeInfoModal(); } }, card);
+  root.appendChild(infoModalEl);
+}
+function closeInfoModal() {
+  if (infoModalEl && root) { try { root.removeChild(infoModalEl); } catch (e) { /* ignore */ } }
+  infoModalEl = null;
+}
+
+function openTipModal() {
+  const tipBox = h('div', { class: 'modal-lore' });
+  const setTip = () => { tipBox.textContent = TIPS[((tipIdx % TIPS.length) + TIPS.length) % TIPS.length]; };
+  setTip();
+  openModalNode(h('div', {},
+    h('h2', { text: '💡 Rada pastýře' }),
+    h('div', { class: 'dim small', text: 'Co se teď nejvíc vyplatí:' }),
+    h('div', { class: 'tip-step', text: '➤ ' + A.suggestStep(S) }),
+    h('div', { class: 'dim small', text: 'Tip:' }),
+    tipBox,
+    h('button', { class: 'act', onclick: () => { tipIdx++; setTip(); } }, 'Další tip')));
+}
+
+function openSettingsModal() {
+  const field = h('input', { placeholder: 'sem vlož save string pro načtení…' });
+  const msg = h('div', { class: 'dim small' });
+  const expBtn = h('button', { class: 'act', onclick: () => {
+    const str = hooks.exportSave ? hooks.exportSave() : '';
+    field.value = str; if (field.setAttribute) field.setAttribute('value', str);
+    msg.textContent = 'Save string je v poli níže (zálohuj si ho).';
+    try { globalThis.navigator?.clipboard?.writeText(str); msg.textContent = 'Zkopírováno do schránky.'; } catch (e) { /* ignore */ }
+  } }, '⬇ Export (kopírovat)');
+  const impBtn = h('button', { class: 'act', onclick: () => {
+    const str = (field.value || '').trim();
+    if (!str) { msg.textContent = 'Vlož nejdřív save string do pole.'; return; }
+    try { if (hooks.importSave) hooks.importSave(str); } catch (e) { msg.textContent = 'Chyba načtení: ' + e.message; }
+  } }, '⬆ Načíst');
+  const resetBtn = h('button', { class: 'act danger', onclick: () => { if (hooks.resetGame) hooks.resetGame(); } }, 'Reset hry (smazat postup)');
+  openModalNode(h('div', {},
+    h('h2', { text: '⚙ Nastavení' }),
+    h('div', { class: 'dim small', text: 'Export uloží celý stav hry jako text (záloha / přenos na jiné zařízení). Načíst obnoví hru z takového textu.' }),
+    h('div', { class: 'btn-row' }, expBtn, impBtn),
+    field, msg,
+    h('div', { class: 'sect-div' }),
+    h('div', { class: 'dim small', text: 'Nebezpečná zóna — reset smaže veškerý postup:' }),
+    resetBtn));
+}
+
+function openAboutModal() {
+  openModalNode(h('div', {},
+    h('h2', { text: '❓ O hře' }),
+    h('div', { class: 'modal-lore', text: 'Incremental Sheep — idle hra o stádu, které tě dovede od první ostříhané ovce až k singularitě. Vanilková JavaScript hra bez buildu.' }),
+    h('div', { class: 'about-row' }, h('span', { class: 'dim', text: 'Autor' }), h('span', { text: 'procmadatelzobak' })),
+    h('div', { class: 'about-row' }, h('span', { class: 'dim', text: 'Verze save' }), h('span', { text: String(VERSION) })),
+    h('div', { class: 'btn-row', style: 'margin-top:12px' },
+      h('a', { class: 'about-link', href: 'https://github.com/procmadatelzobak/incremental-sheep', target: '_blank', rel: 'noopener' }, '🐙 GitHub'),
+      h('a', { class: 'about-link', href: 'lore/README.md', target: '_blank', rel: 'noopener' }, '📜 Bible Farmářova'))));
+}
+
 // --- veřejné API -----------------------------------------------------------
-export function initUI(state, mountId = 'app', actionCb = () => {}) {
-  S = state; onAction = actionCb; activeTab = 'herds'; upgradeFilter = 'all';
+export function initUI(state, mountId = 'app', actionCb = () => {}, opts = {}) {
+  S = state; onAction = actionCb; hooks = opts || {}; activeTab = 'herds'; upgradeFilter = 'all';
   root = document.getElementById(mountId);
   clear(root);
   hud = h('div', { class: 'hud', id: 'hud' });
@@ -718,7 +847,7 @@ export function initUI(state, mountId = 'app', actionCb = () => {}) {
   bannerEl = h('div', { class: 'banner', id: 'banner', style: 'display:none' });
   root.appendChild(bannerEl); root.appendChild(hud); root.appendChild(tabsBar); root.appendChild(panelEl);
   lastTabSig = ''; structSig = '';
-  modalEl = null; toastWrap = null; modalQueue.length = 0; visitedTabs.clear();
+  modalEl = null; infoModalEl = null; toastWrap = null; modalQueue.length = 0;
   buildHud(); updateHud(state); buildTabs(); rebuildPanel();
 }
 

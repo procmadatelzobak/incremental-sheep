@@ -69,7 +69,7 @@ export function phaseProgress(state) {
 
 // Vstup do fáze jako událost: lore + co se nově odemklo.
 export const PHASE_INFO = {
-  2:  { unlocks: ['Mléko', 'Šlechtění (selekce)', 'Pastviny', 'Automatika porážek'], lore: '„I počal Farmář šlechtit, a stádo se mu množilo pod rukama."' },
+  2:  { unlocks: ['Mléko', 'Šlechtění (selekce)', 'Pastviny'], lore: '„I počal Farmář šlechtit, a stádo se mu množilo pod rukama."' },
   3:  { unlocks: ['Monopol', 'Zpracování (sukno, sýr)', 'Dražší vylepšení'], lore: '„Ovládl trh a počal šponovat ceny — neb kdo jiný by mu v tom zabránil."' },
   4:  { unlocks: ['Nápoj nesmrtelnosti', 'Pokročilá genetika'], lore: '„Vypil mléko věčnosti a přestal být pouhým ovčákem. Stal se Pastýřem."' },
   5:  { unlocks: ['Extrémní geny (vyšší stropy)', 'Inteligence → Výpočet', 'Kosti, kůže, mozek', 'Cesta do vesmíru'], lore: '„Vyšlechtil ovce moudré a z jejich mozků složil počítače."' },

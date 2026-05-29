@@ -1,5 +1,6 @@
 import { newGame, activeGroup, prestigeCarry } from '../src/io/state.js';
 import { step } from '../src/sim/simulation.js';
+import { applyPolicyKills, maleCapOf } from '../src/sim/groups.js';
 import { totalCount, totalPopulation, births } from '../src/sim/cohort.js';
 import { herdCapacity, totalArea } from '../src/content/locations.js';
 import { serialize, deserialize, applyOffline } from '../src/io/save.js';
@@ -326,6 +327,34 @@ function autoPlayer() {
   const pop = totalPopulation(s);
   check('#29 brzké stádo se samo udrží a poroste (ne vymírá)', pop > pop0);
   check('#29 brzké množení je pomalé (ne explozivní)', pop < pop0 * 40);
+}
+
+// 11) #33 Jatka: porážka před zestárnutím (plný výnos) + auto-strop samců
+{
+  const s = newGame(); s.phase = 2; const g = s.groups[0];
+  g.counts = { M: { child: 0, adult: 0, old: 10 }, F: { child: 0, adult: 0, old: 10 } };
+  g.policy.slaughterBeforeOld = true;
+  const y = applyPolicyKills(g, getMults(s), s);
+  check('#33 porážka před zestárnutím vybije staré', g.counts.M.old === 0 && g.counts.F.old === 0);
+  check('#33 porážka před zestárnutím dává maso', y.meat > 0);
+
+  const s2 = newGame(); s2.phase = 2; const g2 = s2.groups[0];
+  g2.counts = { M: { child: 0, adult: 0, old: 10 }, F: { child: 0, adult: 0, old: 10 } };
+  g2.policy.killOld = true;
+  const y2 = applyPolicyKills(g2, getMults(s2), s2);
+  check('#33 porážka před zestárnutím dá víc masa než porážka starých', y.meat > y2.meat);
+
+  const s3 = newGame(); s3.phase = 2; const g3 = s3.groups[0];
+  g3.counts = { M: { child: 0, adult: 50, old: 0 }, F: { child: 0, adult: 40, old: 0 } };
+  g3.policy.autoMales = true; g3.policy.femalesPerMale = 8;
+  check('#33 maleCapOf = ceil(samice / poměr)', maleCapOf(g3) === 5);
+  applyPolicyKills(g3, getMults(s3), s3);
+  check('#33 autoMales ořeže dospělé samce na strop', g3.counts.M.adult === 5);
+
+  const g4 = newGame().groups[0];
+  g4.counts = { M: { child: 0, adult: 9, old: 0 }, F: { child: 0, adult: 0, old: 0 } };
+  g4.policy.autoMales = true; g4.policy.femalesPerMale = 8;
+  check('#33 autoMales nechá aspoň 1 samce i bez samic', maleCapOf(g4) === 1);
 }
 
 console.log(`sim: ${pass} passed, ${fail} failed`);

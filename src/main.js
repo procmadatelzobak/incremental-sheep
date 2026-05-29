@@ -12,34 +12,25 @@ const loaded = loadLocal();
 let state = loaded || newGame();
 const save = () => saveLocal(state);
 
+// Export/import/reset (#32): obsluhuje je ⚙ Nastavení v HUDu (dřív footer).
+const uiHooks = {
+  exportSave: () => serialize(state),
+  importSave: (str) => { state = deserialize(str); save(); initUI(state, 'app', save, uiHooks); showBanner('Hra načtena ze save stringu.'); },
+  resetGame: () => {
+    if (typeof confirm === 'function' && !confirm('Opravdu smazat veškerý postup a začít úplně znovu?')) return;
+    clearLocal(); state = newGame(); initUI(state, 'app', save, uiHooks);
+  },
+};
+
 let off = null;
 try { off = applyOffline(state); } catch (e) { /* ignore */ }
 
-initUI(state, 'app', save);
+initUI(state, 'app', save, uiHooks);
 if (!loaded) {
   showBanner('Vítej! Ovce dávají vlnu, ta se prodává za kredity. Kupuj ovce a vylepšení, rozšiřuj a zahušťuj pastviny; od fáze 2 šlechti stádo selekcí. Nahoře vždy vidíš cíl aktuální fáze.');
 } else if (off && off.seconds >= 60 && off.credits > 0) {
   showOfflineModal(off, state);
 }
-
-// --- footer (export/import/reset) ------------------------------------------
-const $ = (id) => document.getElementById(id);
-$('btn-export')?.addEventListener('click', () => {
-  const str = serialize(state);
-  $('save-string').value = str;
-  $('save-msg').textContent = 'String je v poli níže.';
-  try { navigator.clipboard?.writeText(str); $('save-msg').textContent = 'Zkopírováno do schránky.'; } catch (e) { /* ignore */ }
-});
-$('btn-import')?.addEventListener('click', () => {
-  const str = ($('save-string').value || '').trim();
-  if (!str) return;
-  try { state = deserialize(str); save(); initUI(state, 'app', save); $('save-msg').textContent = 'Načteno.'; }
-  catch (e) { $('save-msg').textContent = 'Chyba: ' + e.message; }
-});
-$('btn-reset')?.addEventListener('click', () => {
-  if (!confirm('Opravdu smazat veškerý postup a začít úplně znovu?')) return;
-  clearLocal(); state = newGame(); initUI(state, 'app', save);
-});
 
 // --- smyčka ----------------------------------------------------------------
 let prev = performance.now(), saveAcc = 0;

@@ -9,7 +9,10 @@ export function defaultPolicy() {
   return {
     killOld: false,
     killMaleChildren: false,
-    maxMales: 0,                 // 0 = bez limitu
+    maxMales: 0,                 // 0 = bez limitu (starý ruční limit; nahrazeno poměrem níže)
+    autoMales: false,            // Jatka (#33): porážet přebytečné dospělé samce dle poměru
+    femalesPerMale: 8,           // kolik samic má připadat na 1 ponechaného samce
+    slaughterBeforeOld: false,   // Jatka (#33): porážet těsně před zestárnutím (plný výnos masa)
     cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2 },  // výběr při narození (#18)
   };
 }

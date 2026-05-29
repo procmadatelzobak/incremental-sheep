@@ -62,7 +62,7 @@ function hydrate(data) {
     }
     g.genes = fixed;
     if (typeof g.bredFracF !== 'number') g.bredFracF = 0;
-    if (!g.policy) g.policy = defaultPolicy();
+    g.policy = Object.assign(defaultPolicy(), g.policy || {});   // doplní nové spínače Jatek (#33) do starých savů
     if (!g.policy.cull) g.policy.cull = { enabled: false, gene: 'woolRate', cutFrac: 0.2 };
   }
   state.rates = {};
