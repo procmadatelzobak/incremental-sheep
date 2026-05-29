@@ -472,7 +472,8 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('název: úroveň 1 = tiers[0]', upgradeName(u, 1) === 'Nůžky');
   check('název: úroveň 2 se mění (Průmyslové nůžky)', upgradeName(u, 2) === 'Průmyslové nůžky');
   check('název: úroveň 3 (Automatická holírna)', upgradeName(u, 3) === 'Automatická holírna');
-  check('název: úroveň 4 ještě nepřekročí práh (stále tiers[2])', upgradeName(u, 4) === upgradeName(u, 3));
+  check('název: úrovně 1–30 mají každá vlastní název', upgradeName(u, 4) !== upgradeName(u, 3) && upgradeName(u, 4) === u.tiers[3]);
+  check('název: v ocasu se sousední úrovně sdílejí (L50 == L55)', upgradeName(u, 50) === upgradeName(u, 55));
   check('název: vysoká úroveň se ustálí na posledním', upgradeName(u, 9999) === u.tiers[u.tiers.length - 1]);
   // invarianty napříč všemi vylepšeními
   let okBase = true, okLen = true;
