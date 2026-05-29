@@ -4,6 +4,7 @@ const { initUI, updateUI, notifyPhase, notifyAchievement, showOfflineModal } = a
 import { newGame } from '../src/io/state.js';
 import { totalCount } from '../src/sim/cohort.js';
 import { serialize, deserialize } from '../src/io/save.js';
+import { UPGRADES, UPGRADE_TIER_FROM, upgradeName } from '../src/config.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) { if (cond) pass++; else { fail++; console.error('  FAIL:', name); } }
@@ -462,6 +463,35 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('inline karta ukazuje název fáze', panel().querySelector('.phase-banner').textContent.includes('Množení'));
   buttonsByText(panel().querySelector('.phase-banner'), 'Pokračovat')[0].click();
   check('Pokračovat zavře inline kartu', panel().querySelectorAll('.phase-banner').length === 0);
+}
+
+// --- per-úrovňové názvy vylepšení (kosmetická eskalace, beze změny mechaniky) ---
+{
+  const u = UPGRADES.shears;
+  check('název: úroveň 0 = tiers[0]', upgradeName(u, 0) === 'Nůžky');
+  check('název: úroveň 1 = tiers[0]', upgradeName(u, 1) === 'Nůžky');
+  check('název: úroveň 2 se mění (Průmyslové nůžky)', upgradeName(u, 2) === 'Průmyslové nůžky');
+  check('název: úroveň 3 (Automatická holírna)', upgradeName(u, 3) === 'Automatická holírna');
+  check('název: úrovně 1–30 mají každá vlastní název', upgradeName(u, 4) !== upgradeName(u, 3) && upgradeName(u, 4) === u.tiers[3]);
+  check('název: v ocasu se sousední úrovně sdílejí (L50 == L55)', upgradeName(u, 50) === upgradeName(u, 55));
+  check('název: vysoká úroveň se ustálí na posledním', upgradeName(u, 9999) === u.tiers[u.tiers.length - 1]);
+  // invarianty napříč všemi vylepšeními
+  let okBase = true, okLen = true;
+  for (const k in UPGRADES) {
+    if (UPGRADES[k].tiers[0] !== UPGRADES[k].label) okBase = false;
+    if (UPGRADES[k].tiers.length !== UPGRADE_TIER_FROM.length) okLen = false;
+  }
+  check('každé vylepšení: tiers[0] == label (zachová identitu i save)', okBase);
+  check('každé vylepšení: počet názvů == počet prahů', okLen);
+
+  // UI: povýšené vylepšení ukazuje honosnější název, ne základní
+  const s = newGame(); s.resources.credits = 1e7; s.upgrades.shears = 2;
+  initUI(s, 'app', () => {});
+  clickTab('Vylepšení');
+  const txt = panel().textContent;
+  check('UI: povýšené Nůžky ukazují „Průmyslové nůžky"', txt.includes('Průmyslové nůžky'));
+  check('UI: tlačítko láká na další název („Automatická holírna")', txt.includes('Automatická holírna'));
+  check('UI: základní „Nůžky" se u povýšeného nezobrazuje', !txt.includes('Nůžky'));
 }
 
 console.log(`ui: ${pass} passed, ${fail} failed`);
