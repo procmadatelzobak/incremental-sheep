@@ -83,18 +83,18 @@ export function clearLocal() {
   try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
 }
 
-// Offline progres: dožeň reálný čas od posledního uložení (strop 8 h), po krocích.
-// Vrací souhrn pro návratovou obrazovku (nebo null, když je čas zanedbatelný).
-export function applyOffline(state) {
-  const elapsed = Math.min(MAX_OFFLINE_SECONDS, ((Date.now() - state.meta.lastSaved) / 1000) * TIME_SCALE);
-  if (elapsed < 1) return null;
+// Dožene `seconds` herního času po malých krocích a vrátí souhrn přírůstků
+// (kredity, suroviny, populace) pro návratovou obrazovku — nebo null, když je
+// čas zanedbatelný (< 1 s). Strop a převod reálný→herní čas řeší volající.
+export function simulateElapsed(state, seconds) {
+  if (!(seconds >= 1)) return null;
   const popOf = () => state.groups.reduce((t, g) => t + totalCount(g), 0);
   const b = { cred: state.stats.credLifetime, wool: state.stats.woolLifetime, milk: state.stats.milkLifetime, meat: state.stats.meatLifetime, born: state.stats.born, pop: popOf() };
-  const steps = Math.min(3000, Math.ceil(elapsed));
-  const chunk = elapsed / steps;
+  const steps = Math.min(3000, Math.ceil(seconds));
+  const chunk = seconds / steps;
   for (let i = 0; i < steps; i++) step(state, chunk);
   return {
-    seconds: elapsed,
+    seconds,
     credits: state.stats.credLifetime - b.cred,
     wool: state.stats.woolLifetime - b.wool,
     milk: state.stats.milkLifetime - b.milk,
@@ -102,4 +102,19 @@ export function applyOffline(state) {
     born: state.stats.born - b.born,
     popDelta: popOf() - b.pop,
   };
+}
+
+// Offline progres: dožeň reálný čas od posledního uložení (strop MAX_OFFLINE_SECONDS),
+// po krocích. Vrací souhrn pro návratovou obrazovku (nebo null, když je čas zanedbatelný).
+export function applyOffline(state) {
+  const elapsed = Math.min(MAX_OFFLINE_SECONDS, ((Date.now() - state.meta.lastSaved) / 1000) * TIME_SCALE);
+  return simulateElapsed(state, elapsed);
+}
+
+// Probuzení uspaného/throttlovaného tabu (#46): dožeň uplynulý reálný interval
+// stejně jako offline progres — stejný strop (MAX_OFFLINE_SECONDS) i převod
+// reálný→herní čas. Volá se z herní smyčky, když jeden frame pokryl dlouhou pauzu.
+export function resumeProgress(state, realSeconds) {
+  const elapsed = Math.min(MAX_OFFLINE_SECONDS, realSeconds * TIME_SCALE);
+  return simulateElapsed(state, elapsed);
 }
