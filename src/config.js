@@ -18,7 +18,7 @@ export const GENES = {
   woolQuality:   { min: 0.4, max: 4,   base: 1,   sd: 0.2,  mut: 0.10, dec: 2, label: 'Kvalita vlny',  extreme: true,  phase: 1 },
   size:          { min: 0.4, max: 5,   base: 1,   sd: 0.2,  mut: 0.10, dec: 2, label: 'Velikost',      extreme: true,  phase: 1 },
   fertility:     { min: 4,   max: 24,  base: 8,   sd: 1.5,  mut: 0.6,  dec: 1, label: 'Plodnost',      extreme: true,  phase: 1 },
-  gestation:     { min: 8,   max: 60,  base: 38,  sd: 4,    mut: 1.5,  dec: 1, label: 'Březost (s)',   lowerBetter: true, phase: 1 },
+  gestation:     { min: 8,   max: 60,  base: 32,  sd: 4,    mut: 1.5,  dec: 1, label: 'Březost (s)',   lowerBetter: true, phase: 1 },
   lifespan:      { min: 60,  max: 600, base: 180, sd: 20,   mut: 8,    dec: 0, label: 'Délka života',  extreme: true,  phase: 1 },
   maturity:      { min: 0.5, max: 4,   base: 1,   sd: 0.12, mut: 0.06, dec: 2, label: 'Rychlost dospívání', extreme: true, phase: 1 },
   adultFrac:     { min: 0.30,max: 0.60,base: 0.45,sd: 0.04, mut: 0.02, dec: 2, label: 'Podíl dospěl.', phase: 1 },
@@ -32,7 +32,7 @@ export const RESOURCES = {
   credits: { label: 'Kredity',  phase: 1, sell: false, store: false },
   wool:    { label: 'Vlna',     phase: 1, sell: true,  store: true,  value: 1.0 },
   meat:    { label: 'Maso',     phase: 1, sell: true,  store: true,  value: 6.0 },
-  milk:    { label: 'Mléko',    phase: 2, sell: true,  store: true,  value: 2.0 },
+  milk:    { label: 'Mléko',    phase: 2, sell: true,  store: true,  value: 2.7 },
   cloth:   { label: 'Sukno',    phase: 3, sell: true,  store: true,  value: 3 },
   cheese:  { label: 'Sýr',      phase: 3, sell: true,  store: true,  value: 5 },
   bones:   { label: 'Kosti',    phase: 5, sell: true,  store: true,  value: 4 },
@@ -49,7 +49,7 @@ export const UPGRADES = {
   shears:    { label: 'Nůžky',         phase: 1, base: 60,   growth: 1.7,  per: 0.15, kind: 'woolMult',  desc: '+15 % vlna' },
   commerce:  { label: 'Obchod',        phase: 1, base: 120,  growth: 1.75, per: 0.12, kind: 'priceMult', desc: '+12 % ceny' },
   courtship: { label: 'Námluvy',       phase: 1, base: 100,  growth: 1.8,  per: 0.10, kind: 'breedMult', desc: '-10 % březost' },
-  ram:       { label: 'Beran',         phase: 1, base: 300,  growth: 2.0,  per: 2,    kind: 'fertBonus', desc: '+2 plodnost samců' },
+  ram:       { label: 'Beran',         phase: 2, base: 300,  growth: 2.0,  per: 2,    kind: 'fertBonus', desc: '+2 plodnost samců' },
   milkMach:  { label: 'Dojička',       phase: 2, base: 400,  growth: 1.75, per: 0.18, kind: 'milkMult',  desc: '+18 % mléko', lab: true },
   fatten:    { label: 'Výkrm',         phase: 2, base: 500,  growth: 1.8,  per: 0.15, kind: 'meatMult',  desc: '+15 % maso' },
   monopoly:  { label: 'Monopol',       phase: 3, base: 5e3,  growth: 2.1,  per: 0.25, kind: 'priceMult', desc: '+25 % ceny (šponování)' },
@@ -108,7 +108,7 @@ export const BALANCE = {
   // (Dřív: rozloha ∝ area^0.55 ale kapacita ∝ area → vyšší tier = skoro zadarmo;
   //  hustota měla pevný strop ~5e8 za 65536× — obojí dělalo z pozemků formalitu.)
   cost: {
-    addSheep:  { base: 50,   growth: 1.6  },          // přidá malé stádo; cena rychle roste (trh dojde)
+    addSheep:  { base: 50,   growth: 1.4  },          // přidá malé stádo; cena roste (trh dojde), ale mírněji – ať nákup přemostí pomalé rané množení
     land:      { perCap: 5,   growth: 1.30, base: 50 }, // rozloha = hlavní (nejlevnější) sink; růst per parcela v tieru tlačí k odemykání vyšších tierů
     density:   { perCap: 22,  base: 2e3 },             // hustota = prémiový globální násobič kapacity
     areaMod:   { perCap: 12,  base: 2e3 },             // modifikátory rozlohy = prémiový globální bonus kapacity
