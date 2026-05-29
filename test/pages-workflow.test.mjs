@@ -12,6 +12,8 @@ check('checkout action používá Node 24 major', workflow.includes('uses: actio
 check('upload-pages-artifact action používá Node 24 major', workflow.includes('uses: actions/upload-pages-artifact@v5'));
 check('deploy-pages action používá Node 24 major', workflow.includes('uses: actions/deploy-pages@v5'));
 check('workflow už nepoužívá Pages actions na Node 20 majoru', !/actions\/(?:checkout@v4|upload-pages-artifact@v3|deploy-pages@v4)/.test(workflow));
+check('Pages workflow smí komentovat PR přes issues API', /permissions:\s*\n(?:\s+[a-z-]+:\s+\w+\n)*\s+issues:\s+write\b/s.test(workflow));
+check('Pages workflow po deployi spouští komentář preview URL', /Comment PR preview URLs[\s\S]*node scripts\/comment-pr-previews\.mjs/.test(workflow));
 
 console.log(`pages-workflow: ${pass} ok, ${fail} fail`);
 process.exit(fail ? 1 : 0);

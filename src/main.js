@@ -42,6 +42,18 @@ function flushNotices() {
   if (state._achUp && state._achUp.length) { for (const id of state._achUp.slice(0, 6)) notifyAchievement(id); state._achUp.length = 0; }
 }
 
+// #54: poměr pohlaví pro „louku oveček" na pozadí (redesign.js). Ta vrstva je
+// záměrně oddělená od herní logiky a stav čte přes tento lehký global, ne importem.
+function publishFlockSex() {
+  let M = 0, F = 0;
+  for (const g of state.groups) {
+    const c = g.counts;
+    M += c.M.child + c.M.adult + c.M.old;
+    F += c.F.child + c.F.adult + c.F.old;
+  }
+  if (typeof window !== 'undefined') window.__flockSex = { M, F };
+}
+
 function frame(now) {
   const wallNow = Date.now();
   let dt = (now - prev) / 1000; prev = now;
@@ -55,6 +67,7 @@ function frame(now) {
     const off = resumeProgress(state, wallElapsed);
     runAutobuy(state);
     updateUI(state);
+    publishFlockSex();
     flushNotices();
     if (off && off.seconds >= 60 && off.credits > 0) showOfflineModal(off, state);
     save(); saveAcc = 0;
@@ -69,6 +82,7 @@ function frame(now) {
   runAutobuy(state);               // automatické nákupy (zapnuté kategorie)
   saveAcc += dt;
   updateUI(state);                 // jen aktualizuje hodnoty na místě (bez blikání)
+  publishFlockSex();
   flushNotices();
   if (saveAcc >= AUTOSAVE_MS / 1000) { save(); saveAcc = 0; }
   requestAnimationFrame(frame);

@@ -131,6 +131,22 @@ export function flockSheepScale() {
   return FLOCK_SHEEP_SCALE;
 }
 
+// #54: kolik z `total` zobrazených oveček má být černých (samci). Poměr odpovídá
+// reálnému poměru samců/samic ve stádě. Když je některé pohlaví nenulové, ale
+// vyšlo by na něj po zaokrouhlení 0 oveček, dorovná se nahoru na 1 (aby šel
+// poměr menšiny vůbec poznat). Funkce je čistá kvůli testovatelnosti.
+export function maleDisplayCount(total, M, F) {
+  if (total <= 0) return 0;
+  const P = M + F;
+  if (P <= 0 || M <= 0) return 0;      // bez dat / žádní samci → vše bílé
+  if (F <= 0) return total;            // žádné samice → vše černé
+  if (total === 1) return M >= F ? 1 : 0;   // jediná ovce ukáže většinu
+  let m = Math.round(total * M / P);
+  if (m < 1) m = 1;                    // nenuloví samci → aspoň 1 černá
+  if (m > total - 1) m = total - 1;    // nenulové samice → aspoň 1 bílá
+  return m;
+}
+
 function readSheepCount() {
   // najdi chip populace (popisek „🐑 Ovce") a přečti jeho hodnotu
   const labels = document.querySelectorAll('.chip .chip-l');
@@ -164,6 +180,7 @@ function flockSetup() {
       lastSheepFloor = saved.floor ?? flock.length;
     }
   } catch (e) { /* ignoruj */ }
+  recolorFlock();
   drawFlock();
 }
 
@@ -197,14 +214,32 @@ function saveFlock() {
   } catch (e) { /* plný storage – přežijeme */ }
 }
 
+// #54: rozdělí stádo na samce (černé) a samice (bílé) podle reálného poměru.
+// Samci dostanou ty ovce s nejnižším `seed` (stabilní napříč tiky — barva
+// nebliká), jejich přesný počet drží maleDisplayCount().
+function recolorFlock() {
+  const sx = (typeof globalThis !== 'undefined' && globalThis.__flockSex) || null;
+  const M = sx ? sx.M : 0, F = sx ? sx.F : 0;
+  const males = maleDisplayCount(flock.length, M, F);
+  const order = flock.map((sh, i) => [sh.seed, i]).sort((a, b) => a[0] - b[0]);
+  for (let k = 0; k < order.length; k++) flock[order[k][1]].male = k < males;
+}
+
 // jednoduchá ovečka: chomáček vlny + hlavička + nožičky
-function drawOneSheep(ctx, x, y, scale, seed, cosmic) {
+function drawOneSheep(ctx, x, y, scale, seed, cosmic, male) {
   const s = scale * (0.85 + seed * 0.4);
   const flip = seed > 0.5 ? 1 : -1;
-  // barvy laděné s motivem (čitelné na světlém i tmavém pozadí)
-  const wool = cosmic > 0.45 ? 'rgba(225,235,250,0.50)' : 'rgba(255,253,247,0.62)';
-  const ink  = cosmic > 0.45 ? 'rgba(180,205,235,0.55)' : 'rgba(90,78,60,0.40)';
-  const dark = cosmic > 0.45 ? 'rgba(40,36,62,0.65)' : 'rgba(70,62,50,0.55)';
+  // barvy laděné s motivem (čitelné na světlém i tmavém pozadí). Samci (#54) mají
+  // invertovanou paletu — tmavá vlna se světlými obrysy, ať jdou od samic odlišit.
+  const wool = male
+    ? (cosmic > 0.45 ? 'rgba(30,34,58,0.62)' : 'rgba(48,42,36,0.66)')
+    : (cosmic > 0.45 ? 'rgba(225,235,250,0.50)' : 'rgba(255,253,247,0.62)');
+  const ink  = male
+    ? (cosmic > 0.45 ? 'rgba(150,180,235,0.6)' : 'rgba(18,14,10,0.5)')
+    : (cosmic > 0.45 ? 'rgba(180,205,235,0.55)' : 'rgba(90,78,60,0.40)');
+  const dark = male
+    ? (cosmic > 0.45 ? 'rgba(205,220,250,0.72)' : 'rgba(225,218,205,0.7)')
+    : (cosmic > 0.45 ? 'rgba(40,36,62,0.65)' : 'rgba(70,62,50,0.55)');
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(flip, 1);
@@ -230,8 +265,10 @@ function drawOneSheep(ctx, x, y, scale, seed, cosmic) {
   ctx.beginPath(); ctx.ellipse(6.5 * s, -1.5 * s, 2.6 * s, 2.2 * s, 0.25, 0, Math.PI * 2); ctx.fill();
   // ouško
   ctx.beginPath(); ctx.ellipse(5.2 * s, -3.4 * s, 1.1 * s, 0.7 * s, -0.5, 0, Math.PI * 2); ctx.fill();
-  // očko
-  ctx.fillStyle = cosmic > 0.45 ? 'rgba(220,235,255,0.9)' : 'rgba(255,255,255,0.85)';
+  // očko (u samce je hlavička světlá, tak očko ztmav, ať je vidět)
+  ctx.fillStyle = male
+    ? 'rgba(35,32,46,0.85)'
+    : (cosmic > 0.45 ? 'rgba(220,235,255,0.9)' : 'rgba(255,255,255,0.85)');
   ctx.beginPath(); ctx.arc(7.2 * s, -1.8 * s, 0.5 * s, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
@@ -252,7 +289,7 @@ function drawFlock() {
       if (t < 0) continue;            // ještě se „nenarodila"
       if (t < 1) scale = base * Math.max(0, easeOutBack(t));
     }
-    drawOneSheep(fCtx, sh.fx * W, sh.fy * H, scale, sh.seed, cosmic);
+    drawOneSheep(fCtx, sh.fx * W, sh.fy * H, scale, sh.seed, cosmic, sh.male);
   }
 }
 
@@ -278,13 +315,17 @@ function flockTick() {
   if (lastSheepFloor == null || (flock.length === 0 && floor > 0)) {
     if (floor > 0 && flock.length < FLOCK_CAP) addSheep(floor - flock.length, false);
     lastSheepFloor = floor;
-    return;
+  } else {
+    if (floor > lastSheepFloor && flock.length < FLOCK_CAP) {
+      const gained = floor - lastSheepFloor;
+      addSheep(gained, gained <= 60);   // velké skoky přidej rovnou bez bouřky popů
+    }
+    lastSheepFloor = Math.max(lastSheepFloor, floor);
   }
-  if (floor > lastSheepFloor && flock.length < FLOCK_CAP) {
-    const gained = floor - lastSheepFloor;
-    addSheep(gained, gained <= 60);   // velké skoky přidej rovnou bez bouřky popů
-  }
-  lastSheepFloor = Math.max(lastSheepFloor, floor);
+  // #54: každý tik přebarvi podle aktuálního poměru pohlaví (mění se i bez
+  // změny počtu zobrazených oveček). Vykreslení proběhne v anim/resize smyčce.
+  recolorFlock();
+  if (!flockAniming) drawFlock();
 }
 
 // --- start -----------------------------------------------------------------
