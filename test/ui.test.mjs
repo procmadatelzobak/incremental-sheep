@@ -404,16 +404,16 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('odznak po otevření zmizí', buttonsByText(tabs(), 'Pozemky')[0].querySelectorAll('.tab-badge').length === 0);
 }
 
-// --- #35: oznámení nové fáze je inline v panelu (ne modální okno) ---
+// --- #35: oznámení nové fáze je modální okno (potvrzení „Pokračovat") ---
 {
   const s = newGame(); s.resources.credits = 1e6; s.phase = 2;
   initUI(s, 'app', () => {});
   notifyPhase(2);
-  check('oznámení fáze je inline v panelu', panel().querySelectorAll('.phase-notice').length === 1);
-  check('oznámení fáze NENÍ modální okno', !document.body.querySelector('.modal-bg'));
-  check('inline oznámení ukazuje název fáze', panel().textContent.includes('Množení'));
-  buttonsByText(panel(), 'Pokračovat')[0].click();
-  check('Pokračovat zavře inline oznámení', panel().querySelectorAll('.phase-notice').length === 0);
+  check('oznámení fáze je modální okno', !!document.body.querySelector('.modal-bg'));
+  check('oznámení fáze NENÍ inline v panelu', panel().querySelectorAll('.phase-notice').length === 0);
+  check('modál ukazuje název fáze', document.body.querySelector('.modal').textContent.includes('Množení'));
+  buttonsByText(document.body.querySelector('.modal-bg'), 'Pokračovat')[0].click();
+  check('Pokračovat zavře modál', !document.body.querySelector('.modal-bg'));
 }
 
 console.log(`ui: ${pass} passed, ${fail} failed`);
