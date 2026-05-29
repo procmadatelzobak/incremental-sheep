@@ -179,31 +179,6 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('náhled prestige (fáze 7) se vykreslí', ok && panel().textContent.includes('Černá díra'));
 }
 
-// --- #40: fázové odemykání Min/Max koridoru + reset Min/Max při změně genu ---
-{
-  // fáze 2: Min/Max koridor skrytý
-  const s2 = newGame(); s2.phase = 2; s2.resources.credits = 1e6;
-  initUI(s2, 'app', () => {});
-  clickTab('Genetika');
-  check('#40 koridor Min/Max skrytý ve fázi 2', !panel().textContent.includes('Koridor'));
-
-  // fáze 5: koridor viditelný; přepnutí genu vynuluje Min/Max
-  const s5 = newGame(); s5.phase = 5; s5.resources.credits = 1e6;
-  const g = s5.groups[0];
-  g.policy.cull.gene = 'woolRate'; g.policy.cull.min = 1; g.policy.cull.max = 2;
-  initUI(s5, 'app', () => {});
-  clickTab('Genetika');
-  check('#40 koridor Min/Max viditelný ve fázi 5', panel().textContent.includes('Koridor'));
-  const geneSel = panel().querySelectorAll('select').find(sel => (sel.textContent || '').includes('Vlna/s'));
-  check('#40 cílový select existuje', !!geneSel);
-  if (geneSel) {
-    geneSel.value = 'size'; geneSel.dispatch('change');
-    check('#40 změna genu nastaví nový cíl', g.policy.cull.gene === 'size');
-    check('#40 změna genu vynuluje Min', g.policy.cull.min === null);
-    check('#40 změna genu vynuluje Max', g.policy.cull.max === null);
-  }
-}
-
 // --- Batch C: offline návratová obrazovka ---
 {
   const s = newGame();
