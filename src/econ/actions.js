@@ -235,13 +235,23 @@ export function runAutobuy(state) {
 // --- doporučený další krok (pro HUD) --------------------------------------
 function cheapestUseful(s) {
   const opts = [];
-  for (const k in UPGRADES) if (UPGRADES[k].phase <= s.phase) opts.push({ label: UPGRADES[k].label, cost: upgradeCost(s, k) });
-  for (const wk of WORLD_ORDER) if (WORLDS[wk].phase <= s.phase && !WORLDS[wk].fromProject) opts.push({ label: 'Rozloha: ' + WORLDS[wk].label, cost: landParcelCost(s, wk) });
-  if (s.land.density < densityMaxLevel()) opts.push({ label: 'Hustota pastvy', cost: densityCost(s) });
-  opts.push({ label: 'Ovce', cost: costFor(s, 'addSheep') });
+  for (const k in UPGRADES) if (UPGRADES[k].phase <= s.phase) opts.push({ kind: 'upgrade', key: k, label: UPGRADES[k].label, cost: upgradeCost(s, k) });
+  for (const wk of WORLD_ORDER) if (WORLDS[wk].phase <= s.phase && !WORLDS[wk].fromProject) opts.push({ kind: 'land', key: wk, label: 'Rozloha: ' + WORLDS[wk].label, cost: landParcelCost(s, wk) });
+  if (s.land.density < densityMaxLevel()) opts.push({ kind: 'density', key: null, label: 'Hustota pastvy', cost: densityCost(s) });
+  opts.push({ kind: 'addSheep', key: null, label: 'Ovce', cost: costFor(s, 'addSheep') });
   let best = null;
   for (const o of opts) if (!best || o.cost < best.cost) best = o;
   return best;
+}
+
+// Identifikace doporučené akce pro vizuální zvýraznění tlačítek (#10).
+// Vrací { kind, key, cost } nebo null, jen pokud doporučení míří na konkrétní nákup.
+export function suggestedAction(s) {
+  if (singularityAvailable(s) || s.phase >= 10) return null;
+  if (s.phase === 4 && !s.flags.immortal) return { kind: 'immortality', key: null };
+  if (s.phase === 6 && worldsColonized(s) < 3) return null;
+  if ((s.phase === 7 || s.phase === 8) && (s.phase === 7 ? s.projects.dyson.count < 1 : s.projects.dyson.count < 5)) return null;
+  return cheapestUseful(s);
 }
 
 export function suggestStep(s) {

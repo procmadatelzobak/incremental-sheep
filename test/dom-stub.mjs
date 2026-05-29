@@ -18,6 +18,22 @@ class El {
   }
   get className() { return this.attributes.class || ''; }
   set className(v) { this.attributes.class = v; }
+  get classList() {
+    const el = this;
+    const list = () => (el.className || '').split(' ').filter(Boolean);
+    const set = (a) => { el.className = a.join(' '); };
+    return {
+      add: (c) => { const a = list(); if (!a.includes(c)) { a.push(c); set(a); } },
+      remove: (c) => set(list().filter(x => x !== c)),
+      contains: (c) => list().includes(c),
+      toggle: (c, force) => {
+        const has = list().includes(c);
+        const on = force !== undefined ? !!force : !has;
+        if (on && !has) { const a = list(); a.push(c); set(a); }
+        else if (!on && has) set(list().filter(x => x !== c));
+      },
+    };
+  }
   get disabled() { return !!this.attributes.disabled; }
   set disabled(v) { if (v) this.attributes.disabled = 'disabled'; else delete this.attributes.disabled; }
   setAttribute(k, v) {

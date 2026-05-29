@@ -26,11 +26,12 @@ let updaters = [];           // aktualizace hodnot aktivního panelu (běží ka
 let S, onAction = () => {};
 let hooks = {};              // callbacky z main.js (export/import/reset) pro ⚙ Nastavení (#32)
 let modalEl = null; const modalQueue = []; let toastWrap = null;
+const phaseBannerQueue = [];   // #35: inline karty „nová fáze" na začátku aktivního panelu
 let infoModalEl = null;      // dismissable overlay pro 💡/⚙/❓ (#32)
 let herdCanvasEl = null;
 let upgradeFilter = 'all';     // filtr v panelech vylepšení (#27): all|avail|soon|owned
 let tipIdx = 0;                // rotace tipů v 💡 (#32)
-// #35: nová fáze se oznamuje modálem (viz notifyPhase), ne inline kartou v panelu.
+// #35: nová fáze se oznamuje inline kartou na začátku panelu (NE modal). Viz notifyPhase a phaseBannerEl.
 
 // --- DOM helpers -----------------------------------------------------------
 function h(tag, props = {}, ...kids) {
@@ -69,14 +70,21 @@ function etaStr(sec) {
 function reg(el, fn) { updaters.push(() => fn(el)); return el; }
 
 // Dvouřádkové tlačítko: hlavní řádek (popisek · cena) + podřádek (efekt nákupu,
-// nebo důvod nedostupnosti "chybí X"). effectFn vrací krátký popis efektu. (#10/#12/#16)
-function cBtn(label, costFn, actFn, effectFn) {
+// nebo důvod nedostupnosti "chybí X"). effectFn vrací krátký popis efektu.
+// opts (volitelně): primaryFn → zelený CTA stav (#10), deltaFn → po nákupu popDelta
+// na chip zdroje (#25), titleFn → text v tooltipu (např. ROI; #12).
+function cBtn(label, costFn, actFn, effectFn, opts = {}) {
   const main = h('span', { class: 'b-main' });
   const sub = h('span', { class: 'b-sub' });
   const b = h('button', { class: 'act cost' }, main, sub);
   b.addEventListener('click', () => {
     const cost = b._cost;
-    if (actFn() !== false) { onAction(); flashChip('credits'); if (cost > 0) popDelta('credits', '−' + fmt(cost), false); rebuildPanel(); }
+    if (actFn() !== false) {
+      onAction(); flashChip('credits');
+      if (cost > 0) popDelta('credits', '−' + fmt(cost), false);
+      if (opts.deltaFn) { const d = opts.deltaFn(); if (d && d.key) popDelta(d.key, d.text, d.good !== false); }
+      rebuildPanel();
+    }
   });
   return reg(b, (el) => {
     const c = costFn(); el._cost = c;
@@ -84,6 +92,9 @@ function cBtn(label, costFn, actFn, effectFn) {
     const have = S.resources.credits || 0;
     el.disabled = have < c;
     sub.textContent = have < c ? `chybí ${fmt(c - have)} 💰` : (effectFn ? effectFn() : '');
+    if (opts.primaryFn) el.classList.toggle('primary', !el.disabled && !!opts.primaryFn());
+    else if (el.classList.contains('primary')) el.classList.remove('primary');
+    if (opts.titleFn) el.title = opts.titleFn() || '';
   });
 }
 function aBtn(label, enabledFn, actFn, reasonFn, cls) {
@@ -326,7 +337,8 @@ function renderHerds(s) {
   const sexLbl = { M: 'samců', F: 'samic', mix: 'ovcí (půl/půl)' };
   const buyBtn = cBtn(`${ICONS.sheep} Koupit ovce`, () => A.addSheepCost(s),
     () => A.buyAddSheep(s),
-    () => { const add = (s.settings.buy.qty || 1) * BALANCE.sheepPerUnit, pop = totalPopulation(s); return `+${fmtCount(add)} ${sexLbl[s.settings.buy.sex] || 'ovcí'} · stádo ${fmtCount(pop)}→${fmtCount(pop + add)}`; });
+    () => { const add = (s.settings.buy.qty || 1) * BALANCE.sheepPerUnit, pop = totalPopulation(s); return `+${fmtCount(add)} ${sexLbl[s.settings.buy.sex] || 'ovcí'} · stádo ${fmtCount(pop)}→${fmtCount(pop + add)}`; },
+    { primaryFn: () => { const sa = A.suggestedAction(s); return !!sa && sa.kind === 'addSheep'; } });
   buyBtn.addEventListener('click', () => flashEl(herdCanvasEl));
   // přehled počtů po pohlaví × stádiu (#22) — hráč vidí, kde ovce jsou a kam mizí
   const mfCell = (sex, stage) => liveSpan(() => fmtCount(group().counts[sex][stage]));
@@ -343,6 +355,22 @@ function renderHerds(s) {
     if (gg.counts.M.adult * fert < gg.counts.F.adult * 0.95 && gg.counts.F.adult >= 2) t += ' ⚠ málo samců';
     return t;
   }, 'dim small statusline');
+  const marketHint = liveSpan(() => {
+    const add = ((s.settings.buy && s.settings.buy.qty) || 1) * BALANCE.sheepPerUnit;
+    // vyhlazený růst (#36) — surový kmitá u kapacity a hláška pak blikala; fallback drží testy
+    const growth = (s.rates && (s.rates._popGrowthAvg ?? s.rates._popGrowth)) || 0;
+    const belowCap = totalPopulation(s) < herdCapacity(s) * 0.95;   // u plné pastviny je rada bezpředmětná
+    return (belowCap && growth > 0 && growth * 20 >= add && A.addSheepCost(s) > 500)
+      ? '🛒 Trh ovcí se vyčerpává — vlastní stádo se teď množí rychleji, než stihneš dokupovat. Investuj radši do pozemků a šlechtění.'
+      : '';
+  }, 'small note');
+  const buyHelp = h('div', { class: 'dim small' }, 'Zprvu hlavně dokupuj — množení je pomalé. Jak vyšlechtíš nižší Březost a rozrosteš stádo, množení převezme a nákup ztratí smysl (trh dojde). Samice se množí, samci dávají kapacitu páření (1 samec spáří ≈ Plodnost samic).');
+  const buyAutobuy = autobuyToggle('Automaticky dokupovat ovce', 'sheep');
+  // #43: od fáze 5 už nákup ovcí na trhu zpravidla nedává smysl (trh dojde) → schovat do <details>.
+  const buyBlock = s.phase >= 5
+    ? h('details', { class: 'buy-collapse' }, h('summary', { class: 'dim small' }, `${ICONS.sheep} Nákup ovcí (rozbalit — v této fázi už zpravidla nedává smysl)`),
+        sexRow, qtyRow, buyBtn, marketHint, buyAutobuy, buyHelp)
+    : h('div', {}, sexRow, qtyRow, buyBtn, marketHint, buyAutobuy, buyHelp);
   wrap.appendChild(section(g.name,
     cv,
     h('div', { class: 'stat-row' },
@@ -352,18 +380,7 @@ function renderHerds(s) {
     breedLine,
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmtCount(p)} / ${fmtCount(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
     liveSpan(() => limitText(s), 'dim small statusline'),
-    sexRow, qtyRow, buyBtn,
-    liveSpan(() => {
-      const add = ((s.settings.buy && s.settings.buy.qty) || 1) * BALANCE.sheepPerUnit;
-      // vyhlazený růst (#36) — surový kmitá u kapacity a hláška pak blikala; fallback drží testy
-      const growth = (s.rates && (s.rates._popGrowthAvg ?? s.rates._popGrowth)) || 0;
-      const belowCap = totalPopulation(s) < herdCapacity(s) * 0.95;   // u plné pastviny je rada bezpředmětná
-      return (belowCap && growth > 0 && growth * 20 >= add && A.addSheepCost(s) > 500)
-        ? '🛒 Trh ovcí se vyčerpává — vlastní stádo se teď množí rychleji, než stihneš dokupovat. Investuj radši do pozemků a šlechtění.'
-        : '';
-    }, 'small note'),
-    autobuyToggle('Automaticky dokupovat ovce', 'sheep'),
-    h('div', { class: 'dim small' }, 'Zprvu hlavně dokupuj — množení je pomalé. Jak vyšlechtíš nižší Březost a rozrosteš stádo, množení převezme a nákup ztratí smysl (trh dojde). Samice se množí, samci dávají kapacitu páření (1 samec spáří ≈ Plodnost samic).')));
+    buyBlock));
 
   wrap.appendChild(incomeSection(s));
 
@@ -486,12 +503,62 @@ function renderSlaughter(s) {
   return wrap;
 }
 
+// Aktuální kumulativní efekt upgradu (#16): co teď tahle linka vylepšení reálně dělá.
+function upgradeAgg(s, u) {
+  const m = getMults(s);
+  switch (u.kind) {
+    case 'woolMult':    return `vlna ×${m.woolMult.toFixed(2)}`;
+    case 'milkMult':    return `mléko ×${m.milkMult.toFixed(2)}`;
+    case 'meatMult':    return `maso ×${m.meatMult.toFixed(2)}`;
+    case 'priceMult':   return `ceny ×${m.priceMult.toFixed(2)}`;
+    case 'breedMult':   return `březost ×${m.breedMult.toFixed(2)}`;
+    case 'fertBonus':   return `+${m.fertBonus.toFixed(1)} plodnost`;
+    case 'birthMult':   return `porody ×${m.birthMult.toFixed(2)}`;
+    case 'ceilingMult': return `strop ×${m.ceilingMult.toFixed(2)}`;
+    case 'computeMult': return `výpočet ×${m.computeMult.toFixed(2)}`;
+    default: return '';
+  }
+}
+// Které chip-y po nákupu flashnout (#25). Pro priceMult dáme delta na 'credits'.
+function upgradeDelta(u) {
+  const pct = `+${Math.round((u.per || 0) * 100)} %`;
+  switch (u.kind) {
+    case 'woolMult':  return { key: 'wool',    text: pct, good: true };
+    case 'milkMult':  return { key: 'milk',    text: pct, good: true };
+    case 'meatMult':  return { key: 'meat',    text: pct, good: true };
+    case 'priceMult': return { key: 'credits', text: pct, good: true };
+    default: return null;
+  }
+}
+// Odhad návratnosti upgradu (#12): Δ příjem z proporčního scalingu relevantního multu.
+const ROI_MAP = { woolMult: 'woolMult', milkMult: 'milkMult', meatMult: 'meatMult', priceMult: 'priceMult' };
+function upgradeRoi(s, k) {
+  const u = UPGRADES[k];
+  const mk = ROI_MAP[u.kind];
+  const inc = s.rates && s.rates._income;
+  if (!mk || !inc || inc <= 0) return '';
+  const m0 = getMults(s);
+  const orig = s.upgrades[k] || 0;
+  s.upgrades[k] = orig + 1;
+  const m1 = getMults(s);
+  s.upgrades[k] = orig;
+  const ratio = m0[mk] > 0 ? m1[mk] / m0[mk] : 1;
+  const newInc = inc * ratio;
+  const delta = newInc - inc;
+  if (delta <= 0) return '';
+  const roi = upgradeCost(s, k) / delta;
+  return `Příjem: ${fmt(inc)} → ${fmt(newInc)} kr/s · ROI ~${etaStr(roi)}`;
+}
 function upgradeItem(s, k) {
   const u = UPGRADES[k];
   return h('div', { class: 'item' },
-    h('div', { class: 'item-h' }, h('b', { text: u.label }), liveSpan(() => `Lv ${s.upgrades[k] || 0}`, 'dim')),
+    h('div', { class: 'item-h' }, h('b', { text: u.label }), liveSpan(() => `Lv ${s.upgrades[k] || 0}`, 'dim'), liveSpan(() => upgradeAgg(s, u), 'dim small')),
     h('div', { class: 'dim small', text: u.desc }),
-    cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k), () => `${u.desc} → Lv ${(s.upgrades[k] || 0) + 1}`));
+    cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k), () => `${u.desc} → Lv ${(s.upgrades[k] || 0) + 1}`, {
+      primaryFn: () => { const sa = A.suggestedAction(s); return !!sa && sa.kind === 'upgrade' && sa.key === k; },
+      deltaFn: () => upgradeDelta(u),
+      titleFn: () => upgradeRoi(s, k),
+    }));
 }
 
 // Filtr vylepšení (#27): projde-li daný klíč aktuálním filtrem.
@@ -782,6 +849,7 @@ function rebuildPanel() {
   if (!tab.avail(S)) { activeTab = 'herds'; tab = TABS[0]; }
   updaters = [];
   clear(panelEl);
+  if (phaseBannerQueue.length) panelEl.appendChild(phaseBannerEl(phaseBannerQueue[0]));   // #35
   panelEl.appendChild(tab.render(S));
   structSig = structSigOf(S);
   refreshPanel();
@@ -875,7 +943,7 @@ export function initUI(state, mountId = 'app', actionCb = () => {}, opts = {}) {
   bannerEl = h('div', { class: 'banner', id: 'banner', style: 'display:none' });
   root.appendChild(bannerEl); root.appendChild(hud); root.appendChild(tabsBar); root.appendChild(panelEl);
   lastTabSig = ''; structSig = '';
-  modalEl = null; infoModalEl = null; toastWrap = null; modalQueue.length = 0;
+  modalEl = null; infoModalEl = null; toastWrap = null; modalQueue.length = 0; phaseBannerQueue.length = 0;
   buildHud(); updateHud(state); buildTabs(); rebuildPanel();
 }
 
@@ -911,10 +979,15 @@ function closeModal() {
   showNextModal();
 }
 
+// #35: inline „karta" v aktivním panelu (NE modal). Fronta zvládne víc fází po sobě.
+function phaseBannerEl(phase) {
+  return h('div', { class: 'sect phase-banner' },
+    phaseModalContent(phase),
+    h('button', { class: 'act primary', onclick: () => { phaseBannerQueue.shift(); rebuildPanel(); } }, 'Pokračovat'));
+}
 export function notifyPhase(phase) {
-  // #35: modální okno s potvrzením „Pokračovat"; fronta zvládne i víc fází po sobě.
-  modalQueue.push(phaseModalContent(phase));
-  showNextModal();
+  phaseBannerQueue.push(phase);
+  if (panelEl) rebuildPanel();
 }
 
 function showToast(text) {

@@ -449,16 +449,44 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('odznak po otevření zmizí', buttonsByText(tabs(), 'Pozemky')[0].querySelectorAll('.tab-badge').length === 0);
 }
 
-// --- #35: oznámení nové fáze je modální okno (potvrzení „Pokračovat") ---
+// --- #43: nákup ovcí je collapsible od fáze 5 (a inline před ní) ---
+{
+  const s1 = newGame(); s1.phase = 1;
+  initUI(s1, 'app', () => {});
+  check('phase 1: nákup ovcí inline (žádný buy-collapse)', !panel().querySelector('.buy-collapse'));
+
+  const s5 = newGame(); s5.phase = 5;
+  initUI(s5, 'app', () => {});
+  const det = panel().querySelector('.buy-collapse');
+  check('phase 5: nákup ovcí je v collapsible bloku', !!det && det.tagName === 'DETAILS');
+  check('phase 5: collapsible má summary se slovem rozbalit', det && (det.textContent || '').includes('rozbalit'));
+}
+
+// --- #10: doporučené tlačítko (suggestedAction) dostane class 'primary' ---
+{
+  // Stáda: addSheep je nejlevnější useful nákup ve fázi 1, takže buyBtn = primary
+  const sA = newGame(); sA.phase = 1; sA.resources.credits = 1e9;
+  initUI(sA, 'app', () => {});
+  const buyBtnEl = buttonsByText(panel(), 'Koupit ovce')[0];
+  check('#10 Stáda: Koupit ovce má class primary (cheapest useful)', !!buyBtnEl && (buyBtnEl.className || '').split(' ').includes('primary'));
+
+  // Vylepšení: po vyšroubování ceny ovcí (vysoké s.buys.addSheep) se primárním stane nejlevnější upgrade
+  const sB = newGame(); sB.phase = 1; sB.resources.credits = 1e9; sB.buys.addSheep = 30;   // sheep cost přes 1e6
+  initUI(sB, 'app', () => {});
+  clickTab('Vylepšení');
+  check('#10 Vylepšení: alespoň jedno upgrade tlačítko má primary', panel().querySelectorAll('.primary').length >= 1);
+}
+
+// --- #35: oznámení nové fáze je inline karta na začátku panelu (NE modal) ---
 {
   const s = newGame(); s.resources.credits = 1e6; s.phase = 2;
   initUI(s, 'app', () => {});
   notifyPhase(2);
-  check('oznámení fáze je modální okno', !!document.body.querySelector('.modal-bg'));
-  check('oznámení fáze NENÍ inline v panelu', panel().querySelectorAll('.phase-notice').length === 0);
-  check('modál ukazuje název fáze', document.body.querySelector('.modal').textContent.includes('Množení'));
-  buttonsByText(document.body.querySelector('.modal-bg'), 'Pokračovat')[0].click();
-  check('Pokračovat zavře modál', !document.body.querySelector('.modal-bg'));
+  check('oznámení fáze NENÍ modální okno', !document.body.querySelector('.modal-bg'));
+  check('oznámení fáze JE inline v panelu', panel().querySelectorAll('.phase-banner').length === 1);
+  check('inline karta ukazuje název fáze', panel().querySelector('.phase-banner').textContent.includes('Množení'));
+  buttonsByText(panel().querySelector('.phase-banner'), 'Pokračovat')[0].click();
+  check('Pokračovat zavře inline kartu', panel().querySelectorAll('.phase-banner').length === 0);
 }
 
 console.log(`ui: ${pass} passed, ${fail} failed`);
