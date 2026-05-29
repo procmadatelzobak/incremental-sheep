@@ -20,14 +20,20 @@ export function totalArea(state) {
   let t = 0; for (const wk of WORLD_ORDER) t += effectiveWorldArea(state, wk); return t;
 }
 export const densityMaxLevel = () => DENSITY_TIERS.length - 1;
+// Nejvyšší stupeň hustoty dostupný v aktuální fázi (fázové brány, viz DENSITY_TIERS).
+export const densityPhaseCap = (state) => {
+  let cap = 0;
+  for (let i = 0; i < DENSITY_TIERS.length; i++) if ((DENSITY_TIERS[i].phase || 1) <= state.phase) cap = i;
+  return cap;
+};
 export const densityMult = (state) => (DENSITY_TIERS[state.land.density] || DENSITY_TIERS[0]).mult;
 export function areaModMult(state) {
   let m = 1; for (const mod of AREA_MODS) if (state.land.mods[mod.key]) m += mod.bonus; return m;
 }
+export const flockMult = (state) => 1 + 0.10 * ((state.prestige && state.prestige.perks && state.prestige.perks.flock) || 0);
 
 export function herdCapacity(state) {
-  const flock = 1 + 0.10 * ((state.prestige && state.prestige.perks && state.prestige.perks.flock) || 0);
-  return totalArea(state) * BALANCE.baseCap * densityMult(state) * areaModMult(state) * flock;
+  return totalArea(state) * BALANCE.baseCap * densityMult(state) * areaModMult(state) * flockMult(state);
 }
 
 // Produkční prostředí = vážený průměr env světů podle podílu efektivní rozlohy.
@@ -47,19 +53,41 @@ export function worldEnv(state) {
 export const worldsColonized = (state) => WORLD_ORDER.filter(wk => wk !== 'earth' && parcelsInWorld(state, wk) > 0).length;
 
 // --- ceny ------------------------------------------------------------------
-// cena parcely roste s VELIKOSTÍ tieru (větší území = dražší) i s počtem parcel.
+// Vše per KAPACITU: cena = perCap × přidaná kapacita (× případný růst/prémie).
+// Tím je jedno, jakou cestou kapacitu kupuješ — nelze žádný násobič „obejít".
+
+// Parcela: přidá area × baseCap × hustota × modifikátory × stádo kapacity.
+// growth^count v rámci tieru tlačí k odemykání vyšších tierů (= reset počtu).
 export const landParcelCost = (state, wk) => {
   const t = state.land.worlds[wk];
   const area = WORLDS[wk].tiers[t.tier].area;
-  return Math.floor(BALANCE.cost.land.base * WORLDS[wk].costMult * Math.pow(area, 0.55) * Math.pow(BALANCE.cost.land.growth, t.counts[t.tier] || 0));
+  const addedCap = area * BALANCE.baseCap * densityMult(state) * areaModMult(state) * flockMult(state);
+  const c = BALANCE.cost.land;
+  const price = WORLDS[wk].costMult * c.perCap * addedCap * Math.pow(c.growth, t.counts[t.tier] || 0);
+  return Math.max(c.base, Math.floor(price));
 };
 export function canUnlockTier(state, wk) {
   const w = state.land.worlds[wk];
   return (w.counts[w.tier] || 0) >= BALANCE.landUnlockReq && w.tier < WORLDS[wk].tiers.length - 1;
 }
 export const tierUnlockCost = (state, wk) => Math.floor(landParcelCost(state, wk) * BALANCE.tierUnlockMult);
-export const densityCost = (state) => Math.floor(BALANCE.cost.density.base * Math.pow(BALANCE.cost.density.growth, state.land.density));
+
+// Hustota: globální násobič → přidaná kapacita = (zbytek kapacity) × Δmult.
+// Scale-aware: čím větší rozloha/modifikátory, tím dražší další stupeň hustoty.
+export const densityCost = (state) => {
+  const lvl = state.land.density;
+  if (lvl >= densityPhaseCap(state)) return Infinity;   // další stupeň zamčen fází (nebo absolutní strop)
+  const cur = DENSITY_TIERS[lvl].mult, next = DENSITY_TIERS[lvl + 1].mult;
+  const addedCap = totalArea(state) * BALANCE.baseCap * areaModMult(state) * flockMult(state) * (next - cur);
+  const c = BALANCE.cost.density;
+  return Math.max(c.base, Math.floor(c.perCap * addedCap));
+};
+
+// Modifikátor rozlohy: globální % bonus → přidaná kapacita = (zbytek) × bonus.
 export const areaModCost = (state, key) => {
-  const idx = AREA_MODS.findIndex(m => m.key === key);
-  return Math.floor(BALANCE.cost.areaMod.base * Math.pow(BALANCE.cost.areaMod.growth, Math.max(0, idx)));
+  const mod = AREA_MODS.find(m => m.key === key);
+  if (!mod) return Infinity;
+  const addedCap = totalArea(state) * BALANCE.baseCap * densityMult(state) * flockMult(state) * mod.bonus;
+  const c = BALANCE.cost.areaMod;
+  return Math.max(c.base, Math.floor(c.perCap * addedCap));
 };

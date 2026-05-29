@@ -10,14 +10,14 @@ export const totalSheep = (state) => state.groups.reduce((t, g) => t + totalCoun
 // gate(state) -> lze postoupit z této fáze do další?
 export const PHASES = {
   1:  { name: 'Stvoření',        gate: s => s.stats.credLifetime >= 1500,  hint: 'Prodávej vlnu, dokupuj ovce. Vydělej 1 500 kreditů.' },
-  2:  { name: 'Množení',         gate: s => s.stats.credLifetime >= 3e7,   hint: 'Šlechti stádo a prodávej mléko. Vydělej 10 mil. kreditů.' },
-  3:  { name: 'Královská',       gate: s => s.stats.credLifetime >= 5e9, hint: 'Ovládni trh (Monopol). Vydělej 1,5 mld. kreditů.'  },
-  4:  { name: 'Nesmrtelnosti',   gate: s => !!s.flags.immortal,            hint: 'Vyrob nápoj nesmrtelnosti (panel Stáda).' },
-  5:  { name: 'Moudrých ovcí',   gate: s => s.stats.credLifetime >= 2.4e13, hint: 'Šlechti chytré ovce. Vydělej 1,7 bilionu kreditů.' },
+  2:  { name: 'Množení',         gate: s => s.stats.credLifetime >= 3e7,   hint: 'Šlechti stádo a prodávej mléko. Vydělej 30 milionů kreditů.' },
+  3:  { name: 'Královská',       gate: s => s.stats.credLifetime >= 5e10, hint: 'Ovládni trh (Monopol). Vydělej 50 miliard kreditů.'  },
+  4:  { name: 'Nesmrtelnosti',   gate: s => !!s.flags.immortal,            hint: 'Našetři na nápoj nesmrtelnosti a vyrob ho (panel Stáda).' },
+  5:  { name: 'Moudrých ovcí',   gate: s => s.stats.credLifetime >= 5e13, hint: 'Šlechti chytré ovce. Vydělej 50 bilionů kreditů.' },
   6:  { name: 'Exodu',           gate: s => worldsColonized(s) >= 3,       hint: 'Kolonizuj Měsíc, Mars a Jupiter (panel Pozemky).' },
   7:  { name: 'Sféry',           gate: s => s.projects.dyson.count >= 1,   hint: 'Postav první Dysonovu sféru — kupuj stavitele.' },
   8:  { name: 'Rozmnožení sfér', gate: s => s.projects.dyson.count >= 5,   hint: 'Dokonči 5 sfér; posiluj laser.' },
-  9:  { name: 'Soudců',          gate: s => s.stats.credLifetime >= 1.8e15,  hint: 'Spravuj víc stád. Vydělej 90 bilionů kreditů.' },
+  9:  { name: 'Soudců',          gate: s => s.stats.credLifetime >= 1.8e15,  hint: 'Spravuj víc stád. Vydělej 1,8 biliardy kreditů.' },
   10: { name: 'Černé díry',      gate: () => false,  hint: 'Nasaj produkci do centrálního skladu a zažehni černou díru (Prestiž).' },
   11: { name: 'Zjevení',         gate: () => false,  hint: 'Dosáhni singularity.' },
 };
@@ -55,9 +55,9 @@ export function phaseProgress(state) {
   switch (state.phase) {
     case 1: return cred(1500);
     case 2: return cred(3e7);
-    case 3: return cred(5e9);
+    case 3: return cred(5e10);
     case 4: return { cur: state.flags.immortal ? 1 : 0, target: 1, label: 'Nápoj nesmrtelnosti' };
-    case 5: return cred(2.4e13);
+    case 5: return cred(5e13);
     case 6: return { cur: worldsColonized(state), target: 3, label: 'Kolonizované světy' };
     case 7: return { cur: state.projects.dyson.count, target: 1, label: 'Dysonovy sféry' };
     case 8: return { cur: state.projects.dyson.count, target: 5, label: 'Dysonovy sféry' };
