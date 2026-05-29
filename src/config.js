@@ -4,7 +4,10 @@
 // ===========================================================================
 
 export const VERSION = 3;
-export const SAVE_KEY = 'incremental-sheep-v3';
+import { storageKey } from './io/storage-key.js';
+
+export const SAVE_KEY_BASE = 'incremental-sheep-v3';
+export const SAVE_KEY = storageKey(SAVE_KEY_BASE);
 export const TIME_SCALE = 1;              // herních sekund na reálnou sekundu
 export const MAX_OFFLINE_SECONDS = 8 * 3600;
 export const AUTOSAVE_MS = 5000;
