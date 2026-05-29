@@ -82,7 +82,7 @@ export const BALANCE = {
   startCredits: 25,
   // kohorty / genetika
   cullPeriod: 20,           // herních sekund mezi aplikacemi selekce
-  maxCutFrac: 0.85,
+  maxCutFrac: 0.99,
   sigmaFloorMut: 0.6,       // σ-floor = sigmaFloorMut * mut (drží šlechtění "živé")
   // porody / kapacita
   baseCap: 12,

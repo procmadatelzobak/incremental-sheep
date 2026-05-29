@@ -174,15 +174,24 @@ function renderHerds(s) {
   // selekce (od fáze 2)
   if (s.phase >= 2) {
     const cull = g.policy.cull;
+    const cullMaxFrac = s.phase >= 9 ? 0.99 : s.phase >= 5 ? 0.60 : 0.30;
     const geneOpts = [h('option', { value: 'breedingScore', ...(cull.gene === 'breedingScore' ? { selected: 'selected' } : {}) }, 'Celkové skóre'),
       ...Object.keys(GENES).filter(k => GENES[k].phase <= s.phase).map(k => h('option', { value: k, ...(cull.gene === k ? { selected: 'selected' } : {}) }, GENES[k].label))];
     const stageOpts = ['adult', 'old', 'child'].map(st => h('option', { value: st, ...(cull.stage === st ? { selected: 'selected' } : {}) }, { adult: 'dospělí', old: 'staří', child: 'děti' }[st]));
     wrap.appendChild(section('Šlechtění (selekce)',
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(cull.enabled ? { checked: 'checked' } : {}), onchange: () => { A.setCull(s, g.id, { enabled: !cull.enabled }); onAction(); rebuild(); } }), ' Zapnout selekci'),
-      h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value }); } }, ...geneOpts),
+      h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value }); rebuild(); } }, ...geneOpts),
         ' ve stádiu ', h('select', { onchange: e => { A.setCull(s, g.id, { stage: e.target.value }); } }, ...stageOpts)),
       h('div', { class: 'ctl-row' }, `Useknout nejhorších: ${(cull.cutFrac * 100).toFixed(0)} %`,
-        h('input', { type: 'range', min: 0, max: BALANCE.maxCutFrac, step: 0.05, value: cull.cutFrac, oninput: e => { A.setCull(s, g.id, { cutFrac: +e.target.value }); } })),
+        h('input', { type: 'range', min: 0, max: cullMaxFrac, step: 0.05, value: Math.min(cull.cutFrac, cullMaxFrac), oninput: e => { A.setCull(s, g.id, { cutFrac: +e.target.value }); } })),
+      s.phase >= 5 && cull.gene !== 'breedingScore'
+        ? h('div', { class: 'ctl-row' },
+            'Min: ', h('input', { type: 'number', value: cull.min ?? '', placeholder: '—', style: 'width:80px',
+              onchange: e => { A.setCull(s, g.id, { min: e.target.value === '' ? null : +e.target.value }); onAction(); rebuild(); } }),
+            '  Max: ', h('input', { type: 'number', value: cull.max ?? '', placeholder: '—', style: 'width:80px',
+              onchange: e => { A.setCull(s, g.id, { max: e.target.value === '' ? null : +e.target.value }); onAction(); rebuild(); } }),
+            h('div', { class: 'dim small' }, 'Min/Max: stabilizační selekce udržuje μ v koridoru a utahuje σ.'))
+        : null,
       h('div', { class: 'dim small' }, 'Selekce zvedá μ a utahuje σ; mutace σ doplňuje → šlechtit lze napořád.')));
 
     // automatická pravidla

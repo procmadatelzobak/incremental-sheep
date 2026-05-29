@@ -10,7 +10,7 @@ export function defaultPolicy() {
     killOld: false,
     killMaleChildren: false,
     maxMales: 0,                 // 0 = bez limitu
-    cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2, stage: 'adult' },
+    cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2, stage: 'adult', min: null, max: null },
   };
 }
 

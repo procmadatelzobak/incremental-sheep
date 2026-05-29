@@ -1,9 +1,10 @@
 // ===========================================================================
 //  Skupiny: porážkové výnosy, automatická pravidla, selekční cyklus, CRUD.
 // ===========================================================================
-import { BALANCE } from '../config.js';
+import { BALANCE, GENES } from '../config.js';
 import { locEnv } from '../content/locations.js';
-import { selectGene, selectScore, seedGroupGenes } from './genetics.js';
+import { selectGene, selectScore, seedGroupGenes, clampGene } from './genetics.js';
+import { selectTruncate, selectStabilizing } from './distribution.js';
 import { emptyCounts } from './cohort.js';
 
 const STAGE_MEAT = { adult: 1.0, old: 0.6, child: 0.25 };
@@ -52,8 +53,33 @@ export function applySelectionCull(group, ctx, state) {
   if (n <= 0) return {};
   group.counts.M[stage] *= (1 - p);
   group.counts.F[stage] *= (1 - p);
-  if (pol.gene === 'breedingScore') selectScore(group, p, ctx.ceilingMult);
-  else selectGene(group, pol.gene, p, ctx.ceilingMult);
+
+  const hasMin = pol.min != null;
+  const hasMax = pol.max != null;
+
+  if ((hasMin || hasMax) && pol.gene !== 'breedingScore' && group.genes[pol.gene]) {
+    const d = group.genes[pol.gene];
+    const spec = GENES[pol.gene];
+    const floor = spec.mut * BALANCE.sigmaFloorMut;
+    if (hasMin && d.mu < pol.min) {
+      const r = selectTruncate(d.mu, d.sigma, p, false, floor);
+      d.mu = clampGene(pol.gene, r.mu, ctx.ceilingMult);
+      d.sigma = r.sigma;
+    } else if (hasMax && d.mu > pol.max) {
+      const r = selectTruncate(d.mu, d.sigma, p, true, floor);
+      d.mu = clampGene(pol.gene, r.mu, ctx.ceilingMult);
+      d.sigma = r.sigma;
+    } else {
+      const r = selectStabilizing(d.mu, d.sigma, p, floor);
+      d.mu = r.mu;
+      d.sigma = r.sigma;
+    }
+  } else if (pol.gene === 'breedingScore') {
+    selectScore(group, p, ctx.ceilingMult);
+  } else {
+    selectGene(group, pol.gene, p, ctx.ceilingMult);
+  }
+
   state.stats.culled += n;
   return slaughterYields(group, n, stage, ctx, state);
 }
@@ -64,7 +90,7 @@ export function createGroup(state, locationId, name) {
     id: state.nextGroupId++, name: name || ('Stádo ' + String.fromCharCode(64 + state.nextGroupId)),
     species: 'base', locationId: locationId || state.activeLocationId,
     genes: seedGroupGenes(0, 1), counts: emptyCounts(), bredFracF: 0,
-    policy: { killOld: false, killMaleChildren: false, maxMales: 0, cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2, stage: 'adult' } },
+    policy: { killOld: false, killMaleChildren: false, maxMales: 0, cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2, stage: 'adult', min: null, max: null } },
   };
   state.groups.push(g);
   return g;

@@ -1,4 +1,4 @@
-import { phi, Phi, probit, erf, selectTruncate, mixNormal } from '../src/sim/distribution.js';
+import { phi, Phi, probit, erf, selectTruncate, mixNormal, selectStabilizing } from '../src/sim/distribution.js';
 
 let pass = 0, fail = 0;
 const approx = (a, b, eps = 1e-3) => Math.abs(a - b) <= eps;
@@ -45,6 +45,22 @@ check('phi(0)~0.3989', approx(phi(0), 0.39894, 1e-4));
   // 50 dětí s nižším mu vmícháno do 50 dospělých → mu mezi
   const r = mixNormal(50, 10, 1, 50, 8, 1);
   check('mix different means', approx(r.mu, 9) && r.sigma > 1);
+}
+
+// selectStabilizing: mu zůstává stejné, sigma klesá
+{
+  const r = selectStabilizing(10, 2, 0.5);
+  check('stabilizing keeps mu', approx(r.mu, 10));
+  check('stabilizing lowers sigma', r.sigma < 2);
+}
+{
+  const r50 = selectStabilizing(5, 1, 0.5);
+  const r90 = selectStabilizing(5, 1, 0.9);
+  check('stabilizing higher p → lower sigma', r90.sigma < r50.sigma);
+}
+{
+  const r = selectStabilizing(10, 0.05, 0.9, 0.1);
+  check('stabilizing sigma floor respected', r.sigma >= 0.1 - 1e-9);
 }
 
 console.log(`distribution: ${pass} passed, ${fail} failed`);
