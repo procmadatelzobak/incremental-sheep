@@ -11,6 +11,15 @@ ${preview.previewUrl}
 Commit: \`${String(preview.sha || '').slice(0, 12)}\``;
 }
 
+export async function findExistingPreviewComment(fetchCommentsPage) {
+  for (let page = 1; ; page++) {
+    const comments = await fetchCommentsPage(page);
+    const existing = comments.find(comment => (comment.body || '').includes(MARKER));
+    if (existing) return existing;
+    if (comments.length < 100) return null;
+  }
+}
+
 async function main() {
   const previews = JSON.parse(process.env.PR_PREVIEWS_JSON || '[]');
   if (!previews.length) return;
@@ -28,8 +37,7 @@ async function main() {
 
 async function upsertComment(repo, token, preview) {
   const api = process.env.GITHUB_API_URL || 'https://api.github.com';
-  const comments = await github(`${api}/repos/${repo}/issues/${preview.number}/comments?per_page=100`, token);
-  const existing = comments.find(comment => (comment.body || '').includes(MARKER));
+  const existing = await findExistingPreviewComment(page => github(`${api}/repos/${repo}/issues/${preview.number}/comments?per_page=100&page=${page}`, token));
   const body = buildPreviewComment(preview);
   if (existing) {
     await github(`${api}/repos/${repo}/issues/comments/${existing.id}`, token, {
