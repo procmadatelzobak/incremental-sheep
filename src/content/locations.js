@@ -15,12 +15,7 @@ export function worldArea(state, wk) {
   for (const i in w.counts) a += (w.counts[i] || 0) * (tiers[i] ? tiers[i].area : 0);
   return a;
 }
-const oxygenCap = (state) => (state.buys.oxygen || 0) * BALANCE.oxygenPerLevel;
-export function effectiveWorldArea(state, wk) {
-  const a = worldArea(state, wk);
-  if (WORLDS[wk].env.oxygenRequired) return Math.min(a, oxygenCap(state));  // kyslík škáluje plochu Měsíce
-  return a;
-}
+export const effectiveWorldArea = (state, wk) => worldArea(state, wk);
 export function totalArea(state) {
   let t = 0; for (const wk of WORLD_ORDER) t += effectiveWorldArea(state, wk); return t;
 }

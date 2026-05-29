@@ -67,7 +67,7 @@ export function newGame(carry = null) {
     rates: {},
     storage: { warehouseLevel: 0, autotrade: {}, stockpile: {} },
     upgrades: {},
-    buys: { addSheep: 0, warehouse: 0, oxygen: 0 },
+    buys: { addSheep: 0, warehouse: 0 },
     projects: {
       dyson: { progress: 0, count: 0, builders: 0 },
       laser: { level: 0 },

@@ -39,7 +39,6 @@ export const RESOURCES = {
   skin:    { label: 'Kůže',     phase: 5, sell: true,  store: true,  value: 5 },
   brain:   { label: 'Mozky',    phase: 5, sell: true,  store: true,  value: 22 },
   compute: { label: 'Výpočet',  phase: 5, sell: false, store: true },
-  oxygen:  { label: 'Kyslík',   phase: 6, sell: false, store: true },
   energy:  { label: 'Energie',  phase: 7, sell: false, store: true },
   knowledge:{label: 'Vědění',   phase: 10,sell: false, store: false },
 };
@@ -107,15 +106,13 @@ export const BALANCE = {
     land:      { base: 60,   growth: 1.28 },   // koupě parcely aktuálního tieru (× costMult světa)
     density:   { base: 1e3,  growth: 5    },   // globální hustota pastvy (track)
     areaMod:   { base: 4e3,  growth: 7    },   // globální modifikátory rozlohy
-    warehouse: { base: 1e5,  growth: 1.8  },   // +strop skladu (fáze 6)
-    oxygen:    { base: 8e4,  growth: 1.7  },   // +kyslíková kapacita (fáze 6)
+    warehouse: { base: 1e5,  growth: 1.8  },   // +strop skladu na surovinu (fáze 6)
     builder:   { base: 1e7,  growth: 1.18 },   // stavitel sféry (fáze 7)
     laser:     { base: 5e6,  growth: 1.6  },   // laser (fáze 8)
   },
   landUnlockReq: 3,         // kolik parcel tieru pro odemčení dalšího
   tierUnlockMult: 12,       // odemčení dalšího tieru = cena parcely × tato hodnota
-  warehouse: { capInc: 5000 },
-  oxygenPerLevel: 5e8,      // kyslíková kapacita (v jednotkách rozlohy) za úroveň
+  warehouse: { capInc: 5000 },   // přírůstek stropu skladu PRO KAŽDOU SUROVINU ZVLÁŠŤ (#38)
   // zpracování (fáze 3+): poměr raw → processed
   processing: { wool: { to: 'cloth', ratio: 1 }, milk: { to: 'cheese', ratio: 1 } },
   // projekty
@@ -146,7 +143,7 @@ export const WORLDS = {
     ],
   },
   moon: {
-    label: 'Měsíc', icon: '🌕', phase: 6, costMult: 2e3, env: { oxygenRequired: true, woolMult: 1.1 },
+    label: 'Měsíc', icon: '🌕', phase: 6, costMult: 2e3, env: { woolMult: 1.1 },
     tiers: [{ label: 'Regolitové skleníky', area: 5e8 }, { label: 'Kráterové farmy', area: 4e9 }, { label: 'Lávové tunely', area: 3e10 }, { label: 'Kupolová města', area: 2e11 }],
   },
   mars: {

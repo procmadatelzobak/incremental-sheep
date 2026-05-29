@@ -7,7 +7,7 @@ export const ICONS = {
   pasture: '🌾', processing: '🏭', station: '🚀', moon: '🌕', mars: '🔴', jupiter: '🪐',
   sphere: '☀️', compute: '🧠', knowledge: '📚', blackHole: '🕳️', singularity: '✨',
   builder: '🏗️', laser: '🔦', immortality: '🧪', storage: '📦', manager: '🧑‍🌾',
-  prestige: '🕳️', stats: '📊', kronika: '📜', upgrades: '🛠️', oxygen: '🫧', energy: '⚡', lab: '🔬',
+  prestige: '🕳️', stats: '📊', kronika: '📜', upgrades: '🛠️', energy: '⚡', lab: '🔬',
 };
 
 // ikona fáze (1–11)
@@ -23,5 +23,5 @@ export const KIND_ICONS = {
 // ikona zdroje (klíč = klíč v RESOURCES)
 export const RES_ICONS = {
   credits: '💰', wool: '🧶', meat: '🥩', milk: '🥛', cloth: '🧵', cheese: '🧀',
-  bones: '🦴', skin: '🟫', brain: '🧠', compute: '🧠', oxygen: '🫧', energy: '⚡', knowledge: '📚',
+  bones: '🦴', skin: '🟫', brain: '🧠', compute: '🧠', energy: '⚡', knowledge: '📚',
 };

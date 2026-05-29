@@ -13,7 +13,7 @@ import { maleCapOf } from '../sim/groups.js';
 import { herdCapacity, totalArea, densityMult, densityMaxLevel, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
 import { phaseName, phaseHint, phaseProgress, PHASE_INFO, PHASES } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax, selectedNewbornDist } from '../sim/genetics.js';
-import { combinedCap, storedTradeTotal, TRADEABLE, storageEnabled } from '../econ/storage.js';
+import { resourceCap, TRADEABLE, storageEnabled } from '../econ/storage.js';
 import { processFraction } from '../econ/processing.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
@@ -611,14 +611,7 @@ function renderStations(s) {
   }
   if (anyMod) wrap.appendChild(section('Modifikátory rozlohy (globální % bonus)', modsBox));
 
-  // SKLAD + KYSLÍK (fáze 6+)
-  if (s.phase >= 6) {
-    wrap.appendChild(section('Sklad a kyslík',
-      h('div', { class: 'btn-row' },
-        cBtn(`${ICONS.storage} + Sklad`, () => A.costFor(s, 'warehouse'), () => A.buyWarehouse(s)),
-        cBtn(`${ICONS.oxygen} + Kyslík`, () => A.costFor(s, 'oxygen'), () => A.buyOxygen(s))),
-      liveSpan(() => `Kyslíková kapacita: ${fmt(s.buys.oxygen * BALANCE.oxygenPerLevel)} rozlohy (násobí plochu Měsíce).`, 'dim small')));
-  }
+  // (Rozšiřování skladu se kupuje v záložce Sklad — #38.)
 
   // DYSONOVA SFÉRA (fáze 7+)
   if (s.phase >= 7) {
@@ -636,20 +629,24 @@ function renderStations(s) {
 
 function renderStorage(s) {
   const wrap = h('div', {});
-  wrap.appendChild(section('Společný sklad',
-    liveBar(() => { const c = combinedCap(s); return c ? storedTradeTotal(s) / c : 0; }, () => `${fmt(storedTradeTotal(s))} / ${fmt(combinedCap(s))}`, '#5b8def'),
-    h('div', { class: 'dim small', text: 'Pozor: jakýkoli nákup vyprázdní sklad.' })));
+  // Rozšiřování skladu (přesunuto z Pozemků, #38) vedle ukazatele — strop je per surovina.
+  wrap.appendChild(section('Rozšíření skladu',
+    h('div', { class: 'btn-row' },
+      cBtn(`${ICONS.storage} + Sklad`, () => A.costFor(s, 'warehouse'), () => A.buyWarehouse(s), () => `+${fmt(BALANCE.warehouse.capInc)} kapacity na surovinu`),
+      liveSpan(() => `Kapacita na surovinu: ${fmt(resourceCap(s))}`, 'dim')),
+    h('div', { class: 'dim small', text: 'Strop platí pro každou surovinu zvlášť. Pozor: jakýkoli nákup vyprázdní sklad.' })));
   const list = h('div', { class: 'list' });
   for (const k of TRADEABLE) {
     if (RESOURCES[k].phase > s.phase) continue;
     const frac = s.storage.autotrade[k] ?? 1;
     list.appendChild(h('div', { class: 'item' },
       h('div', { class: 'item-h' }, h('b', { text: (RES_ICONS[k] || '') + ' ' + RESOURCES[k].label }), liveSpan(() => fmt(s.resources[k] || 0), 'dim')),
+      liveBar(() => { const c = resourceCap(s); return c ? Math.min(1, (s.resources[k] || 0) / c) : 0; }, () => `${fmt(s.resources[k] || 0)} / ${fmt(resourceCap(s))}`, '#5b8def'),
       h('div', { class: 'ctl-row' },
         liveSpan(() => `Prodávat: ${((s.storage.autotrade[k] ?? 1) * 100).toFixed(0)} %`),
         h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: frac, oninput: e => { A.setAutotrade(s, k, +e.target.value); } }))));
   }
-  wrap.appendChild(section('Autotrade (zbytek se střádá)', list));
+  wrap.appendChild(section('Suroviny (prodej / sklad po strop)', list));
   return wrap;
 }
 
@@ -800,7 +797,7 @@ const TIPS = [
   'S městskými pozemky se odemkne Laboratoř (zpracování, dojení, mozky) a Jatka (automatika porážek).',
   'V Jatkách zapni „porážku před zestárnutím" — stará ovce dává míň masa, takhle z ní dostaneš plný výnos.',
   'Zpracování v Laboratoři mění vlnu na sukno a mléko na sýr — prodá se dráž. Kupuj Tkalcovny.',
-  'Od fáze 6 funguje společný sklad s autotrade: vypni prodej a zboží se střádá. Pozor: jakýkoli nákup sklad vyprázdní.',
+  'Od fáze 6 funguje sklad s autotrade (strop pro každou surovinu zvlášť): vypni prodej a zboží se střádá. Pozor: jakýkoli nákup sklad vyprázdní.',
   'Před černou dírou (fáze 10) zapni „Nasávat produkci" a nech sklad naplnit — pak zažehni a získáš Vědění na trvalé perky.',
 ];
 

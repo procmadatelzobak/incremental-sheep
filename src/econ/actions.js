@@ -26,7 +26,6 @@ export function costFor(state, kind) {
   switch (kind) {
     case 'addSheep':   return costOf(BALANCE.cost.addSheep, state.buys.addSheep);
     case 'warehouse':  return costOf(BALANCE.cost.warehouse, state.buys.warehouse);
-    case 'oxygen':     return costOf(BALANCE.cost.oxygen, state.buys.oxygen);
     case 'builder':    return Math.floor(costOf(BALANCE.cost.builder, state.projects.dyson.builders) * voyage);
     case 'laser':      return costOf(BALANCE.cost.laser, state.projects.laser.level);
     case 'immortality':return 1e9;
@@ -109,17 +108,11 @@ export function buyPerk(state, key) {
   return true;
 }
 
-// --- fáze 6+: sklad, kyslík; fáze 7+: stavitelé; fáze 8+: laser; sféra ------
+// --- fáze 6+: sklad; fáze 7+: stavitelé; fáze 8+: laser; sféra -------------
 export function buyWarehouse(state) {
   if (state.phase < 6) return false;
   if (!spend(state, costFor(state, 'warehouse'))) return false;
   state.storage.warehouseLevel++; state.buys.warehouse++;
-  return true;
-}
-export function buyOxygen(state) {
-  if (state.phase < 6) return false;
-  if (!spend(state, costFor(state, 'oxygen'))) return false;
-  state.buys.oxygen++;
   return true;
 }
 export function buyBuilder(state) {
@@ -214,7 +207,7 @@ export function runAutobuy(state) {
       }
       if (state.land.density < densityMaxLevel()) opts.push([densityCost(state), () => buyDensity(state)]);
       for (const m of AREA_MODS) if (m.phase <= state.phase && !state.land.mods[m.key]) opts.push([areaModCost(state, m.key), () => buyAreaMod(state, m.key)]);
-      if (state.phase >= 6) { opts.push([costFor(state, 'warehouse'), () => buyWarehouse(state)]); opts.push([costFor(state, 'oxygen'), () => buyOxygen(state)]); }
+      if (state.phase >= 6) opts.push([costFor(state, 'warehouse'), () => buyWarehouse(state)]);
     }
     if (ab.upgrades) for (const k in UPGRADES) if (UPGRADES[k].phase <= state.phase) opts.push([upgradeCost(state, k), () => buyUpgrade(state, k)]);
     if (ab.sphere && state.phase >= 7) opts.push([costFor(state, 'builder'), () => buyBuilder(state)]);

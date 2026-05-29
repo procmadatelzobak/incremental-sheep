@@ -73,7 +73,7 @@ export const PHASE_INFO = {
   3:  { unlocks: ['Monopol', 'Zpracování (sukno, sýr)', 'Dražší vylepšení'], lore: '„Ovládl trh a počal šponovat ceny — neb kdo jiný by mu v tom zabránil."' },
   4:  { unlocks: ['Nápoj nesmrtelnosti', 'Pokročilá genetika'], lore: '„Vypil mléko věčnosti a přestal být pouhým ovčákem. Stal se Pastýřem."' },
   5:  { unlocks: ['Extrémní geny (vyšší stropy)', 'Inteligence → Výpočet', 'Kosti, kůže, mozek', 'Cesta do vesmíru'], lore: '„Vyšlechtil ovce moudré a z jejich mozků složil počítače."' },
-  6:  { unlocks: ['Měsíc, Mars, Jupiter', 'Kyslík', 'Sklady + autotrade'], lore: '„Vyšel ke hvězdám a zaséval stáda mezi planety."' },
+  6:  { unlocks: ['Měsíc, Mars, Jupiter', 'Sklady + autotrade'], lore: '„Vyšel ke hvězdám a zaséval stáda mezi planety."' },
   7:  { unlocks: ['Dysonova sféra', 'Stavitelé', 'Energie'], lore: '„Obestavěl Slunce, aby ani paprsek nezůstal nespasen."' },
   8:  { unlocks: ['Další sféry', 'Laser (zrychlení stavby)'], lore: '„Jedna sféra je jen první sféra."' },
   9:  { unlocks: ['Manažer stád', 'Více skupin / druhů', 'Dělení stád'], lore: '„Ustanovil Soudce, jenž spravuje stáda všech světů."' },
