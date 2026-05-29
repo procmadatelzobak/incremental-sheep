@@ -2,7 +2,7 @@
 //  Hráčské akce — jediné API, které volá UI. Každá vrací true/false (úspěch).
 //  Nákupy za kredity vyprázdní obchodovatelný sklad (pravidlo lore §9).
 // ===========================================================================
-import { BALANCE, UPGRADES, PERKS, WORLDS, WORLD_ORDER, AREA_MODS } from '../config.js';
+import { BALANCE, UPGRADES, upgradeName, PERKS, WORLDS, WORLD_ORDER, AREA_MODS } from '../config.js';
 import { fmt } from '../format.js';
 import { costOf, upgradeCost, perkCost } from './economy.js';
 import { emptyStorage } from './storage.js';
@@ -235,7 +235,7 @@ export function runAutobuy(state) {
 // --- doporučený další krok (pro HUD) --------------------------------------
 function cheapestUseful(s) {
   const opts = [];
-  for (const k in UPGRADES) if (UPGRADES[k].phase <= s.phase) opts.push({ kind: 'upgrade', key: k, label: UPGRADES[k].label, cost: upgradeCost(s, k) });
+  for (const k in UPGRADES) if (UPGRADES[k].phase <= s.phase) opts.push({ kind: 'upgrade', key: k, label: upgradeName(UPGRADES[k], s.upgrades[k] || 0), cost: upgradeCost(s, k) });
   for (const wk of WORLD_ORDER) if (WORLDS[wk].phase <= s.phase && !WORLDS[wk].fromProject) opts.push({ kind: 'land', key: wk, label: 'Rozloha: ' + WORLDS[wk].label, cost: landParcelCost(s, wk) });
   if (s.land.density < densityPhaseCap(s)) opts.push({ kind: 'density', key: null, label: 'Hustota pastvy', cost: densityCost(s) });
   opts.push({ kind: 'addSheep', key: null, label: 'Ovce', cost: costFor(s, 'addSheep') });

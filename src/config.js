@@ -45,19 +45,52 @@ export const RESOURCES = {
 
 // --- VYLEPŠENÍ (úrovňová, kumulativní) -------------------------------------
 // effect: jak se aplikuje (viz econ/economy.js getMults). cost = base*growth^lvl.
+// tiers = eskalace názvu (jen kosmetika!): s rostoucí úrovní se vylepšení honosněji
+// jmenuje (viz upgradeName + UPGRADE_TIER_FROM). tiers[0] = úroveň 1 (== label),
+// mechanika (base/growth/per/kind/desc) zůstává u všech úrovní stejná.
 export const UPGRADES = {
-  shears:    { label: 'Nůžky',         phase: 1, base: 60,   growth: 1.7,  per: 0.15, kind: 'woolMult',  desc: '+15 % vlna' },
-  commerce:  { label: 'Obchod',        phase: 1, base: 120,  growth: 1.75, per: 0.12, kind: 'priceMult', desc: '+12 % ceny' },
-  courtship: { label: 'Námluvy',       phase: 1, base: 100,  growth: 1.8,  per: 0.10, kind: 'breedMult', desc: '-10 % březost' },
-  ram:       { label: 'Beran',         phase: 1, base: 300,  growth: 2.0,  per: 2,    kind: 'fertBonus', desc: '+2 plodnost samců' },
-  milkMach:  { label: 'Dojička',       phase: 2, base: 400,  growth: 1.75, per: 0.18, kind: 'milkMult',  desc: '+18 % mléko', lab: true },
-  fatten:    { label: 'Výkrm',         phase: 2, base: 500,  growth: 1.8,  per: 0.15, kind: 'meatMult',  desc: '+15 % maso' },
-  monopoly:  { label: 'Monopol',       phase: 3, base: 5e3,  growth: 2.1,  per: 0.25, kind: 'priceMult', desc: '+25 % ceny (šponování)' },
-  looms:     { label: 'Tkalcovny',     phase: 3, base: 8e3,  growth: 1.9,  per: 0.2,  kind: 'procFrac',  desc: '+20 % vlny→sukno a mléka→sýr', lab: true },
-  genetics:  { label: 'Genetika',      phase: 5, base: 5e4,  growth: 1.9,  per: 0.05, kind: 'ceilingMult', desc: '+5 % strop genů', lab: true },
-  cloning:   { label: 'Klonování',     phase: 5, base: 8e4,  growth: 1.85, per: 0.2,  kind: 'birthMult', desc: '+20 % porodnost', lab: true },
-  computeOpt:{ label: 'Optimalizace',  phase: 5, base: 1e5,  growth: 1.9,  per: 0.25, kind: 'computeMult',desc:'+25 % výpočet', lab: true },
+  shears:    { label: 'Nůžky',         phase: 1, base: 60,   growth: 1.7,  per: 0.15, kind: 'woolMult',  desc: '+15 % vlna',
+    tiers: ['Nůžky', 'Průmyslové nůžky', 'Automatická holírna', 'Robotická stříhárna', 'Laserová stříhárna', 'Nanovláknová sklizeň', 'Orbitální stříhací roj', 'Sféra věčného střihu', 'Galaktická česárna vlny', 'Rouno utkané z hvězd'] },
+  commerce:  { label: 'Obchod',        phase: 1, base: 120,  growth: 1.75, per: 0.12, kind: 'priceMult', desc: '+12 % ceny',
+    tiers: ['Obchod', 'Tržiště', 'Obchodní cech', 'Dálkové karavany', 'Burza', 'Korporátní impérium', 'Planetární trh', 'Mezihvězdná obchodní liga', 'Galaktická ekonomika', 'Trh řídící osud'] },
+  courtship: { label: 'Námluvy',       phase: 1, base: 100,  growth: 1.8,  per: 0.10, kind: 'breedMult', desc: '-10 % březost',
+    tiers: ['Námluvy', 'Dohazování', 'Říje na povel', 'Hormonální stimulace', 'Synchronizovaná říje', 'Reprodukční klinika', 'Urychlená embryogeneze', 'Zkrácená březost', 'Okamžité zrození', 'Stvoření na zavolání'] },
+  ram:       { label: 'Beran',         phase: 1, base: 300,  growth: 2.0,  per: 2,    kind: 'fertBonus', desc: '+2 plodnost samců',
+    tiers: ['Beran', 'Plemenný beran', 'Šampion stáda', 'Elitní plemeník', 'Genetický superberan', 'Klonovaný praotec', 'Všeplodný patriarcha', 'Beran beranů', 'Beran se zlatým rounem', 'Nebeský Beránek'] },
+  milkMach:  { label: 'Dojička',       phase: 2, base: 400,  growth: 1.75, per: 0.18, kind: 'milkMult',  desc: '+18 % mléko', lab: true,
+    tiers: ['Dojička', 'Dojicí stroj', 'Automatická dojírna', 'Robotická dojírna', 'Vakuová dojicí linka', 'Bioreaktor mléka', 'Mlékárna v oblacích', 'Orbitální mlékárna', 'Galaktická řeka mléka', 'Mléčná dráha'] },
+  fatten:    { label: 'Výkrm',         phase: 2, base: 500,  growth: 1.8,  per: 0.15, kind: 'meatMult',  desc: '+15 % maso',
+    tiers: ['Výkrm', 'Krmná směs', 'Výkrmna', 'Průmyslová výkrmna', 'Hormonální výkrm', 'Bioinženýrská tkáň', 'Kultivované maso', 'Tkáňový kultivátor', 'Planetární jatka', 'Maso z čisté energie'] },
+  monopoly:  { label: 'Monopol',       phase: 3, base: 5e3,  growth: 2.1,  per: 0.25, kind: 'priceMult', desc: '+25 % ceny (šponování)',
+    tiers: ['Monopol', 'Kartel', 'Cenový diktát', 'Burzovní manipulace', 'Ovládnutí trhu', 'Ekonomická hegemonie', 'Planetární monopol', 'Mezihvězdný trust', 'Galaktický kartel', 'Pán všech cen'] },
+  looms:     { label: 'Tkalcovny',     phase: 3, base: 8e3,  growth: 1.9,  per: 0.2,  kind: 'procFrac',  desc: '+20 % vlny→sukno a mléka→sýr', lab: true,
+    tiers: ['Tkalcovny', 'Mechanické stavy', 'Automatizovaná přádelna', 'Textilní továrna', 'Nanotkalcovský stav', 'Molekulární tkadlec', 'Orbitální manufaktura', 'Sféra tkaní', 'Galaktická přádelna', 'Tkadlec osudu'] },
+  genetics:  { label: 'Genetika',      phase: 5, base: 5e4,  growth: 1.9,  per: 0.05, kind: 'ceilingMult', desc: '+5 % strop genů', lab: true,
+    tiers: ['Genetika', 'Selektivní šlechtění', 'Genová laboratoř', 'Sekvenátor DNA', 'Genové inženýrství', 'Editor genomu', 'Syntetická biologie', 'Návrhář druhů', 'Genetické vševědění', 'Kniha života'] },
+  cloning:   { label: 'Klonování',     phase: 5, base: 8e4,  growth: 1.85, per: 0.2,  kind: 'birthMult', desc: '+20 % porodnost', lab: true,
+    tiers: ['Klonování', 'Klonovací nádrže', 'Líheň klonů', 'Sériová replikace', 'Tisk živé tkáně', 'Hromadná inkubace', 'Klonovací komplex', 'Replikátor stád', 'Armáda klonů', 'Nekonečné rozmnožení'] },
+  computeOpt:{ label: 'Optimalizace',  phase: 5, base: 1e5,  growth: 1.9,  per: 0.25, kind: 'computeMult',desc:'+25 % výpočet', lab: true,
+    tiers: ['Optimalizace', 'Přetaktování', 'Paralelní výpočet', 'Neuronová síť', 'Kvantový procesor', 'Ovčí superpočítač', 'Distribuovaná mysl stáda', 'Planetární výpočetní mřížka', 'Galaktický intelekt', 'Vševědoucí mysl'] },
 };
+
+// Prahy úrovní pro názvy vylepšení (jako EPITHETS): index do `tiers` = poslední práh
+// ≤ úroveň. Zezačátku se název mění každou úroveň (1,2,3), pak se rozprostře hlouběji
+// do hry (Fibonacci). Délka odpovídá počtu názvů v `tiers`.
+export const UPGRADE_TIER_FROM = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+// Název vylepšení pro danou úroveň (kosmetické; mechanika beze změny). Úroveň 0
+// (nezakoupeno) i 1 ukazují tiers[0]; výš se posouvá dle UPGRADE_TIER_FROM a na
+// posledním názvu se ustálí (vyšší úrovně už jen přidávají „Lv X").
+export function upgradeName(u, level) {
+  const names = u.tiers;
+  if (!names || !names.length) return u.label;
+  const L = Math.max(1, level | 0);
+  let idx = 0;
+  for (let i = 0; i < names.length && i < UPGRADE_TIER_FROM.length; i++) {
+    if (L >= UPGRADE_TIER_FROM[i]) idx = i;
+  }
+  return names[idx];
+}
 
 // --- PERKY (trvalé, kupují se za Vědění; přežijí reset) — 5 větví -----------
 export const PERK_BRANCHES = {

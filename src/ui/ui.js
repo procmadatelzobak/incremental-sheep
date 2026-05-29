@@ -7,7 +7,7 @@
 import { fmt, fmtCount } from '../format.js';
 import * as A from '../econ/actions.js';
 import { upgradeCost, perkCost, getMults } from '../econ/economy.js';
-import { VERSION, UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
+import { VERSION, UPGRADES, upgradeName, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { maleCapOf } from '../sim/groups.js';
 import { herdCapacity, totalArea, densityMult, densityMaxLevel, densityPhaseCap, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
@@ -535,10 +535,17 @@ function upgradeRoi(s, k) {
 }
 function upgradeItem(s, k) {
   const u = UPGRADES[k];
+  // Titulek je „živý": s rostoucí úrovní vylepšení honosněji jmenuje (kosmetika).
+  const nameEl = reg(h('b', {}), (el) => { el.textContent = upgradeName(u, s.upgrades[k] || 0); });
   return h('div', { class: 'item' },
-    h('div', { class: 'item-h' }, h('b', { text: u.label }), liveSpan(() => `Lv ${s.upgrades[k] || 0}`, 'dim'), liveSpan(() => upgradeAgg(s, u), 'dim small')),
+    h('div', { class: 'item-h' }, nameEl, liveSpan(() => `Lv ${s.upgrades[k] || 0}`, 'dim'), liveSpan(() => upgradeAgg(s, u), 'dim small')),
     h('div', { class: 'dim small', text: u.desc }),
-    cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k), () => `${u.desc} → Lv ${(s.upgrades[k] || 0) + 1}`, {
+    cBtn('Koupit', () => upgradeCost(s, k), () => A.buyUpgrade(s, k), () => {
+      const lvl = s.upgrades[k] || 0;
+      const next = upgradeName(u, lvl + 1);
+      // když další úroveň odemyká nový název, ukaž ho na tlačítku jako lákadlo
+      return next !== upgradeName(u, lvl) ? `${u.desc} → ${next} (Lv ${lvl + 1})` : `${u.desc} → Lv ${lvl + 1}`;
+    }, {
       primaryFn: () => { const sa = A.suggestedAction(s); return !!sa && sa.kind === 'upgrade' && sa.key === k; },
       deltaFn: () => upgradeDelta(u),
       titleFn: () => upgradeRoi(s, k),
