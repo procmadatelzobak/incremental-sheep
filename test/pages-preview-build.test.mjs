@@ -15,6 +15,7 @@ check('PR cesta je deterministická podle čísla', prPreviewPath(49) === 'pr/49
 check('branch slug je deterministický', slugifyBranch('playtest/balance tuning') === 'playtest-balance-tuning');
 check('branch cesta používá slug', branchPreviewPath('preview/foo') === 'branch/preview-foo');
 check('refs/heads prefix se při slugování ignoruje', slugifyBranch('refs/heads/playtest/foo') === 'playtest-foo');
+check('běžná branch má také preview cestu', branchPreviewPath('fix/foo') === 'branch/fix-foo');
 
 console.log(`pages-preview-build: ${pass} ok, ${fail} fail`);
 process.exit(fail ? 1 : 0);
