@@ -51,7 +51,7 @@ export function probit(p) {
 // lowerBetter: ponech dolní (1-p) podíl (usekni horní p).
 // floor: minimální sigma (drží variabilitu, aby šlo šlechtit napořád).
 export function selectTruncate(mu, sigma, p, lowerBetter = false, floor = 1e-9) {
-  p = Math.max(0, Math.min(0.95, p));
+  p = Math.max(0, Math.min(0.99, p));
   if (p <= 0 || sigma <= floor) return { mu, sigma: Math.max(sigma, floor) };
   const alpha = probit(p);              // dolní mez v z-jednotkách
   const lambda = phi(alpha) / (1 - p);  // inverzní Millsův poměr (horní tail)
@@ -59,6 +59,17 @@ export function selectTruncate(mu, sigma, p, lowerBetter = false, floor = 1e-9) 
   const newMu = lowerBetter ? mu - sigma * lambda : mu + sigma * lambda;
   const newSigma = Math.max(floor, sigma * Math.sqrt(varFactor));
   return { mu: newMu, sigma: newSigma };
+}
+
+// Stabilizační selekce: udržuje mu, zmenšuje sigma (usekne p/2 zdola i shora).
+// Symetricky useknutý normál → μ beze změny, σ klesá s rostoucím p.
+export function selectStabilizing(mu, sigma, p, floor = 1e-9) {
+  p = Math.max(0, Math.min(0.99, p));
+  if (p <= 0 || sigma <= floor) return { mu, sigma: Math.max(sigma, floor) };
+  const z = probit(p / 2);                                   // dolní mez koridoru (záporná)
+  const varFactor = Math.max(0, 1 + (2 * z * phi(z)) / (1 - p)); // = 1 − 2a·φ(a)/(1−p)
+  const newSigma = Math.max(floor, sigma * Math.sqrt(varFactor));
+  return { mu, sigma: newSigma };
 }
 
 // Sloučení dvou normálů vážené počty (n s {mu0,s0}, b s {mu1,s1}).

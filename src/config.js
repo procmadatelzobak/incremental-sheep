@@ -97,7 +97,7 @@ export const BALANCE = {
   immortalSpeedPerPhase: 0.15, // + za každou fázi nad 4 (eskalující "čas letí")
   sheepPerUnit: 4,            // kolik ovcí přidá jedna zakoupená "jednotka"
   // kohorty / genetika (výběr při narození #18: nejhorší jehňata se vyřadí hned)
-  maxCutFrac: 0.85,         // max podíl vyřazených jehňat z vrhu
+  maxCutFrac: 0.99,         // max podíl vyřazených jehňat z vrhu (god mode od fáze 9)
   sigmaFloorMut: 0.6,       // σ-floor = sigmaFloorMut * mut (drží šlechtění "živé")
   // kapacita: rozloha × hustota × modifikátory × baseCap
   baseCap: 12,              // kapacita na jednotku rozlohy

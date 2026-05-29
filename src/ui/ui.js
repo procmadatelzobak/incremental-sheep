@@ -395,6 +395,8 @@ function renderGenetics(s) {
 
   if (s.phase >= 2) {
     const cull = g.policy.cull;
+    // Fázové odemykání (#40): přísnost 30 % (f.2) → 60 % (f.5) → 99 % (f.9, god mode).
+    const cullMaxFrac = s.phase >= 9 ? 0.99 : s.phase >= 5 ? 0.60 : 0.30;
     const geneOpts = [h('option', { value: 'breedingScore', ...(cull.gene === 'breedingScore' ? { selected: 'selected' } : {}) }, 'Celkové skóre'),
       ...Object.keys(GENES).filter(k => GENES[k].phase <= s.phase).map(k => h('option', { value: k, ...(cull.gene === k ? { selected: 'selected' } : {}) }, GENES[k].label))];
     wrap.appendChild(section('🧬 Výběr při narození (šlechtění)',
@@ -403,10 +405,18 @@ function renderGenetics(s) {
         presetBtn('🧶 Vlna', 'woolRate', g.id), presetBtn('🥛 Mléko', 'milkRate', g.id), presetBtn('🥩 Maso', 'size', g.id),
         presetBtn('🐇 Množení', 'gestation', g.id), presetBtn('🍼 Dospívání', 'maturity', g.id), presetBtn('⏳ Dlouhověkost', 'lifespan', g.id),
         s.phase >= 5 ? presetBtn('🧠 Mozek', 'intelligence', g.id) : null, presetBtn('⚖️ Vše', 'breedingScore', g.id)),
-      h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value }); } }, ...geneOpts)),
+      h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value, min: null, max: null }); rebuildPanel(); } }, ...geneOpts)),
       h('div', { class: 'ctl-row' },
         liveSpan(() => { const p = group().policy.cull.cutFrac; return `Přísnost výběru: necháš nejlepších ${((1 - p) * 100).toFixed(0)} % jehňat, ${(p * 100).toFixed(0)} % jde na maso`; }),
-        h('input', { type: 'range', min: 0, max: BALANCE.maxCutFrac, step: 0.05, value: cull.cutFrac, oninput: e => { A.setCull(s, g.id, { cutFrac: +e.target.value }); } })),
+        h('input', { type: 'range', min: 0, max: cullMaxFrac, step: 0.05, value: Math.min(cull.cutFrac, cullMaxFrac), oninput: e => { A.setCull(s, g.id, { cutFrac: +e.target.value }); } })),
+      s.phase >= 5 && cull.gene !== 'breedingScore'
+        ? h('div', { class: 'ctl-row' },
+            'Koridor — Min: ', h('input', { type: 'number', value: cull.min ?? '', placeholder: '—', style: 'width:80px',
+              onchange: e => { A.setCull(s, g.id, { min: e.target.value === '' ? null : +e.target.value }); onAction(); rebuildPanel(); } }),
+            '  Max: ', h('input', { type: 'number', value: cull.max ?? '', placeholder: '—', style: 'width:80px',
+              onchange: e => { A.setCull(s, g.id, { max: e.target.value === '' ? null : +e.target.value }); onAction(); rebuildPanel(); } }),
+            h('div', { class: 'dim small' }, 'Min/Max: stabilizační šlechtění — μ se drží v koridoru a σ se utahuje (mimo koridor μ míří zpět dovnitř).'))
+        : null,
       liveSpan(() => {
         const gg = group(), cl = gg.policy.cull;
         if (!cl.enabled) return 'Výběr vypnutý — do chovu jdou všechna jehňata.';
@@ -417,8 +427,14 @@ function renderGenetics(s) {
         const spec = GENES[cl.gene];
         const sChild = Math.sqrt(d.sigma * d.sigma / 2 + spec.mut * spec.mut);
         const nb = selectedNewbornDist(cl.gene, d.mu, sChild, cl, s.world.ceilingMult, Object.keys(gg.genes).length);
+        // stabilizační koridor (#40): μ uvnitř [min,max] → drží se, jen σ klesá
+        const hasMin = cl.min != null, hasMax = cl.max != null;
+        const inCorridor = (hasMin || hasMax) && !(hasMin && d.mu < cl.min) && !(hasMax && d.mu > cl.max);
+        if (inCorridor) return `${spec.label} je v koridoru — μ se drží (≈${d.mu.toFixed(2)}) a σ se utahuje každým vrhem (stabilizace).`;
+        const dir = hasMin && d.mu < cl.min ? '+' : hasMax && d.mu > cl.max ? '−' : (spec.lowerBetter ? '−' : '+');
         const dpct = d.mu > 0 ? Math.abs((nb.mu - d.mu) / d.mu * 100) : 0;
-        return `Vybraná jehňata mají ${spec.label} ${spec.lowerBetter ? '−' : '+'}${dpct.toFixed(1)} % oproti průměru stáda → μ se posouvá každým vrhem.`;
+        const corr = (hasMin || hasMax) ? ' (míří zpět do koridoru)' : '';
+        return `Vybraná jehňata mají ${spec.label} ${dir}${dpct.toFixed(1)} % oproti průměru stáda → μ se posouvá každým vrhem${corr}.`;
       }, 'dim small'),
       h('div', { class: 'dim small' }, 'Pastýř pravil: měkká vlna zůstane, hrubá odejde. Vybíráš rovnou při narození — žádné cykly. (μ stoupá, σ se utahuje; mutace ji doplňuje → šlechtit lze napořád.)')));
   } else {

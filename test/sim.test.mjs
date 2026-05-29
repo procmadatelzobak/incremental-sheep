@@ -357,5 +357,24 @@ function autoPlayer() {
   check('#33 autoMales nechá aspoň 1 samce i bez samic', maleCapOf(g4) === 1);
 }
 
+// --- #40: stabilizační koridor Min/Max ve výběru při narození ---
+{
+  const { selectedNewbornDist } = await import('../src/sim/genetics.js');
+  const base = { enabled: true, gene: 'woolRate', cutFrac: 0.5 };
+  // bez koridoru → řízená selekce zvedá μ
+  const dir = selectedNewbornDist('woolRate', 2, 0.5, base, 1, 1);
+  check('#40 bez koridoru μ roste (řízená selekce)', dir.mu > 2);
+  // uvnitř koridoru → μ drží, σ klesá (stabilizace)
+  const stab = selectedNewbornDist('woolRate', 2, 0.5, { ...base, min: 1, max: 3 }, 1, 1);
+  check('#40 uvnitř koridoru μ drží', Math.abs(stab.mu - 2) < 1e-9);
+  check('#40 uvnitř koridoru σ klesá', stab.sigma < 0.5);
+  // μ pod min → tlač nahoru
+  const up = selectedNewbornDist('woolRate', 1.0, 0.5, { ...base, min: 2, max: 3 }, 1, 1);
+  check('#40 μ pod min → roste k min', up.mu > 1.0);
+  // μ nad max → tlač dolů
+  const down = selectedNewbornDist('woolRate', 4.0, 0.5, { ...base, min: 1, max: 3 }, 1, 1);
+  check('#40 μ nad max → klesá k max', down.mu < 4.0);
+}
+
 console.log(`sim: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

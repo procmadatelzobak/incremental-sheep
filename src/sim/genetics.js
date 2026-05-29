@@ -3,7 +3,7 @@
 // ===========================================================================
 import { GENES, BALANCE } from '../config.js';
 import { clamp } from '../rng.js';
-import { selectTruncate, probit, phi } from './distribution.js';
+import { selectTruncate, selectStabilizing, probit, phi } from './distribution.js';
 
 // Efektivní strop genu (extrémní geny rostou s ceilingMult: fáze 5 + perky).
 export function geneMax(key, ceilingMult = 1) {
@@ -69,6 +69,22 @@ export function selectedNewbornDist(key, muNb, sigNb, cull, ceilingMult = 1, nGe
     return { mu: clampGene(key, muNb + dir * w * sigNb * lambda, ceilingMult), sigma: Math.max(floor, sigNb * sq) };
   }
   if (key === cull.gene) {
+    // Stabilizační koridor (#40): drž μ stáda v [min, max].
+    // Mimo koridor → řízená selekce zpět dovnitř; uvnitř → stabilizace (μ drží, σ se utahuje).
+    // Koridor přebíjí přirozený směr genu (lowerBetter).
+    const hasMin = cull.min != null, hasMax = cull.max != null;
+    if (hasMin && muNb < cull.min) {
+      const r = selectTruncate(muNb, sigNb, p, false, floor);   // tlač μ nahoru k min
+      return { mu: clampGene(key, r.mu, ceilingMult), sigma: r.sigma };
+    }
+    if (hasMax && muNb > cull.max) {
+      const r = selectTruncate(muNb, sigNb, p, true, floor);    // tlač μ dolů k max
+      return { mu: clampGene(key, r.mu, ceilingMult), sigma: r.sigma };
+    }
+    if (hasMin || hasMax) {
+      const r = selectStabilizing(muNb, sigNb, p, floor);       // uvnitř koridoru → jen utáhni σ
+      return { mu: muNb, sigma: r.sigma };
+    }
     const r = selectTruncate(muNb, sigNb, p, !!spec.lowerBetter, floor);
     return { mu: clampGene(key, r.mu, ceilingMult), sigma: r.sigma };
   }

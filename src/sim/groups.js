@@ -58,7 +58,7 @@ export function createGroup(state, name) {
     id: state.nextGroupId++, name: name || ('Stádo ' + String.fromCharCode(64 + state.nextGroupId)),
     species: 'base',
     genes: seedGroupGenes(0, 1), counts: emptyCounts(), bredFracF: 0,
-    policy: { killOld: false, killMaleChildren: false, maxMales: 0, autoMales: false, femalesPerMale: 8, slaughterBeforeOld: false, cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2 } },
+    policy: { killOld: false, killMaleChildren: false, maxMales: 0, autoMales: false, femalesPerMale: 8, slaughterBeforeOld: false, cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2, min: null, max: null } },
   };
   state.groups.push(g);
   return g;
