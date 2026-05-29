@@ -322,6 +322,18 @@ a.about-link:hover { background: linear-gradient(180deg, var(--green), var(--gre
 button.act.danger { border-color: var(--bad); color: var(--bad); background: var(--panel-2); }
 button.act.danger:hover:not(:disabled) { background: var(--bad); color: oklch(0.99 0.02 30); border-color: transparent; filter: none; }
 
+/* ---- #35 inline oznámení nové fáze (místo modálu) ---------------------- */
+.phase-notice {
+  background: linear-gradient(180deg,
+    color-mix(in oklch, oklch(0.97 0.045 88), oklch(0.33 0.05 290) var(--m)),
+    color-mix(in oklch, oklch(0.93 0.05 86), oklch(0.30 0.05 290) var(--m)));
+  border: 1px solid var(--gold); border-radius: var(--r-lg); padding: 14px 16px;
+  box-shadow: 0 6px 18px oklch(0.7 0.11 80/.32); animation: pnIn .4s ease-out;
+}
+.phase-notice .pn-title { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--gold-deep); margin: 2px 0 4px; }
+body.cosmic .phase-notice .pn-title { color: var(--gold); }
+@keyframes pnIn { 0% { opacity: 0; transform: translateY(-8px); } 100% { opacity: 1; transform: translateY(0); } }
+
 /* ---- #33 Jatka: dvě automatiky vedle sebe ------------------------------ */
 .jatka-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .jcard { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px; }

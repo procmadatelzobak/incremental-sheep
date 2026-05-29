@@ -30,6 +30,7 @@ let infoModalEl = null;      // dismissable overlay pro 💡/⚙/❓ (#32)
 let herdCanvasEl = null;
 let upgradeFilter = 'all';     // filtr v panelech vylepšení (#27): all|avail|soon|owned
 let tipIdx = 0;                // rotace tipů v 💡 (#32)
+let phaseNotices = [];         // fronta fází k inline potvrzení v panelu (#35, ne modál)
 
 // --- DOM helpers -----------------------------------------------------------
 function h(tag, props = {}, ...kids) {
@@ -748,12 +749,26 @@ function refreshPanel() {
   for (const b of btns) { if (b._cost == null) continue; if (!b.disabled && (best == null || b._cost < best._cost)) best = b; }
   for (const b of btns) { if (b._cost == null) continue; setClass(b, 'best', b === best); }
 }
+// Inline oznámení nové fáze (#35): místo modálu se vloží jako karta na začátek
+// panelu (mezi položky), s lore + odemčeným obsahem a tlačítkem Pokračovat.
+function phaseNoticeCard(phase) {
+  const info = PHASE_INFO[phase];
+  const name = (PHASES[phase] && PHASES[phase].name) || '';
+  return h('div', { class: 'phase-notice' },
+    h('div', { class: 'modal-tag', text: `Nová fáze ${phase}` }),
+    h('div', { class: 'pn-title' }, (PHASE_ICONS[phase] || '') + ' ' + name),
+    info ? h('div', { class: 'modal-lore', text: info.lore }) : null,
+    info && info.unlocks ? h('div', {}, h('div', { class: 'dim small', text: 'Nově odemčeno:' }),
+      h('ul', { class: 'unlocks' }, ...info.unlocks.map(u => h('li', { text: u })))) : null,
+    h('button', { class: 'act primary', onclick: () => { phaseNotices.shift(); rebuildPanel(); } }, 'Pokračovat'));
+}
 function rebuildPanel() {
   if (!panelEl) return;
   let tab = TABS.find(t => t.id === activeTab) || TABS[0];
   if (!tab.avail(S)) { activeTab = 'herds'; tab = TABS[0]; }
   updaters = [];
   clear(panelEl);
+  if (phaseNotices.length) panelEl.appendChild(phaseNoticeCard(phaseNotices[0]));
   panelEl.appendChild(tab.render(S));
   structSig = structSigOf(S);
   refreshPanel();
@@ -847,7 +862,7 @@ export function initUI(state, mountId = 'app', actionCb = () => {}, opts = {}) {
   bannerEl = h('div', { class: 'banner', id: 'banner', style: 'display:none' });
   root.appendChild(bannerEl); root.appendChild(hud); root.appendChild(tabsBar); root.appendChild(panelEl);
   lastTabSig = ''; structSig = '';
-  modalEl = null; infoModalEl = null; toastWrap = null; modalQueue.length = 0;
+  modalEl = null; infoModalEl = null; toastWrap = null; modalQueue.length = 0; phaseNotices = [];
   buildHud(); updateHud(state); buildTabs(); rebuildPanel();
 }
 
@@ -884,16 +899,9 @@ function closeModal() {
 }
 
 export function notifyPhase(phase) {
-  const info = PHASE_INFO[phase];
-  const name = (PHASES[phase] && PHASES[phase].name) || '';
-  const content = h('div', {},
-    h('div', { class: 'modal-tag', text: `Fáze ${phase}` }),
-    h('h2', { text: (PHASE_ICONS[phase] || '') + ' ' + name }),
-    info ? h('div', { class: 'modal-lore', text: info.lore }) : null,
-    info && info.unlocks ? h('div', {}, h('div', { class: 'dim small', text: 'Nově odemčeno:' }),
-      h('ul', { class: 'unlocks' }, ...info.unlocks.map(u => h('li', { text: u })))) : null);
-  modalQueue.push(content);
-  showNextModal();
+  // #35: žádné modální okno — vlož inline kartu do panelu (potvrdí se „Pokračovat").
+  phaseNotices.push(phase);
+  if (panelEl) rebuildPanel();
 }
 
 function showToast(text) {
