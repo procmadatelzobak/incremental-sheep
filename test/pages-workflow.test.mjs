@@ -8,6 +8,8 @@ const workflow = readFileSync('.github/workflows/pages-previews.yml', 'utf8');
 check('Pages workflow běží při pushi do main', /branches:\s*\[[^\]]*\bmain\b[^\]]*\]/.test(workflow));
 check('Pages workflow běží při pushi do libovolné branche', /branches:\s*\[[^\]]*['"]\*\*['"][^\]]*\]/.test(workflow));
 check('Pages workflow běží při PR submission/update na main', /pull_request_target:\s*\n\s*types:\s*\[[^\]]*\bopened\b[^\]]*\bsynchronize\b[^\]]*\]\s*\n\s*branches:\s*\[[^\]]*\bmain\b[^\]]*\]/.test(workflow));
+check('Pages workflow smí komentovat PR přes issues API', /permissions:\s*\n(?:\s+[a-z-]+:\s+\w+\n)*\s+issues:\s+write\b/s.test(workflow));
+check('Pages workflow po deployi spouští komentář preview URL', /Comment PR preview URLs[\s\S]*node scripts\/comment-pr-previews\.mjs/.test(workflow));
 
 console.log(`pages-workflow: ${pass} ok, ${fail} fail`);
 process.exit(fail ? 1 : 0);
