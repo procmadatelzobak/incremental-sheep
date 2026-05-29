@@ -91,6 +91,7 @@ export const EPITHETS = [
 // --- LADĚNÍ ----------------------------------------------------------------
 export const BALANCE = {
   startCredits: 25,
+  immortalityCost: 5e11,        // cena nápoje nesmrtelnosti (fáze 4 = skutečný save-up milník)
   // čas: před nápojem nesmrtelnosti běží sim normálně, po něm se násobně zrychlí
   immortalSpeed: 1.8,           // násobič rychlosti simulace po vypití elixíru
   immortalSpeedPerPhase: 0.15, // + za každou fázi nad 4 (eskalující "čas letí")
@@ -101,14 +102,19 @@ export const BALANCE = {
   // kapacita: rozloha × hustota × modifikátory × baseCap
   baseCap: 12,              // kapacita na jednotku rozlohy
   // ceny (base, growth)
+  // KAPACITNÍ SINKY (rozloha, hustota, modifikátory) se cení ZA JEDNOTKU PŘIDANÉ
+  // KAPACITY (perCap = kredity/kapacita). Žádný násobič tak nejde „obejít": kapacita
+  // roste jen úměrně útratě → řízená exponenciála místo super-exponenciálního výbuchu.
+  // (Dřív: rozloha ∝ area^0.55 ale kapacita ∝ area → vyšší tier = skoro zadarmo;
+  //  hustota měla pevný strop ~5e8 za 65536× — obojí dělalo z pozemků formalitu.)
   cost: {
-    addSheep:  { base: 50,   growth: 1.6  },   // přidá malé stádo; cena rychle roste (trh dojde)
-    land:      { base: 60,   growth: 1.28 },   // koupě parcely aktuálního tieru (× costMult světa)
-    density:   { base: 1e3,  growth: 5    },   // globální hustota pastvy (track)
-    areaMod:   { base: 4e3,  growth: 7    },   // globální modifikátory rozlohy
-    warehouse: { base: 1e5,  growth: 1.8  },   // +strop skladu na surovinu (fáze 6)
-    builder:   { base: 1e7,  growth: 1.18 },   // stavitel sféry (fáze 7)
-    laser:     { base: 5e6,  growth: 1.6  },   // laser (fáze 8)
+    addSheep:  { base: 50,   growth: 1.6  },          // přidá malé stádo; cena rychle roste (trh dojde)
+    land:      { perCap: 5,   growth: 1.30, base: 50 }, // rozloha = hlavní (nejlevnější) sink; růst per parcela v tieru tlačí k odemykání vyšších tierů
+    density:   { perCap: 22,  base: 2e3 },             // hustota = prémiový globální násobič kapacity
+    areaMod:   { perCap: 12,  base: 2e3 },             // modifikátory rozlohy = prémiový globální bonus kapacity
+    warehouse: { base: 1e5,  growth: 1.8  },           // +strop skladu na surovinu (fáze 6)
+    builder:   { base: 1e7,  growth: 1.18 },           // stavitel sféry (fáze 7)
+    laser:     { base: 5e6,  growth: 1.6  },           // laser (fáze 8)
   },
   landUnlockReq: 3,         // kolik parcel tieru pro odemčení dalšího
   tierUnlockMult: 12,       // odemčení dalšího tieru = cena parcely × tato hodnota
@@ -143,15 +149,15 @@ export const WORLDS = {
     ],
   },
   moon: {
-    label: 'Měsíc', icon: '🌕', phase: 6, costMult: 2e3, env: { woolMult: 1.1 },
+    label: 'Měsíc', icon: '🌕', phase: 6, costMult: 1.5, env: { woolMult: 1.1 },
     tiers: [{ label: 'Regolitové skleníky', area: 5e8 }, { label: 'Kráterové farmy', area: 4e9 }, { label: 'Lávové tunely', area: 3e10 }, { label: 'Kupolová města', area: 2e11 }],
   },
   mars: {
-    label: 'Mars', icon: '🔴', phase: 6, costMult: 8e3, env: { woolMult: 0.8, milkMult: 0.9 },
+    label: 'Mars', icon: '🔴', phase: 6, costMult: 2, env: { woolMult: 0.8, milkMult: 0.9 },
     tiers: [{ label: 'Kopule', area: 8e8 }, { label: 'Terraformované údolí', area: 6e9 }, { label: 'Polární skleníky', area: 5e10 }, { label: 'Atmosférické pastviny', area: 4e11 }],
   },
   jupiter: {
-    label: 'Jupiter', icon: '🪐', phase: 6, costMult: 3e4, env: { meatMult: 1.4, birthMult: 0.6 },
+    label: 'Jupiter', icon: '🪐', phase: 6, costMult: 3, env: { meatMult: 1.4, birthMult: 0.6 },
     tiers: [{ label: 'Orbitální stanice', area: 2e9 }, { label: 'Plovoucí farmy', area: 2e10 }, { label: 'Bouřkové pastviny', area: 2e11 }, { label: 'Měsíční prstenec', area: 2e12 }],
   },
   sphere: {
@@ -162,12 +168,14 @@ export const WORLDS = {
 export const WORLD_ORDER = ['earth', 'moon', 'mars', 'jupiter', 'sphere'];
 
 // --- GLOBÁLNÍ HUSTOTA PASTVY (násobič kapacity všech pozemků) ---------------
+// phase = od které fáze lze stupeň koupit. Hustota tak šplhá SPOLU s postupem
+// (nelze maxnout 65536× už ve fázi 2) — to drží kapacitní křivku plynulou.
 export const DENSITY_TIERS = [
-  { label: 'Obyčejný trávník', mult: 1, icon: '🌱' }, { label: 'Slušný trávník', mult: 4, icon: '🌿' },
-  { label: 'Nejlepší trávník', mult: 16, icon: '🍀' }, { label: 'Hydroponické nádrže', mult: 64, icon: '💧' },
-  { label: 'Vícepatrové farmy', mult: 256, icon: '🏢' }, { label: 'Podzemní farmy', mult: 1024, icon: '⛏️' },
-  { label: 'Oceánské farmy', mult: 4096, icon: '🌊' }, { label: 'Hlubinné farmy', mult: 16384, icon: '🌌' },
-  { label: 'Orbitální farmy', mult: 65536, icon: '🛰️' },
+  { label: 'Obyčejný trávník', mult: 1, icon: '🌱', phase: 1 }, { label: 'Slušný trávník', mult: 4, icon: '🌿', phase: 1 },
+  { label: 'Nejlepší trávník', mult: 16, icon: '🍀', phase: 2 }, { label: 'Hydroponické nádrže', mult: 64, icon: '💧', phase: 3 },
+  { label: 'Vícepatrové farmy', mult: 256, icon: '🏢', phase: 4 }, { label: 'Podzemní farmy', mult: 1024, icon: '⛏️', phase: 5 },
+  { label: 'Oceánské farmy', mult: 4096, icon: '🌊', phase: 6 }, { label: 'Hlubinné farmy', mult: 16384, icon: '🌌', phase: 7 },
+  { label: 'Orbitální farmy', mult: 65536, icon: '🛰️', phase: 8 },
 ];
 
 // --- MODIFIKÁTORY ROZLOHY (globální % bonus k efektivní rozloze) ------------

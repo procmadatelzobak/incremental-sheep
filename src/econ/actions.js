@@ -13,7 +13,7 @@ import { mixNormal } from '../sim/distribution.js';
 import { totalCount } from '../sim/cohort.js';
 import { claimSphere, sphereReady } from '../content/projects.js';
 import { igniteBlackHole, triggerSingularity, canIgnite, singularityAvailable } from '../content/prestige.js';
-import { landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost, densityMaxLevel, worldsColonized } from '../content/locations.js';
+import { landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost, densityPhaseCap, worldsColonized } from '../content/locations.js';
 
 const credits = (s) => s.resources.credits || 0;
 function spend(state, amount) {
@@ -31,7 +31,7 @@ export function costFor(state, kind) {
     case 'warehouse':  return costOf(BALANCE.cost.warehouse, state.buys.warehouse);
     case 'builder':    return Math.floor(costOf(BALANCE.cost.builder, state.projects.dyson.builders) * voyage);
     case 'laser':      return costOf(BALANCE.cost.laser, state.projects.laser.level);
-    case 'immortality':return 1e9;
+    case 'immortality':return BALANCE.immortalityCost;
     default: return Infinity;
   }
 }
@@ -89,7 +89,7 @@ export function unlockTier(state, wk) {
   return true;
 }
 export function buyDensity(state) {
-  if (state.land.density >= densityMaxLevel()) return false;
+  if (state.land.density >= densityPhaseCap(state)) return false;   // fázová brána hustoty
   if (!spend(state, densityCost(state))) return false;
   state.land.density++;
   return true;
@@ -217,7 +217,7 @@ export function runAutobuy(state) {
           if (canUnlockTier(state, wk)) opts.push([tierUnlockCost(state, wk), () => unlockTier(state, wk)]);
         }
       }
-      if (state.land.density < densityMaxLevel()) opts.push([densityCost(state), () => buyDensity(state)]);
+      if (state.land.density < densityPhaseCap(state)) opts.push([densityCost(state), () => buyDensity(state)]);
       for (const m of AREA_MODS) if (m.phase <= state.phase && !state.land.mods[m.key]) opts.push([areaModCost(state, m.key), () => buyAreaMod(state, m.key)]);
       if (state.phase >= 6) opts.push([costFor(state, 'warehouse'), () => buyWarehouse(state)]);
     }
@@ -237,7 +237,7 @@ function cheapestUseful(s) {
   const opts = [];
   for (const k in UPGRADES) if (UPGRADES[k].phase <= s.phase) opts.push({ kind: 'upgrade', key: k, label: UPGRADES[k].label, cost: upgradeCost(s, k) });
   for (const wk of WORLD_ORDER) if (WORLDS[wk].phase <= s.phase && !WORLDS[wk].fromProject) opts.push({ kind: 'land', key: wk, label: 'Rozloha: ' + WORLDS[wk].label, cost: landParcelCost(s, wk) });
-  if (s.land.density < densityMaxLevel()) opts.push({ kind: 'density', key: null, label: 'Hustota pastvy', cost: densityCost(s) });
+  if (s.land.density < densityPhaseCap(s)) opts.push({ kind: 'density', key: null, label: 'Hustota pastvy', cost: densityCost(s) });
   opts.push({ kind: 'addSheep', key: null, label: 'Ovce', cost: costFor(s, 'addSheep') });
   let best = null;
   for (const o of opts) if (!best || o.cost < best.cost) best = o;

@@ -10,7 +10,7 @@ import { upgradeCost, perkCost, getMults } from '../econ/economy.js';
 import { VERSION, UPGRADES, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { maleCapOf } from '../sim/groups.js';
-import { herdCapacity, totalArea, densityMult, densityMaxLevel, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
+import { herdCapacity, totalArea, densityMult, densityMaxLevel, densityPhaseCap, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
 import { phaseName, phaseHint, phaseProgress, PHASE_INFO, PHASES } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax, selectedNewbornDist } from '../sim/genetics.js';
 import { resourceCap, TRADEABLE, storageEnabled } from '../econ/storage.js';
@@ -645,13 +645,16 @@ function renderStations(s) {
   }
   wrap.appendChild(section('Rozloha — kup území nebo odemkni větší kategorii', worldsBox));
 
-  // HUSTOTA: globální track
+  // HUSTOTA: globální track (fázové brány: vyšší stupně se odemykají s fázemi)
   const dmax = densityMaxLevel();
+  const dcap = densityPhaseCap(s);
   wrap.appendChild(section('Hustota / technologie pastvy (globální násobič)',
     liveSpan(() => `${DENSITY_TIERS[s.land.density].icon} ${DENSITY_TIERS[s.land.density].label} (×${fmt(densityMult(s))})`, 'dim'),
-    s.land.density < dmax
+    s.land.density < dcap
       ? cBtn(`Vylepšit → ${DENSITY_TIERS[s.land.density + 1].label}`, () => densityCost(s), () => A.buyDensity(s), () => `kapacita ×${(DENSITY_TIERS[s.land.density + 1].mult / DENSITY_TIERS[s.land.density].mult).toFixed(0)}`)
-      : h('div', { class: 'dim', text: 'Maximální hustota.' })));
+      : s.land.density < dmax
+        ? h('div', { class: 'dim', text: `Další stupeň (${DENSITY_TIERS[s.land.density + 1].label}) se odemkne ve fázi ${DENSITY_TIERS[s.land.density + 1].phase}.` })
+        : h('div', { class: 'dim', text: 'Maximální hustota.' })));
 
   // MODIFIKÁTORY ROZLOHY
   const modsBox = h('div', { class: 'btn-row' });
