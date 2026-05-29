@@ -305,6 +305,26 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('signál vyčerpaného trhu se zobrazí', panel().textContent.includes('Trh ovcí se vyčerpává'));
 }
 
+// --- #36 (reopened): UI neposkakuje — rezervovaná výška + vyhlazený růst ---
+{
+  const s = newGame(); s.resources.credits = 1e6;
+  initUI(s, 'app', () => {});
+  clickTab('Stáda');
+  // hlášky s proměnlivou délkou (limit stáda, páření) mají rezervovanou výšku
+  check('stavové řádky mají .statusline (rezervovaná výška)', panel().querySelectorAll('.statusline').length >= 2);
+}
+{
+  // tržní hláška čte VYHLAZENÝ růst: když je vyhlazený 0, surový kmit nahoru ji nezapne
+  const s = newGame(); s.resources.credits = 1e6; s.buys.addSheep = 12;
+  initUI(s, 'app', () => {});
+  s.rates = { _popGrowthAvg: 0, _popGrowth: 2, _pop: 4 };   // surový kmit, vyhlazený klid
+  updateUI(s); clickTab('Stáda');
+  check('vyhlazený růst 0 → hláška NEbliká, i když surový kmitne', !panel().textContent.includes('Trh ovcí se vyčerpává'));
+  s.rates = { _popGrowthAvg: 2, _pop: 4 };                  // vyhlazený růst skutečný
+  updateUI(s); clickTab('Stáda');
+  check('vyhlazený růst > 0 → hláška se zobrazí', panel().textContent.includes('Trh ovcí se vyčerpává'));
+}
+
 // --- #24: rozpad příjmů v panelu Stáda ---
 {
   const s = newGame(); s.resources.credits = 1e6;

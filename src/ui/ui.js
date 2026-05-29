@@ -342,7 +342,7 @@ function renderHerds(s) {
     let t = `Páření: ${fmtCount(gg.counts.M.adult)} samců spáří ~${fmtCount(eff)} z ${fmtCount(gg.counts.F.adult)} dospělých samic`;
     if (gg.counts.M.adult * fert < gg.counts.F.adult * 0.95 && gg.counts.F.adult >= 2) t += ' ⚠ málo samců';
     return t;
-  }, 'dim small');
+  }, 'dim small statusline');
   wrap.appendChild(section(g.name,
     cv,
     h('div', { class: 'stat-row' },
@@ -351,12 +351,14 @@ function renderHerds(s) {
     mfTable,
     breedLine,
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmtCount(p)} / ${fmtCount(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
-    liveSpan(() => limitText(s), 'dim small'),
+    liveSpan(() => limitText(s), 'dim small statusline'),
     sexRow, qtyRow, buyBtn,
     liveSpan(() => {
       const add = ((s.settings.buy && s.settings.buy.qty) || 1) * BALANCE.sheepPerUnit;
-      const growth = (s.rates && s.rates._popGrowth) || 0;
-      return (growth > 0 && growth * 20 >= add && A.addSheepCost(s) > 500)
+      // vyhlazený růst (#36) — surový kmitá u kapacity a hláška pak blikala; fallback drží testy
+      const growth = (s.rates && (s.rates._popGrowthAvg ?? s.rates._popGrowth)) || 0;
+      const belowCap = totalPopulation(s) < herdCapacity(s) * 0.95;   // u plné pastviny je rada bezpředmětná
+      return (belowCap && growth > 0 && growth * 20 >= add && A.addSheepCost(s) > 500)
         ? '🛒 Trh ovcí se vyčerpává — vlastní stádo se teď množí rychleji, než stihneš dokupovat. Investuj radši do pozemků a šlechtění.'
         : '';
     }, 'small note'),

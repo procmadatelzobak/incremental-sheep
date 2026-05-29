@@ -376,5 +376,21 @@ function autoPlayer() {
   check('#40 μ nad max → klesá k max', down.mu < 4.0);
 }
 
+// 12) #36: vyhlazený růst stáda (EMA) — tlumí kmitání, je transientní
+{
+  const s = newGame();
+  run(s, 2);
+  check('#36 _popGrowthAvg je konečné číslo', Number.isFinite(s._popGrowthAvg));
+  check('#36 rates._popGrowthAvg = perzistentní pole', s.rates._popGrowthAvg === s._popGrowthAvg);
+  // EMA tlumí: jeden krok posune průměr jen částečně k okamžité hodnotě (~6,5 %)
+  s._popGrowthAvg = -1000;
+  step(s, 0.2);
+  const inst = s.rates._popGrowth;
+  check('#36 EMA neskočí celou cestu (tlumí kmit)', s._popGrowthAvg > -1000 && s._popGrowthAvg < -800);
+  check('#36 EMA ≠ okamžitý růst (je vyhlazený)', Math.abs(s._popGrowthAvg - inst) > 100);
+  const restored = deserialize(serialize(s));
+  check('#36 _popGrowthAvg je transientní (nesaveuje se)', restored._popGrowthAvg === undefined);
+}
+
 console.log(`sim: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

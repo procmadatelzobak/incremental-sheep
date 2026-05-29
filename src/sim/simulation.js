@@ -79,7 +79,14 @@ export function step(state, dt) {
   state.rates = {};
   for (const k in produced) state.rates[k] = produced[k] / dt;
   state.rates._pop = total;
-  state.rates._popGrowth = (total - popStart) / dt;          // čistá změna stáda /s (trend #11)
+  const inst = (total - popStart) / dt;
+  state.rates._popGrowth = inst;                              // čistá změna stáda /s (trend #11)
+  // Vyhlazený růst (EMA, ~3 s): surový růst kmitá kolem nuly u kapacity i při
+  // přesýpání kohort, takže UI hlášky podle něj přerušovaně poskakovaly (#36).
+  // Drží se mimo rates (to se každý tik maže) a strip _* ho nesaveuje.
+  const aSmooth = 1 - Math.exp(-dt / 3);
+  state._popGrowthAvg = (state._popGrowthAvg == null) ? inst : state._popGrowthAvg + aSmooth * (inst - state._popGrowthAvg);
+  state.rates._popGrowthAvg = state._popGrowthAvg;
   state.rates._income = ((state.resources.credits || 0) - credBefore) / dt;  // příjem kreditů /s (#11)
   state.rates._speed = sp;
 }
