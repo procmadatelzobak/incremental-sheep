@@ -392,5 +392,22 @@ function autoPlayer() {
   check('#36 _popGrowthAvg je transientní (nesaveuje se)', restored._popGrowthAvg === undefined);
 }
 
+// #40: nákup běžných ovcí na trhu obnoví σ po 99% cullingu (ředění krve přes mixNormal)
+{
+  const s = newGame();
+  s.resources.credits = 1e9;
+  const g = activeGroup(s);
+  // simuluj kolaps rozptylu po 99% cullingu: μ vytlačené nahoru, σ téměř na nule
+  g.genes.woolRate.mu = 4; g.genes.woolRate.sigma = 1e-6;
+  g.counts.M.adult = 2; g.counts.F.adult = 2;   // malé stádo → znatelný dopad nákupu
+  const sig0 = g.genes.woolRate.sigma, mu0 = g.genes.woolRate.mu;
+  const ok = buyAddSheep(s, 'mix', 10);   // 10 jednotek × sheepPerUnit (4) = 40 ovcí do malého stáda
+  check('#40 buyAddSheep proběhl', ok === true);
+  check('#40 nákup rozšíří σ (obnova rozptylu po bottlenecku)', g.genes.woolRate.sigma > sig0);
+  check('#40 σ se reálně obnoví (≥ část tržní SD)', g.genes.woolRate.sigma >= GENES.woolRate.sd * 0.3);
+  check('#40 μ se zředí k základu (cena za ředění krve)', g.genes.woolRate.mu < mu0 && g.genes.woolRate.mu > GENES.woolRate.base);
+  check('#40 žádné NaN v genech', isFinite(g.genes.woolRate.sigma) && isFinite(g.genes.woolRate.mu));
+}
+
 console.log(`sim: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

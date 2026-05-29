@@ -8,6 +8,9 @@ import { costOf, upgradeCost, perkCost } from './economy.js';
 import { emptyStorage } from './storage.js';
 import { groupById } from '../io/state.js';
 import { createGroup, splitGroup } from '../sim/groups.js';
+import { seedGroupGenes } from '../sim/genetics.js';
+import { mixNormal } from '../sim/distribution.js';
+import { totalCount } from '../sim/cohort.js';
 import { claimSphere, sphereReady } from '../content/projects.js';
 import { igniteBlackHole, triggerSingularity, canIgnite, singularityAvailable } from '../content/prestige.js';
 import { landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost, densityMaxLevel, worldsColonized } from '../content/locations.js';
@@ -46,6 +49,15 @@ export function buyAddSheep(state, sex, qty) {
   if (!spend(state, addSheepCost(state, qty))) return false;
   const g = groupById(state, state.activeGroupId) || state.groups[0];
   const total = qty * BALANCE.sheepPerUnit;
+  // Tržní ovce mají běžné (bazální) geny s přirozeným rozptylem. Přimícháme je do
+  // rozložení stáda vážené počty (#40) — tím se po 99% cullingu obnoví σ ("ředění
+  // krve"): mu se zředí k základu, sigma se rozšíří. U velkého stáda je dopad malý.
+  const existing = totalCount(g);
+  const market = seedGroupGenes(0, state.world.ceilingMult || 1);
+  for (const k in g.genes) {
+    if (!market[k]) continue;
+    g.genes[k] = mixNormal(existing, g.genes[k].mu, g.genes[k].sigma, total, market[k].mu, market[k].sigma);
+  }
   if (sex === 'M') g.counts.M.adult += total;
   else if (sex === 'F') g.counts.F.adult += total;
   else { g.counts.M.adult += total / 2; g.counts.F.adult += total / 2; }
