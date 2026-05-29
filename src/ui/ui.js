@@ -412,14 +412,16 @@ function renderGenetics(s) {
     liveSpan(() => `Celkové skóre šlechtění: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`, 'dim small'),
     genes));
 
-  if (s.phase >= 2) {
+  // Výběr jehňat (šlechtění) je dostupný už od fáze 1 — fáze 1 = lekce genetiky,
+  // ne jen čekání na kredity (genom i selekce viditelné od první generace).
+  if (s.phase >= 1) {
     const cull = g.policy.cull;
     const geneOpts = [h('option', { value: 'breedingScore', ...(cull.gene === 'breedingScore' ? { selected: 'selected' } : {}) }, 'Celkové skóre'),
       ...Object.keys(GENES).filter(k => GENES[k].phase <= s.phase).map(k => h('option', { value: k, ...(cull.gene === k ? { selected: 'selected' } : {}) }, GENES[k].label))];
     wrap.appendChild(section('🧬 Výběr při narození (šlechtění)',
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(cull.enabled ? { checked: 'checked' } : {}), onchange: e => { A.setCull(s, g.id, { enabled: !!e.target.checked }); onAction(); } }), ' Vybírat nejlepší jehňata do chovu (zbytek rovnou na maso)'),
       h('div', { class: 'ctl-row' }, 'Šlechtit na: ',
-        presetBtn('🧶 Vlna', 'woolRate', g.id), presetBtn('🥛 Mléko', 'milkRate', g.id), presetBtn('🥩 Maso', 'size', g.id),
+        presetBtn('🧶 Vlna', 'woolRate', g.id), s.phase >= 2 ? presetBtn('🥛 Mléko', 'milkRate', g.id) : null, presetBtn('🥩 Maso', 'size', g.id),
         presetBtn('🐇 Množení', 'gestation', g.id), presetBtn('🍼 Dospívání', 'maturity', g.id), presetBtn('⏳ Dlouhověkost', 'lifespan', g.id),
         s.phase >= 5 ? presetBtn('🧠 Mozek', 'intelligence', g.id) : null, presetBtn('⚖️ Vše', 'breedingScore', g.id)),
       h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value }); rebuildPanel(); } }, ...geneOpts)),
@@ -440,8 +442,6 @@ function renderGenetics(s) {
         return `Vybraná jehňata mají ${spec.label} ${spec.lowerBetter ? '−' : '+'}${dpct.toFixed(1)} % oproti průměru stáda → μ se posouvá každým vrhem.`;
       }, 'dim small'),
       h('div', { class: 'dim small' }, 'Pastýř pravil: měkká vlna zůstane, hrubá odejde. Vybíráš rovnou při narození — žádné cykly. (μ stoupá, σ se utahuje; mutace ji doplňuje → šlechtit lze napořád.)')));
-  } else {
-    wrap.appendChild(h('div', { class: 'dim small' }, 'Šlechtění (výběr nejlepších jehňat při narození) se odemkne ve fázi 2.'));
   }
   return wrap;
 }
