@@ -11,6 +11,7 @@ const OUT = path.join(ROOT, 'dist/pages');
 const APP_ENTRIES = ['index.html', 'styles.css', 'src'];
 const ALLOWED_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 const PREVIEW_REMOTE = process.env.PREVIEW_REMOTE || 'origin';
+const PAGES_BASE_URL = process.env.PAGES_BASE_URL || 'https://procmadatelzobak.github.io/incremental-sheep/';
 
 export function slugifyBranch(name) {
   return String(name || '').replace(/^refs\/heads\//, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'branch';
@@ -20,12 +21,20 @@ export function prPreviewPath(number) {
   return `pr/${number}`;
 }
 
+export function prPreviewUrl(number, baseUrl = PAGES_BASE_URL) {
+  return previewUrl(`${prPreviewPath(number)}/`, baseUrl);
+}
+
 export function branchPreviewPath(name) {
   return `branch/${slugifyBranch(name)}`;
 }
 
 export function allowedPreviewPrs(prs, base = 'main') {
   return prs.filter(pr => pr && pr.state === 'open' && pr.base?.ref === base && ALLOWED_ASSOCIATIONS.has(pr.author_association));
+}
+
+export function previewRefspec(remoteRef, localRef) {
+  return `+${remoteRef}:${localRef}`;
 }
 
 async function main() {
@@ -43,8 +52,10 @@ async function main() {
     await copyAppFromGitRef(ref, dest);
     previews.push({
       kind: 'PR',
+      number: pr.number,
       label: `#${pr.number} ${pr.title}`,
       path: `${prPreviewPath(pr.number)}/`,
+      previewUrl: prPreviewUrl(pr.number),
       sha: pr.head.sha,
       url: pr.html_url,
     });
@@ -66,6 +77,7 @@ async function main() {
   }
 
   await writePreviewIndex(previews);
+  await writePrPreviewManifest(previews);
 }
 
 async function copyAppFromDir(from, to) {
@@ -122,7 +134,7 @@ function listPreviewBranches() {
 }
 
 function fetchRef(remoteRef, localRef) {
-  git(['fetch', '--depth=1', PREVIEW_REMOTE, `${remoteRef}:${localRef}`]);
+  git(['fetch', '--depth=1', PREVIEW_REMOTE, previewRefspec(remoteRef, localRef)]);
 }
 
 async function applyStorageNamespaceOverlay(appDir) {
@@ -191,6 +203,21 @@ async function writePreviewIndex(previews) {
 </body>
 </html>
 `);
+}
+
+async function writePrPreviewManifest(previews) {
+  const prs = previews.filter(p => p.kind === 'PR').map(p => ({
+    number: p.number,
+    title: p.label,
+    previewUrl: p.previewUrl,
+    sha: p.sha,
+  }));
+  await mkdir(path.join(OUT, 'previews'), { recursive: true });
+  await writeFile(path.join(OUT, 'previews/pr-previews.json'), JSON.stringify(prs));
+}
+
+function previewUrl(pathname, baseUrl) {
+  return new URL(pathname, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
 }
 
 function git(args) {

@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pull-requests: read
   pages: write
   id-token: write
@@ -23,6 +24,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      pr_previews: ${{ steps.preview-manifest.outputs.pr_previews }}
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -38,6 +41,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Export PR preview manifest
+        id: preview-manifest
+        run: |
+          {
+            echo 'pr_previews<<EOF'
+            cat dist/pages/previews/pr-previews.json
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -50,6 +62,17 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Comment PR preview URLs
+        run: node scripts/comment-pr-previews.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_PREVIEWS_JSON: ${{ needs.build.outputs.pr_previews }}
