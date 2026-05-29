@@ -90,5 +90,6 @@ check('dosažena fáze 10 / zažehnutí', firstIgnite != null);
 check('singularita dosažena', singularityAt != null);
 check('cesta k singularitě je dlouhá (>20 h)', singularityAt != null && H(singularityAt) > 20);
 check('a ne absurdně dlouhá (<600 h)', singularityAt != null && H(singularityAt) < 600);
+check('počet resetů k singularitě dle spec (3–6)', s.prestige.runs >= 3 && s.prestige.runs <= 6);
 console.log(`balance: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

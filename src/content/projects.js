@@ -4,7 +4,7 @@
 import { BALANCE } from '../config.js';
 
 // Cíl rostoucí s počtem sfér (každá další větší dílo). Laser zrychluje stavbu.
-export const dysonTarget = (state) => BALANCE.dyson.target * (1 + 0.8 * state.projects.dyson.count);
+export const dysonTarget = (state) => BALANCE.dyson.target * (1 + BALANCE.dyson.targetGrowth * state.projects.dyson.count);
 
 export function stepProjects(state, dt, ctx) {
   const d = state.projects.dyson;

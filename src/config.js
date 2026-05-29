@@ -122,15 +122,15 @@ export const BALANCE = {
   // zpracování (fáze 3+): poměr raw → processed
   processing: { wool: { to: 'cloth', ratio: 1 }, milk: { to: 'cheese', ratio: 1 } },
   // projekty
-  dyson: { target: 2.6e6, builderRate: 0.8, energyPerSphere: 1e4 },
+  dyson: { target: 2.6e6, targetGrowth: 0.5, builderRate: 0.8, energyPerSphere: 1e4 },  // targetGrowth = o kolik roste cíl s každou další sférou (nižší = svižnější stavba sfér 2–5)
   laser: { rangePerLevel: 1 },
   // prestiž
   prestige: {
     blackHoleBase: 5e12,    // strop centrálního skladu pro 1. zažehnutí
     thresholdGrowth: 1.3,   // mírný růst stropu každý reset
-    // odměna roste s počtem běhů (+ log z velikosti běhu) → ~8 smyček k singularitě
+    // odměna roste s počtem běhů (+ log z velikosti běhu) → ~3–6 smyček k singularitě
     award: (cw, base, runs) => Math.max(1, Math.floor(8 * (runs + 1) + 4 * Math.log10(Math.max(10, cw / (base / 100))))),
-    singularityKnowledge: 1400, // kumulativní Vědění pro odemčení singularity
+    singularityKnowledge: 380, // kumulativní Vědění pro odemčení singularity (spec: 3–6 resetů)
   },
   // ceny extrémních genů: strop genu × ceilingMult (fáze 5 + perky)
   ceiling: { phase5: 3, perPerk: 1 },
