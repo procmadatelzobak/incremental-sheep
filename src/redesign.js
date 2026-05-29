@@ -117,11 +117,18 @@ const FLOCK_CAP = 1000;
 const FLOCK_KEY = 'sheep-meadow-v1';
 let fCanvas, fCtx, flock = [], flockAniming = false, lastSheepFloor = null;
 
+// Popisek populačního chipu má prefix s ikonou (viz ui.js: ICONS.sheep + ' Ovce'),
+// proto hledáme podřetězec, NE přesnou shodu. Dřív tu bylo === 'Ovce', což se kvůli
+// emoji „🐑 " nikdy netrefilo → počet se četl jako NaN a louka zůstala prázdná.
+export function isSheepChipLabel(text) {
+  return /\bOvce\b/.test(text || '');
+}
+
 function readSheepCount() {
-  // najdi chip s popiskem "Ovce" a přečti jeho hodnotu
+  // najdi chip populace (popisek „🐑 Ovce") a přečti jeho hodnotu
   const labels = document.querySelectorAll('.chip .chip-l');
   for (const l of labels) {
-    if ((l.textContent || '').trim() === 'Ovce') {
+    if (isSheepChipLabel(l.textContent)) {
       const v = l.parentElement.querySelector('.chip-v');
       if (v) return parseNum(v.textContent);
     }
@@ -259,9 +266,10 @@ function flockTick() {
   const n = readSheepCount();
   if (!isFinite(n)) return;
   const floor = Math.floor(n);
-  if (lastSheepFloor == null) {
-    // první načtení: dorovnej tiše na aktuální počet (bez animace)
-    if (flock.length === 0 && floor > 0) addSheep(Math.min(floor, FLOCK_CAP), false);
+  // První načtení, nebo prázdná louka i přes kladný počet (např. po starém
+  // vadném save): tiše dorovnej na aktuální počet (bez „pop" animace).
+  if (lastSheepFloor == null || (flock.length === 0 && floor > 0)) {
+    if (floor > 0 && flock.length < FLOCK_CAP) addSheep(floor - flock.length, false);
     lastSheepFloor = floor;
     return;
   }
@@ -292,5 +300,9 @@ function wireChipPulse() {
   new MutationObserver(() => { if (chip.textContent !== prev) { prev = chip.textContent; pulse(chip); } }).observe(chip, { childList: true, characterData: true, subtree: true });
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
-else start();
+// Auto-start jen v prohlížeči (ne při importu v Node/testech, kde document
+// nemá addEventListener) — modul je tím i bezpečně importovatelný v testech.
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+}
