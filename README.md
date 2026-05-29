@@ -45,6 +45,7 @@ npm test          # node test/all.mjs — bez závislostí
 - `test/storage.test.mjs` — sklad: strop per surovina, ořez při zmenšení (#38, #39).
 - `test/redesign.test.mjs` — vizuální vrstva: rozpoznání populačního chipu s ikonou.
 - `test/integration.test.mjs` — nahrání `main.js` a běh smyčky se stubem prohlížeče.
+- `test/resume.test.mjs` — dohánění reálného času po probuzení uspaného tabu (#46).
 - `test/balance.test.mjs` — auto-hráč projde hru k singularitě a změří pacing.
 
 ## Struktura

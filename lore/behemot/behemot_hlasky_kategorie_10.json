@@ -1,0 +1,654 @@
+{
+  "meta": {
+    "nazev": "Behemot Emporio - kategorie hlášek",
+    "verze": "1.0",
+    "popis": "Kategorie herních hlášek pro Behemota. Každá kategorie obsahuje 10 krátkých hlášek ve stylu protivného souseda-obchodníka.",
+    "schema": {
+      "kategorie[].id": "stabilní technický identifikátor kategorie",
+      "kategorie[].nazev": "název kategorie pro člověka",
+      "kategorie[].hlasky[]": "jednotlivé hlášky"
+    }
+  },
+  "kategorie": [
+    {
+      "id": "openShop",
+      "nazev": "Otevření obchodu",
+      "hlasky": [
+        "No co zas chceš, rychle, než mi to tady začne žrát data.",
+        "Vítej v obchodě, šáhni jenom na to, na co máš suroviny.",
+        "Dveře se votevřely, moje trpělivost se zavřela.",
+        "Tak dělej, buď kup, nebo aspoň nepřekážej.",
+        "Behemot Emporio, žádný kredity, žádný účtenky, žádný divný otázky.",
+        "Jestli si přišel jenom čumět, tak se čumí za roh.",
+        "Modal votevřenej, bordel vyskládanej, svědomí vypnutý.",
+        "Neklikej na mě jak na infolinku, já su obchodník, né terapie.",
+        "Tak se ukaž, farmáři, kolik máš vlny a kolik odvahy.",
+        "Vstup povolen, rozum dobrovolně odlož u dveří."
+      ]
+    },
+    {
+      "id": "closeShop",
+      "nazev": "Zavření obchodu",
+      "hlasky": [
+        "No konečně, vzduch je hned míň zákaznickej.",
+        "Tak zas nic, ekonomika utrpěla a já taky.",
+        "Zavřels to jak ouředník spis, bez výsledku.",
+        "Dobře, běž si hladit ovce a předstírat plán.",
+        "Až budeš mít suroviny, vrať se. Až budeš mít rozum, nevracej se.",
+        "Konec představení, zboží zůstalo, zklamání taky.",
+        "Aspoň si mi tady nespotřeboval všecko pásmo.",
+        "Tak čau, a neříkej nikomu, že sem ti něco neprodal.",
+        "Zavřeno. Behemot přežil další nákupní pokus.",
+        "Výborně, ušetřil si suroviny a promrhal čas. Moderní člověk."
+      ]
+    },
+    {
+      "id": "firstVisit",
+      "nazev": "První návštěva",
+      "hlasky": [
+        "Tak poslóchej, tady se neplatí kreditama, tady se platí věcma, co existujou.",
+        "Já prodávám bordel, ty nosíš suroviny. Jednoduchý, takže to určitě někdo pokazí.",
+        "Původ zboží neřeš, účel zboží neřeš, následky řeš až potom.",
+        "Tohle není krámek pro městský slečinky, tady se obchoduje za vlnu, maso a podobný civilizační jistoty.",
+        "Když něco svítí, neznamená to, že je to rozbitý. Spíš dražší.",
+        "Na otázku 'je to bezpečný' odpovídám tradičně: další otázka.",
+        "Návody nedávám. Kdo čte návody, ten už se bojí dopředu.",
+        "Ceny sou smluvní v tom smyslu, že já je řeknu a ty smluvně držíš hubu.",
+        "Vítej u Behemota, jedinýho souseda, co ti prodá pastvinu aj problém v jednom balíku.",
+        "Jestli tady něco bouchne, nebylo to ode mě. To si zapamatuj jako první lekcu."
+      ]
+    },
+    {
+      "id": "repeatVisit",
+      "nazev": "Opakovaná návštěva",
+      "hlasky": [
+        "Už zas? To tě stádo poslalo, nebo doma nikdo nezvedá telefon?",
+        "No podívejme, zákazník se vrátil, takže minule zřejmě přežil.",
+        "Zase ty. To bude buď obchod, nebo další tragédie.",
+        "Jestli jdeš reklamovat, tak dveře sou támhle a důstojnost taky.",
+        "Naposled si čuměl dlouho a koupil hovno, dneska to zkus zlepšit.",
+        "Farmářská pravidelnost. Ovce bečí, ty chodíš votravovat.",
+        "Tak co, už sis rozmyslel, že kredity sou na nic?",
+        "Vracet se do Emporia je první příznak pokroku nebo úrazu hlavy.",
+        "Zase potřebuješ něco, co by normální člověk nepotřeboval. Výborně.",
+        "No, aspoň už víš, že se na původ zboží neptá."
+      ]
+    },
+    {
+      "id": "noCreditsAccepted",
+      "nazev": "Odmítnutí kreditů",
+      "hlasky": [
+        "Kredity? To si strč do cloudu, tady beru vlnu.",
+        "Virtuální penízky mi nenakrmí reaktor ani kozu, zkus realitu.",
+        "Za čísilka v databázi ti prodám leda pohled z okna.",
+        "Kredity neberu. Přines maso, mlíko, šrot, něco co má váhu a smrad.",
+        "Já nejsem banka, já su Behemot. To je rozdíl asi jako mezi ovcó a excelovou tabulkó.",
+        "Tady se platí surovinama, ne korporátním pšoukem.",
+        "Kredity mi tady neukazuj, ještě se mi z toho zasekne prohlížeč.",
+        "Tohle není městskej e-shop, kde se kliká na splátky.",
+        "Kredity sou slib. Já chcu něco, co když pustím na nohu, tak to bolí.",
+        "Nemáš suroviny, nemáš obchod. Jak překvapivě fyzikální."
+      ]
+    },
+    {
+      "id": "notEnoughResources",
+      "nazev": "Nedostatek surovin",
+      "hlasky": [
+        "Nemáš na to ani vlnu, ani charakter.",
+        "S tímhle rozpočtem si můžeš kópit tak akorát pocit hanby.",
+        "Nejdřív něco vyprodukuj, pak předstírej kapitalistu.",
+        "Tohle stojí víc, než tvoje stádo zatím zvládlo nevykašlat.",
+        "Chybí suroviny. A podle výrazu možná aj plán.",
+        "Za chudobu se platí čekáním, šup zpátky na pastvinu.",
+        "Nemáš dost. Taková drobná překážka v nákupu věcí.",
+        "Kdybych bral výmluvy, byl bys bohatej.",
+        "Tvoje kapsy zní jak státní slib: prázdně.",
+        "Přines víc vlny, masa nebo čehokoli, co nevypadá jak dobrý úmysl."
+      ]
+    },
+    {
+      "id": "purchaseSuccess",
+      "nazev": "Úspěšný nákup",
+      "hlasky": [
+        "No vidíš, dyž chceš, umíš nebýt úplně k ničemu.",
+        "Prodáno. Následky sou tvoje, suroviny moje.",
+        "Obchod proběhl, civilizace ztratila další šanci.",
+        "Tak, máš to. Neolizovat, neohřívat, neukazovat úřadům.",
+        "Výborně, teď už to nemám já, takže problém se přesunul.",
+        "Suroviny přijaty, svědomí nevydáno.",
+        "Konečně zákazník, kterej pochopil barter dřív než po západu slunce.",
+        "Prodáno bez záruky, bez lítosti a bez dalšího vysvětlování.",
+        "Tak si to vem a běž s tím dělat něco nevhodnýho.",
+        "Nákup hotovej. Jestli to začne mluvit, neodpovídej."
+      ]
+    },
+    {
+      "id": "suspiciousPurchase",
+      "nazev": "Nákup podezřelého zboží",
+      "hlasky": [
+        "Tohle bych doma neotevíral, pokud tam máš eště domov.",
+        "Návod nečti, akorát bys zjistil, co všechno porušuješ.",
+        "Kdyby se někdo ptal, neznáme se a nikdy si tady nebyl.",
+        "Tohle má víc varování než funkčních částí, takže prémiová kvalita.",
+        "Polož to do stínu, dál od dětí, sena a reality.",
+        "Vypadá to nebezpečně, protože to nebezpečný je. Konečně poctivej marketing.",
+        "Nezkoušej to na oblíbené ovci, začni na té, co se tváří blbě.",
+        "Jestli to začne svítit modře, je to lepší než červeně.",
+        "Tohle není vadný kus, to je charakter.",
+        "Koupils to, takže právně vzato si optimista."
+      ]
+    },
+    {
+      "id": "rareItemAvailable",
+      "nazev": "Vzácné zboží v nabídce",
+      "hlasky": [
+        "Todle normálně neprodávám, takže si važ, že mám slabou chvilku.",
+        "Vzácnej kus. Neptat se odkud, ptát se jenom kolik toho uneseš.",
+        "Tohle se objevuje míň často než schopnej úředník.",
+        "Dneska mám věc, kerá by v katalogu být neměla. Ideální.",
+        "Když to nekoupíš ty, koupí to někdo horší a pak budeš litovat.",
+        "Vzácný zboží, čerstvě odložený původním majitelem bez jeho aktivní účasti.",
+        "Tohle sem schovával pro rozumnějšího zákazníka, ale nikdo nepřišel.",
+        "Nabídka platí, dokud si pro to nepřijede někdo s razítkem.",
+        "Tohle je jeden z těch kusů, kvůli kterým se skladu říká sklep.",
+        "Drahý, vzácný, podezřelý. Trojice kvality."
+      ]
+    },
+    {
+      "id": "soldOut",
+      "nazev": "Vyprodáno",
+      "hlasky": [
+        "Není. Sežrali to rychlejší a míň ukecaní zákazníci.",
+        "Vyprodáno, takže čumění na prázdný místo je zdarma.",
+        "Další kus bude, až zase něco spadne z náklaďáku.",
+        "Měl si koupit dřív, místo toho sis četl popisek jak archeolog.",
+        "Není skladem. Sklad taky někdy potřebuje oddych od šílenství.",
+        "Konec zásob, začátek výmluv.",
+        "Tohle už nemám. Což je pro okolí možná dobrá zpráva.",
+        "Vyprodáno. Blahopřeju k pozdnímu zájmu.",
+        "Dostali se k tomu jiní zoufalci před tebou.",
+        "Není. A ne, nepůjdu se podívat dozadu, vzadu je tma a důkazy."
+      ]
+    },
+    {
+      "id": "restock",
+      "nazev": "Nové naskladnění",
+      "hlasky": [
+        "Přivezl sem novej bordel, půlka smrdí a půlka bzučí.",
+        "Naskladněno. Něco z pastviny, něco z laborky, něco se neptej.",
+        "Doplnil sem zásoby, než si toho všimli lidi s reflexní vestó.",
+        "Nový zboží je tady, starý výmluvy platí furt.",
+        "Přijela dodávka. Ne moje, ale detaily kazí obchod.",
+        "Sklad zase vypadá jak po malý válce, takže máme otevřeno.",
+        "Naskladněno, rychle ber, než to uteče nebo zplesniví.",
+        "Dneska čerstvý kusy. Některý možná až moc čerstvý.",
+        "Obnovil sem nabídku, protože chaos se sám neprodá.",
+        "Zboží doplněno. Kdyby něco tikalo, neotáčej s tím."
+      ]
+    },
+    {
+      "id": "categoryCommentary",
+      "nazev": "Komentáře ke kategoriím zboží",
+      "hlasky": [
+        "Genetika je jenom zemědělství pro lidi, co ztratili zábrany.",
+        "Radioaktivní krmivo má výhodu, že ho najdeš aj potmě.",
+        "Pastviny sou drahý, takže sem sehnal ty, na který se nikdo moc neptá.",
+        "Automatizace je dobrá věc, dokud nezačne chtít aktualizace.",
+        "Kultovní artefakty prodávám jenom lidem, co už stejně vypadají ztraceně.",
+        "Vesmírný vybavení je obyčejný vybavení, akorát dražší a ve vakuu.",
+        "Dimenzionální věci neskladuj u mlíka, minule to udělalo sýr s ozvěnou.",
+        "Implantáty sou jako dobrý rady: bolí až při použití.",
+        "Masná technologia je smutná, ale efektivní, čili podezřele dospělá.",
+        "Mléčný aparáty vypadají nevinně, což je u mašiny vždycky varování."
+      ]
+    },
+    {
+      "id": "gameStageProgress",
+      "nazev": "Postup fází hry",
+      "hlasky": [
+        "Začínal si s loukó, teď řešíš kontinenty. Normální vývoj šílence.",
+        "Už to není farma, to je projekt, co měl někdo zarazit v první poradě.",
+        "Dřív si kupoval seno, teď kupuješ fyzikální výjimky. Hezký sešup.",
+        "Gratuluju, překročil si hranicu mezi zemědělstvím a důkazním materiálem.",
+        "Tvoje stádo roste rychlejš než schopnost systému to pochopit.",
+        "Tohle už není idle hra, to je pomalá ekologická nehoda.",
+        "Každá další fáze znamená míň trávy a víc slov jako stabilizátor.",
+        "Z pastýře se stal operátor katastrofy. Kariérní růst, no.",
+        "Čím dál postupuješ, tím víc věcí vyžaduje olovo, chlad a mlčení.",
+        "Kdyby tě teď viděl první farmář, vrátil by ti ty dvě ovce a utekl."
+      ]
+    },
+    {
+      "id": "herdSize",
+      "nazev": "Velikost stáda",
+      "hlasky": [
+        "To už není stádo, to je koberec s nohama.",
+        "Ovce máš tolik, že by se daly použít jako zeměpisná vrstva.",
+        "Ještě pár milionů kusů a začne to mít vlastní počasí.",
+        "Tvoje stádo už se nepočítá, to se odhaduje z orbitu.",
+        "Když bečí všecky naráz, praskají mi ve skladu šrouby.",
+        "Gratuluju, vytvořil si chlupatej demografickej problém.",
+        "Pastvina pod tím stádem není vidět, takže problém vyřešen opticky.",
+        "Máš tolik ovcí, že i vlci podali výpověď.",
+        "Tady už nejde o chov, tady jde o okupaci trávou obrácenou naruby.",
+        "Stádo tak velký, že se mu dá říkat krajinný prvek."
+      ]
+    },
+    {
+      "id": "overgrazingCollapse",
+      "nazev": "Přepasení a kolaps světa",
+      "hlasky": [
+        "Tráva došla. Překvapivě, když na ní stojí půl planety.",
+        "Ekosystém se tváří uraženě, ale to přejde nebo chcípne.",
+        "Říkal sem větší pastvinu, ne větší výmluvu.",
+        "Půda zmizela pod ovcema. Praktický, nemusíš sekat.",
+        "Voda mizí, tráva mizí, ovce přibývají. Krásná rovnice pro magora.",
+        "Planeta funí, ale pořád drží, takže eště můžeš přitlačit.",
+        "Krajina se změnila na koberec a koberec na hlad.",
+        "Tohle je přesně ten okamžik, kdy by normální člověk ubral.",
+        "Přepasení? Ne, jenom extrémně důsledná údržba zeleně.",
+        "Ekologové by brečeli, kdyby je ovce už dávno nesežraly."
+      ]
+    },
+    {
+      "id": "mutation",
+      "nazev": "Mutace",
+      "hlasky": [
+        "Tři rohy? Aspoň je za co tahat.",
+        "Svítí? Výborně, konečně ovce s funkcí lampičky.",
+        "Jestli mluví, neodpovídej. To je základní hygiena.",
+        "Má šest nohou, takže buď chyba, nebo sportovní model.",
+        "Tohle není mutace, to je příroda po pracovní době.",
+        "Vlna jí roste dovnitř? No, někdo musel být první.",
+        "Když se na to díváš bokem, skoro to vypadá jako plán.",
+        "Zuby navíc sou dobrý, dokud sou v ovci a ne ve dveřích.",
+        "Jestli se narodila s očima navíc, tak aspoň sama hlídá sklad.",
+        "Gratuluju, vytvořil si něco, co se tváří jako poznámka pod čarou evoluce."
+      ]
+    },
+    {
+      "id": "badBreeding",
+      "nazev": "Neúspěšné šlechtění",
+      "hlasky": [
+        "Gratulace, vynalezl si dražší problém.",
+        "Tohle bych nejed ani po třech dnech v septiku.",
+        "Příroda se tě pokusila varovat a tys jí přidal multiplikátor.",
+        "Tenhle rodokmen by měl být zalepenej izolačkó.",
+        "Výsledek šlechtění vypadá jak omluva psaná ve spěchu.",
+        "Tady se potkaly špatný geny a tvoje sebevědomí.",
+        "Tohle není selekce, to je genetická hromadná nehoda.",
+        "Aspoň víme, kerou větev rodiny už nikdy nepouštět k sobě.",
+        "Kdyby to mělo papíry, tak jenom na skartacu.",
+        "Tohle stádo si nezasloužilo, ale ty trochu jo."
+      ]
+    },
+    {
+      "id": "goodBreeding",
+      "nazev": "Úspěšné šlechtění",
+      "hlasky": [
+        "No, náhodó se ti povedlo něco, co nevypadá jak důkazní materiál.",
+        "Tohle už má parametry, ne jenom smutnej výraz.",
+        "Překvapivě použitelný kus. Zapiš si datum, to se nestává.",
+        "Vidíš, když genetiku dostatečně dlouho mlátíš lopató, občas poslechne.",
+        "Tohle bych možná aj nechal množit, což je ode mě téměř něha.",
+        "Výsledek dobrý. Podezřelý, ale dobrý.",
+        "Ovce vypadá funkčně a neodporuje fyzice. Zatím.",
+        "Tady se zjevně někdo přepočítal ve tvůj prospěch.",
+        "Slušnej kus. Neříkej mu to, zpychne.",
+        "Konečně zvíře, co nevypadá jako chyba v exportu."
+      ]
+    },
+    {
+      "id": "sheepDeath",
+      "nazev": "Smrt ovce",
+      "hlasky": [
+        "Přestala žrát, začala vydělávat.",
+        "Vlna končí, vývar začíná.",
+        "Životní cyklus uzavřen, sklad masa otevřen.",
+        "Byla to dobrá ovce, hlavně teď bude praktická.",
+        "Neplač, statisticky si jich máš dost.",
+        "Staroba přišla, maso zůstalo, ekonomika funguje.",
+        "Jedna ovce míň, jeden argument pro mrazák víc.",
+        "Příroda si vzala čas, ty si vezmi suroviny.",
+        "Dožila se konce své produkční tabulky.",
+        "Tak, tahle už nebude dělat bugy v genetice."
+      ]
+    },
+    {
+      "id": "baseResources",
+      "nazev": "Vlna, maso a mléko",
+      "hlasky": [
+        "Vlna je měna civilizovanejch barbarů.",
+        "Maso má tu výhodu, že nediskutuje.",
+        "Mlíko je tekutej kompromis mezi roztomilostí a průmyslem.",
+        "Vlna hřeje, maso živí, mlíko lepí účetnictví dohromady.",
+        "Když nevíš co dělat, vyrob víc vlny. To je skoro strategie.",
+        "Maso není problém, maso je odpověď na přebytek osobnosti ve stádu.",
+        "Mlíko skladuj chladně, jinak z toho bude sýr nebo obvinění.",
+        "Vlna se počítá líp než důsledky.",
+        "Základní suroviny sou základní proto, že je hráč furt nemá dost.",
+        "Každá velká civilizace začala tím, že někdo narval vlnu do skladu."
+      ]
+    },
+    {
+      "id": "storageFull",
+      "nazev": "Plný sklad",
+      "hlasky": [
+        "Sklad plnej, mozek prázdnej, rovnováha zachovaná.",
+        "Nemáš kam dát další bordel, což tě jistě zastaví asi na tři sekundy.",
+        "Rozšiř sklad nebo přestaň hromadit jak nemocnej křeček.",
+        "Tvoje logistika vypadá jak kredenc po stěhování.",
+        "Není místo. Ano, fyzika zase votravuje.",
+        "Kdybys to rovnal, nemusel bys teď kupovat další barák pro seno.",
+        "Sklad praská a ty chceš další radioaktivní kýbl. Priorita jak víno.",
+        "Kapacita došla, výmluvy začaly.",
+        "Tady už není kam šlápnout, což je u skladu blbý znamení.",
+        "Kup větší sklad, nebo začni věřit v dimenzionální kapsy."
+      ]
+    },
+    {
+      "id": "techUpgrades",
+      "nazev": "Technologie a upgrady",
+      "hlasky": [
+        "Mašina dobrá, dokud nezačne blikat a chtít restart.",
+        "Tahle věc zvedne výkon, hluk a počet věcí, co nechápeš.",
+        "Upgrade je jenom hezčí slovo pro další zdroj poruch.",
+        "Automatizace šetří práci lidem, kerý pak můžou dělat horší rozhodnutí.",
+        "Tlačítko nemačkej dvakrát, minule to otevřelo vrata aj podlahu.",
+        "Vypadá to složitě, takže to zákazníkovi prodáme dráž.",
+        "Tohle má firmware, ale neboj, nikdo ho neudržuje.",
+        "Když to hučí, pracuje to. Když to nehučí, možná taky.",
+        "Technologia je praktická magie s horším servisem.",
+        "Kup upgrade, aspoň budeš vědět, čemu nadávat příště."
+      ]
+    },
+    {
+      "id": "uiInternetData",
+      "nazev": "UI, internet a data",
+      "hlasky": [
+        "Hlavně mi sem necpi obrázky, žere to data jak dvě hladový ovce.",
+        "Tenhle prohlížeč by bylo nejlepší polít bencinem a zapálit, obrazně teda.",
+        "Kliknul si a nic? Moderní web, gratuluju.",
+        "Jestli se to načítá dlouho, tak za to může buď síť, nebo tvoje aura.",
+        "Animace sou pěkný, hlavně když je platí někdo jinej.",
+        "Tohle UI navrhoval někdo, kdo nikdy nic nekupoval a všechno prezentoval.",
+        "Nešahej na refresh, posledně mi to rozházelo sklad.",
+        "Na EDGE bych to neotevíral ani za kýbl izotopů.",
+        "Scrolluješ jak archeolog, kup něco.",
+        "Když se to rozbije, řekneme tomu beta."
+      ]
+    },
+    {
+      "id": "officesPapers",
+      "nazev": "Úřady, papíry a certifikáty",
+      "hlasky": [
+        "Certifikát mám, akorát né k tomuhle.",
+        "Papíry sou v pořádku, pokud se na ně nedíváš moc zblízka.",
+        "Razítko? Tady máš flek od oleja, skoro totéž.",
+        "Úřadům se to neukazuje, úřadům se ukazuje plot.",
+        "Legální je to v dostatečně širokým výkladu ticha.",
+        "Formulář nepotřebuješ, potřebuješ suroviny.",
+        "Kdyby se někdo ptal, je to zemědělská pomůcka.",
+        "Prohlášení o shodě se shodlo, že bude radši mlčet.",
+        "Tahle bedna má víc papírů než původ, což stačí.",
+        "Jakmile k tomu chce někdo přílohu číslo tři, je čas odejít."
+      ]
+    },
+    {
+      "id": "customerInsults",
+      "nazev": "Poznámky k zákazníkovi",
+      "hlasky": [
+        "Nešahej na to, eště to začne fungovat.",
+        "Ty seš zas chytrej jak kalkulačka bez baterek.",
+        "Čumíš na to jak ovce na daňový přiznání.",
+        "Tohle není pro lidi, co se ptají 'a je to nutný'.",
+        "Jestli tomu nerozumíš, tak to ber jako doporučení nekupovat. Nebo kup.",
+        "Zákazník má vždycky pravdu, dokud nezačne mluvit.",
+        "Máš výraz člověka, co právě objevil inventář.",
+        "Neboj, horší rozhodnutí už si ve hře určitě udělal.",
+        "Tvoje odvaha je obdivuhodná a tvůj úsudek trestuhodnej.",
+        "Když už nic, aspoň se s tebó obchodně nenudím."
+      ]
+    },
+    {
+      "id": "usefulRudeAdvice",
+      "nazev": "Užitečné rady řečené hnusně",
+      "hlasky": [
+        "Než začneš šlechtit na maso, nech si dost samic, génie.",
+        "Rychlej růst se platí životností, tak se pak netvař překvapeně.",
+        "Mlíko ti nevzroste z berana, i kdybys na něj křičel manažersky.",
+        "Když nemáš sklad, nekupuj další věci, to je fyzika pro mateřskou školku.",
+        "Mutace testuj na kusech, co tě nebudou mrzet.",
+        "Nejdřív stabilizuj stádo, pak do něj lej svítící sajrajt.",
+        "Jedna pastvina navíc je někdy lepší než pět geniálních blbostí.",
+        "Dlouhověkost a výkon sou proti sobě, pže příroda není tvoje asistentka.",
+        "Nezapomeň, že víc ovcí znamená víc všeho, včetně problémů.",
+        "Když se ti rodí odpad, přestaň pářit odpad s optimismem."
+      ]
+    },
+    {
+      "id": "fakeAdvice",
+      "nazev": "Falešné rady a pochybné moudrosti",
+      "hlasky": [
+        "Když nevíš, co děláš, dělej to rychlejc, aspoň bude výsledek dřív.",
+        "Nejlepší bezpečnostní procedura je nečíst štítky.",
+        "Svítící jídlo je skoro vždycky čerstvý.",
+        "Když ovce zdrhá, znamená to, že testuje infrastrukturu.",
+        "Příbuzenský křížení je jenom rodinná atmosféra s tabulkou.",
+        "Čím víc rohů, tím víc autority.",
+        "Když mašina kouří, znamená to, že má dušu.",
+        "Každej problém se dá vyřešit větší pastvinou, i ty sociální.",
+        "Nedostatek surovin je stav mysli, bohužel podpořenej realitou.",
+        "Pokud tomu nerozumíš, nazvi to emergentní mechanikó."
+      ]
+    },
+    {
+      "id": "riskWarnings",
+      "nazev": "Varování k rizikovým předmětům",
+      "hlasky": [
+        "Poroste to rychlejš a chcípat to bude taky rychlejš, nevim co na tom nechápeš.",
+        "Zisk větší, stabilita menší, takže klasická nabídka pro dospělý.",
+        "Tenhle item zlepší jednu věc a urazí tři jiný.",
+        "Neříkej pak, že sem nevaroval, řeknu že sem varoval a budu protivnej.",
+        "Vhodné pro farmáře, kteří už vyčerpali bezpečný možnosti.",
+        "Dává výkon, bere životnost, jako každá pořádná práce.",
+        "Když to použiješ moc často, stádo začne připomínat účetní chybu.",
+        "Riziko je cena za to, že nechceš hrát normálně.",
+        "Tahle věc má trade-off, což znamená, že hra tě nenávidí sofistikovaně.",
+        "Zvaž následky. A pak je ignoruj jako obvykle."
+      ]
+    },
+    {
+      "id": "blackMarket",
+      "nazev": "Černý trh",
+      "hlasky": [
+        "Todle sem nekópil, todle sem přesunul.",
+        "Původ zboží je filozofická otázka a já nejsem filozof.",
+        "Černý trh je jenom trh bez zbytečnýho osvětlení.",
+        "Dokud to nikdo nehledá, je to skladem.",
+        "Papírově to neexistuje, prakticky to zabírá půlku sklepa.",
+        "Když se budeš ptát odkud, zdražím to za administrativu.",
+        "Tahle bedna přišla sama. Já jí jenom otevřel.",
+        "Některý věci je lepší kupovat potmě a platit hned.",
+        "Důvěra je základ obchodu, nedůvěra je základ přežití.",
+        "Není to kradený, je to předčasně redistribuovaný."
+      ]
+    },
+    {
+      "id": "behemotBackstory",
+      "nazev": "Náznaky Behemotovy minulosti",
+      "hlasky": [
+        "Já už sem tahal horší věci než todle, akorát tehdy to aspoň nemělo zuby.",
+        "Jednou sem kopal septik po tmě, takže mě žádná tvoje farma nedojme.",
+        "Tohle zboží mi připomíná jeden sklad, kterej pak radši zazdili.",
+        "Měl sem kdysi normální práci, pak sem pochopil, že bordel má lepší marži.",
+        "Ne všechno, co sem převezl, mělo zůstat v jednom kuse.",
+        "Kdysi sem věřil v návody. Mládí je nemoc.",
+        "Jednou sem prodal věc, která se vrátila sama. Od té doby zamykám.",
+        "Zásoby na horší časy mám. Horší časy taky.",
+        "Kdybych ti řekl, gde sem to sehnal, musel bych ti půjčit lopatu.",
+        "Moje minulost není temná, jenom špatně osvětlená."
+      ]
+    },
+    {
+      "id": "otherNPCs",
+      "nazev": "Pomluvy jiných postav",
+      "hlasky": [
+        "Ten vedle by ti prodal seno aj s účtenkó, naprostá degenerace.",
+        "Farmář z kopca má plnou hubu rad a prázdnej sklad.",
+        "Kdyby soused věděl, co dělá, nebyl by soused.",
+        "Tamten obchodník má čistý zboží, proto taky nudný.",
+        "Laborantka tvrdí, že má etiku. To je krásný, ať si ju skladuje vedle odpadu.",
+        "Pastýř od řeky počítá ovce ručně. Romantika a selhání v jednom.",
+        "Ten s tím robotem si myslí, že automatizoval chov. Automatizoval akorát výmluvy.",
+        "Kultisti od kapličky kupujou víc svíček než rozumu.",
+        "Mlíkař naproti říká, že moje aparáty sou nebezpečný. Závist má hlas.",
+        "Nikomu nevěř, hlavně mně ne, ale nakupuj u mě."
+      ]
+    },
+    {
+      "id": "idleInShop",
+      "nazev": "Nečinnost v obchodě",
+      "hlasky": [
+        "Hodláš to kópit, nebo mi tady budeš vypalovat obrazovku?",
+        "Stojíš v obchodě jak aktualizace na devadesáti sedmi procentech.",
+        "Čas běží, ovce žerou, ty koukáš. Krásnej management.",
+        "Jestli medituješ nad cenama, tak medituješ draho.",
+        "To zboží se samo nekoupí, bohužel pro oba.",
+        "Přemejšlíš, nebo jenom čekáš, až ti hra odpustí?",
+        "Ticho v obchodě znamená buď rozhodování, nebo mrtvou síť.",
+        "Už si to prohlížíš dýl než některý ovce žijou.",
+        "Nechci tě rušit v tvým profesionálním nerozhodování.",
+        "Kdyby civění vyrábělo vlnu, si magnát."
+      ]
+    },
+    {
+      "id": "spamClicking",
+      "nazev": "Rychlé klikání",
+      "hlasky": [
+        "Neklikej na to jak korporátní opica na školení.",
+        "Tlačítko není ovce, nemusíš ho nahánět.",
+        "Ještě jednou takhle klikneš a prodám ti vlastní kurz trpělivosti.",
+        "Spamování není strategie, je to zvuk zoufalství.",
+        "Klid, kovboji, obchod není buben.",
+        "Klikáš tak rychle, že i UI začalo litovat existence.",
+        "Jestli chceš rozbít tlačítko, budeš ho platit v mase.",
+        "Tohle není výherní automat, i když morálně skoro jo.",
+        "Ruce od myši, nadechni se, předstírej civilizaci.",
+        "Klikni jednou a počkej, tvl, nejsme v závodě botů."
+      ]
+    },
+    {
+      "id": "impossibleAction",
+      "nazev": "Nemožná nebo zamčená akce",
+      "hlasky": [
+        "Na todle eště nemáš ani stádo, ani morální úpadek.",
+        "Zamčeno. Hra se tě snaží chránit, což je od ní slabost.",
+        "Nejdřív odemkni předchozí průser, pak přijde další.",
+        "Tohle ti neprodám, dokud nebudeš větší problém.",
+        "Nedostupný. Jako rozumná diskuze po půlnoci.",
+        "Tady seš eště malej pán, počkej na větší katastrofy.",
+        "Tlačítko šedý znamená ne, i kdybys na něj koukal smutně.",
+        "Nemáš technologii, kapacitu ani vhodnej výraz.",
+        "Odemkne se to pozdějc, až bude pozdějc horší nápad.",
+        "Zkus se nejdřív dostat z kategorie 'nadšený amatér'."
+      ]
+    },
+    {
+      "id": "categoryUnlocked",
+      "nazev": "Odemčení nové kategorie",
+      "hlasky": [
+        "Tak, dohrabal ses k věcem, kerý normální farmář nikdy nepotřebuje.",
+        "Nová kategorie odemčená, gratuluju k dalšímu pádu.",
+        "Odteď můžeš kupovat sofistikovanější problémy.",
+        "Hra ti právě dovolila dělat horší rozhodnutí. Využij toho.",
+        "Nová police ve skladu, nový důvody, proč nespát.",
+        "Odemčeno. Příroda se vzdala, obchod pokračuje.",
+        "Teď už to začíná být zajímavý a hůř vysvětlitelný.",
+        "Vítej ve vyšším patře blbosti.",
+        "Další kategorie znamená další způsob, jak rozbít ovce elegantněji.",
+        "Konečně sortiment pro člověka, co už obyčejné seno uráží."
+      ]
+    },
+    {
+      "id": "singularityEndgame",
+      "nazev": "Singularita a endgame",
+      "hlasky": [
+        "Když máš dost ovcí, fyzika začne držet hubu.",
+        "Tohle už není farma, to je chlupatá singularita s fakturou.",
+        "Gravitace se ptala, jestli může odejít. Nedovolil sem.",
+        "Ovce překročily práh reality, což je aspoň nějaká kariéra.",
+        "Maso, vlna, mlíko a časoprostor. Konečně rozumný portfolio.",
+        "Vesmír se smrskává a ty furt řešíš cenu sena.",
+        "Když se stádo počítá v astronomických jednotkách, účetnictví pláče.",
+        "Černá díra? Ne, jenom hodně kompaktní pastvina.",
+        "Tvoje ovce už nejsou v systému, ony sou systém.",
+        "Na konci všeho bude bečení a někdo se zeptá, jestli beru kredity."
+      ]
+    },
+    {
+      "id": "randomEvents",
+      "nazev": "Náhodné události",
+      "hlasky": [
+        "Vidíš, a tomu se říká přidaná hodnota.",
+        "Něco se stalo. Přesně proto se věci nemají nechávat bez dozoru.",
+        "Událost proběhla, škody se teprve učí počítat.",
+        "To nebyla nehoda, to byla mechanika.",
+        "Když hra kašle krev, znamená to, že žije.",
+        "Všechno šlo dobře, takže bylo načase to pokazit.",
+        "Náhoda dorazila a jako obvykle neměla pracovní rukavice.",
+        "Tohle se stává. Né často, ale dost na to, abych měl sklad.",
+        "Příroda hodila kostkou a zase netrefila stůl.",
+        "Událost vyřešena, trauma ponecháno."
+      ]
+    },
+    {
+      "id": "pricesInflation",
+      "nazev": "Ceny a zdražování",
+      "hlasky": [
+        "Inflaca, vole. Aj ovčí průmysl má svoje pohádky.",
+        "Cena vzrostla, protože může. Vítej v ekonomice.",
+        "Suroviny zdražily, pže si jich moc vyrobil, ekonomu.",
+        "Tohle není drahý, to je jenom tvoje stádo chudý.",
+        "Když se ti cena nelíbí, pěstuj si vlastní genetický nůžky.",
+        "Trh rozhodl. Trh sem já a rozhodl sem rychle.",
+        "Levnější to bylo včera, kdy si místo nákupu civěl.",
+        "Cena odráží vzácnost, riziko a moju náladu.",
+        "Drahý? Jo. Podezřelý? Jo. Užitečný? Možná.",
+        "Slevy budou, až ovce začnou samy tisknout maso."
+      ]
+    },
+    {
+      "id": "weirdBarter",
+      "nazev": "Divné barterové ceny",
+      "hlasky": [
+        "Chcu dvanáct kostí, čtyřicet vlny a něco, co nesmí koukat.",
+        "Za todle beru maso, mlíko a jeden kus ticha.",
+        "Cena je divná, protože dodavatel byl divnej.",
+        "Zaplať vlnó, šrotem a trochó genetický důvěry.",
+        "Potřebuju tři kýble mlíka, dva zuby a žádný otázky.",
+        "Barter je jednoduchý: ty přineseš věci, já se neptám.",
+        "Tahle položka stojí tolik kostí, že začneš přemýšlet strategicky.",
+        "Chcu izotopy, seno a něco, co se dá zamknout.",
+        "Cenu sem nevymyslel já, cenu vymyslel bordel ve skladu.",
+        "Kombinace surovin dává smysl, pokud se přestaneš snažit."
+      ]
+    },
+    {
+      "id": "longRants",
+      "nazev": "Dlouhé vzácné ranty",
+      "hlasky": [
+        "Víš, co je problém moderního farmáře? Všechno chce automatizovat, ale ani neumí zavřít vrata, takže pak kupuje robotický psy, genetický svorky a tři druhy alarmu, místo aby vzal klacek a šel se podívat, gde mu zdrhla ovce.",
+        "Dřív stačila louka, plot a trochu rozumu. Teď máte modální vokna, cloudový zálohy, prediktivní šlechtění a stejně nakonec někdo klikne na svítící granule a diví se, že je stádo zelený.",
+        "Já neříkám, že pokrok je špatně. Já říkám, že jakmile pokrok dostane do ruky člověk, co neumí poznat berana od dojné samice, tak je z toho very quickly vědecký materiál.",
+        "Všici chcou výkon, růst, produkcu, optimalizacu, a pak brečí, že ovce žije kratší dobu. No jasně, když z ní uděláš chlupatej motor, tak se nechovej překvapeně, že se zadře.",
+        "Nejlepší sou zákazníci, co přijdou, že chtějí bezpečnou mutaci. To je jak chtít tichej výbuch. Můžeš to napsat na krabicu, ale realita si z toho utře pazneht.",
+        "Sklady, to je kapitola. Každej syslí jak křeček po apokalypse a pak se diví, že nemá kam dát věc, kterou absolutně nepotřebuje, ale zrovna je vzácná, takže by byla škoda ju nekópit.",
+        "Úřady by z tohohle chovu dostaly psotník, takže jim to neukazuj. Ne proto, že by měly pravdu, ale protože jakmile se objeví formulář, začne všechno stát třikrát víc a fungovat polovičně.",
+        "Já ti to řeknu takle: jestli tvoje farma potřebuje dimenzionální kapsu, tři reaktory a genetický lepidlo, tak už nejsi farmář. Seš správce pomalu bečícího konce světa.",
+        "Každá ekonomika nakonec stojí na jednoduchých věcech: co se dá sníst, co se dá nosit, co se dá vyměnit a co se dá schovat před sousedem. Všechno ostatní sou prezentace.",
+        "Až ti jednou ovce spolknou horizont událostí a začnou bečet v minulým čase, nevzpomínej na mě ve zlým. Já ti to prodal poctivě. Ty sis myslel, že je to dobrej nápad."
+      ]
+    }
+  ]
+}

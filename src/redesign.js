@@ -117,6 +117,7 @@ function fmtShort(n) {
 // ===========================================================================
 const FLOCK_CAP = 1000;
 const FLOCK_KEY = storageKey('sheep-meadow-v1');
+const FLOCK_SHEEP_SCALE = 2;
 let fCanvas, fCtx, flock = [], flockAniming = false, lastSheepFloor = null;
 
 // Popisek populačního chipu má prefix s ikonou (viz ui.js: ICONS.sheep + ' Ovce'),
@@ -124,6 +125,10 @@ let fCanvas, fCtx, flock = [], flockAniming = false, lastSheepFloor = null;
 // emoji „🐑 " nikdy netrefilo → počet se četl jako NaN a louka zůstala prázdná.
 export function isSheepChipLabel(text) {
   return /\bOvce\b/.test(text || '');
+}
+
+export function flockSheepScale() {
+  return FLOCK_SHEEP_SCALE;
 }
 
 function readSheepCount() {
@@ -239,7 +244,7 @@ function drawFlock() {
   fCtx.clearRect(0, 0, W, H);
   const cosmic = lastCosmic < 0 ? 0 : lastCosmic;
   const now = performance.now();
-  const base = Math.max(1.4, Math.min(2.6, W / 520)); // velikost dle šířky
+  const base = flockSheepScale();
   for (const sh of flock) {
     let scale = base;
     if (sh.born) {

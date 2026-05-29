@@ -2,7 +2,7 @@
 // musí být přes podřetězec, ne přesná shoda. Dřív tu bylo === 'Ovce', což se
 // kvůli emoji nikdy netrefilo → počet ovcí se četl jako NaN a louka oveček na
 // pozadí zůstala navždy prázdná.
-import { isSheepChipLabel } from '../src/redesign.js';
+import { flockSheepScale, isSheepChipLabel } from '../src/redesign.js';
 import { ICONS } from '../src/icons.js';
 
 let pass = 0, fail = 0;
@@ -16,6 +16,7 @@ check('ignoruje Vlnu', !isSheepChipLabel(ICONS.wool + ' Vlna/s'));
 check('ignoruje Maso', !isSheepChipLabel(ICONS.meat + ' Maso/s'));
 check('ignoruje Vědění', !isSheepChipLabel(ICONS.knowledge + ' Vědění'));
 check('zvládne prázdný i undefined vstup', !isSheepChipLabel('') && !isSheepChipLabel(undefined));
+check('velikost oveček nezávisí na šířce viewportu', flockSheepScale(360) === flockSheepScale(1920));
 
 console.log(`redesign: ${pass} ok, ${fail} fail`);
 process.exit(fail ? 1 : 0);
