@@ -2,7 +2,7 @@ name: Pages previews
 
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request_target:
     types: [opened, reopened, synchronize, closed, ready_for_review, converted_to_draft]
     branches: [main]
@@ -45,9 +45,9 @@ jobs:
         id: preview-manifest
         run: |
           {
-            echo 'pr_previews<<EOF'
+            echo 'pr_previews<<PR_PREVIEWS_JSON'
             cat dist/pages/previews/pr-previews.json
-            echo EOF
+            printf '\nPR_PREVIEWS_JSON\n'
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload Pages artifact
