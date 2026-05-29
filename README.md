@@ -42,6 +42,8 @@ npm test          # node test/all.mjs — bez závislostí
 - `test/distribution.test.mjs` — matematika selekce (useknutý normál).
 - `test/sim.test.mjs` — simulace: růst, prodej, selekce, postup fází, save.
 - `test/ui.test.mjs` — klikatelnost tlačítek a vykreslení panelů (DOM stub).
+- `test/storage.test.mjs` — sklad: strop per surovina, ořez při zmenšení (#38, #39).
+- `test/redesign.test.mjs` — vizuální vrstva: rozpoznání populačního chipu s ikonou.
 - `test/integration.test.mjs` — nahrání `main.js` a běh smyčky se stubem prohlížeče.
 - `test/balance.test.mjs` — auto-hráč projde hru k singularitě a změří pacing.
 
@@ -52,11 +54,13 @@ npm test          # node test/all.mjs — bez závislostí
 - `src/sim/` — `distribution.js` (φ/Φ/Φ⁻¹, selekce), `cohort.js` (stárnutí/porody),
   `genetics.js` (rozložení genů), `production.js`, `groups.js`, `simulation.js` (tick).
 - `src/econ/` — `economy.js` (ceny/multiplikátory), `storage.js` (sklad/autotrade),
-  `actions.js` (hráčské akce = API pro UI).
+  `processing.js` (Tkalcovny: vlna→sukno, mléko→sýr), `actions.js` (hráčské akce = API pro UI).
 - `src/content/` — `phases.js` (11 fází), `locations.js`, `projects.js` (sféra),
-  `prestige.js` (černá díra, singularita).
+  `prestige.js` (černá díra, singularita), `achievements.js` (milníky/Kronika + trvalý násobič).
 - `src/io/` — `state.js` (newGame), `save.js` (serialize/offline).
 - `src/ui/ui.js` — HUD, záložky, panely. `src/render/canvas.js` — plátno-akcenty.
+- `src/icons.js` — centrální mapa ikon (emoji, cíleně u zdrojů/fází/záložek/nákupů).
+  `src/redesign.js` — aditivní vizuální vrstva (`--cosmic` dle fáze, particly), bez herní logiky.
 - `src/main.js` — bootstrap a herní smyčka. `src/format.js`, `src/rng.js` — pomůcky.
 - `REWRITE-SPEC.md` — návrhová specifikace. `MECHANICS.txt` — popis staré verze.
 
