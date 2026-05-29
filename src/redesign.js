@@ -8,6 +8,8 @@
 //      <script type="module" src="src/redesign.js"></script>
 //  a nahraď styles.css přiloženou verzí (definuje --cosmic a celý vzhled).
 // ===========================================================================
+import { storageKey } from './io/storage-key.js';
+
 
 // --- proměna fází → --cosmic (0 = pastorální, 1 = kosmické) ----------------
 function phaseFromHud() {
@@ -114,7 +116,7 @@ function fmtShort(n) {
 //  Pozice se pamatují (localStorage), takže po refreshi zůstanou.
 // ===========================================================================
 const FLOCK_CAP = 1000;
-const FLOCK_KEY = 'sheep-meadow-v1';
+const FLOCK_KEY = storageKey('sheep-meadow-v1');
 const FLOCK_SHEEP_SCALE = 2;
 let fCanvas, fCtx, flock = [], flockAniming = false, lastSheepFloor = null;
 
