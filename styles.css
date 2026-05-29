@@ -102,6 +102,9 @@ body.cosmic .hud-hint { color: var(--gold); }
 }
 .chip-l { font-size: 9.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
 .chip-v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+/* mini trend pod hodnotou (#11): pevná výška řádku, ať HUD neposkakuje, když se
+   trend u plné pastviny střídavě objevuje a mizí (#36) */
+.chip-t { display: block; min-height: 14px; line-height: 14px; font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .chip:first-child {
   background: linear-gradient(180deg,
     color-mix(in oklch, oklch(0.97 0.04 88), oklch(0.33 0.05 290) var(--m)),
