@@ -28,7 +28,7 @@ function syncCosmic() {
   if (Math.abs(c - lastCosmic) < 0.001) return;
   lastCosmic = c;
   document.documentElement.style.setProperty('--cosmic', c.toFixed(3));
-  document.body.classList.toggle('cosmic', c > 0.55);
+  document.body.classList.toggle('cosmic', c > 0.45);
 }
 
 // --- juice -----------------------------------------------------------------
@@ -107,6 +107,171 @@ function fmtShort(n) {
   return (n < 10 ? n.toFixed(1) : Math.round(n)) + u[i];
 }
 
+// ===========================================================================
+//  HRAČIČKA: "louka oveček" na pozadí.
+//  Pokaždé, když populace stoupne o další ovci, přibude na pozadí jedna
+//  jednoduchá ručně-kreslená ovečka (s drobným „pop" odskokem). Až do 1000.
+//  Pozice se pamatují (localStorage), takže po refreshi zůstanou.
+// ===========================================================================
+const FLOCK_CAP = 1000;
+const FLOCK_KEY = 'sheep-meadow-v1';
+let fCanvas, fCtx, flock = [], flockAniming = false, lastSheepFloor = null;
+
+function readSheepCount() {
+  // najdi chip s popiskem "Ovce" a přečti jeho hodnotu
+  const labels = document.querySelectorAll('.chip .chip-l');
+  for (const l of labels) {
+    if ((l.textContent || '').trim() === 'Ovce') {
+      const v = l.parentElement.querySelector('.chip-v');
+      if (v) return parseNum(v.textContent);
+    }
+  }
+  return NaN;
+}
+
+function flockSetup() {
+  fCanvas = document.createElement('canvas');
+  fCanvas.id = 'sheep-meadow';
+  Object.assign(fCanvas.style, {
+    position: 'fixed', inset: '0', width: '100%', height: '100%',
+    zIndex: '0', pointerEvents: 'none',
+  });
+  // za obsah (#app má z-index 1), ale nad pozadí stránky
+  document.body.insertBefore(fCanvas, document.body.firstChild);
+  fCtx = fCanvas.getContext('2d');
+  resizeFlock();
+  window.addEventListener('resize', () => { resizeFlock(); drawFlock(); });
+
+  // načti uložené pozice
+  try {
+    const saved = JSON.parse(localStorage.getItem(FLOCK_KEY) || 'null');
+    if (saved && Array.isArray(saved.sheep)) {
+      flock = saved.sheep.map(s => ({ fx: s.fx, fy: s.fy, seed: s.seed, born: 0 }));
+      lastSheepFloor = saved.floor ?? flock.length;
+    }
+  } catch (e) { /* ignoruj */ }
+  drawFlock();
+}
+
+function resizeFlock() {
+  if (!fCanvas) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  fCanvas.width = Math.round(window.innerWidth * dpr);
+  fCanvas.height = Math.round(window.innerHeight * dpr);
+  fCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function addSheep(n, animate) {
+  for (let i = 0; i < n && flock.length < FLOCK_CAP; i++) {
+    flock.push({
+      fx: 0.04 + Math.random() * 0.92,
+      fy: 0.10 + Math.random() * 0.86,
+      seed: Math.random(),
+      born: animate ? performance.now() + i * 55 : 0, // mírně rozfázovaný pop
+    });
+  }
+  saveFlock();
+  if (animate) startFlockAnim(); else drawFlock();
+}
+
+function saveFlock() {
+  try {
+    localStorage.setItem(FLOCK_KEY, JSON.stringify({
+      floor: lastSheepFloor,
+      sheep: flock.map(s => ({ fx: +s.fx.toFixed(4), fy: +s.fy.toFixed(4), seed: +s.seed.toFixed(3) })),
+    }));
+  } catch (e) { /* plný storage – přežijeme */ }
+}
+
+// jednoduchá ovečka: chomáček vlny + hlavička + nožičky
+function drawOneSheep(ctx, x, y, scale, seed, cosmic) {
+  const s = scale * (0.85 + seed * 0.4);
+  const flip = seed > 0.5 ? 1 : -1;
+  // barvy laděné s motivem (čitelné na světlém i tmavém pozadí)
+  const wool = cosmic > 0.45 ? 'rgba(225,235,250,0.50)' : 'rgba(255,253,247,0.62)';
+  const ink  = cosmic > 0.45 ? 'rgba(180,205,235,0.55)' : 'rgba(90,78,60,0.40)';
+  const dark = cosmic > 0.45 ? 'rgba(40,36,62,0.65)' : 'rgba(70,62,50,0.55)';
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(flip, 1);
+  if (cosmic > 0.45) { ctx.shadowColor = 'rgba(150,200,255,0.5)'; ctx.shadowBlur = 6 * s; }
+  // nožičky
+  ctx.strokeStyle = dark; ctx.lineWidth = 1.4 * s; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-3.5 * s, 4.5 * s); ctx.lineTo(-3.5 * s, 8 * s);
+  ctx.moveTo(2.5 * s, 4.5 * s);  ctx.lineTo(2.5 * s, 8 * s);
+  ctx.stroke();
+  // tělo – pár překrývajících se obloučků (vlna)
+  ctx.fillStyle = wool; ctx.strokeStyle = ink; ctx.lineWidth = 1 * s;
+  ctx.beginPath();
+  const puffs = [[-5,0,4.2],[-1.5,-2.5,4],[2.5,-2,4],[4.5,1,3.6],[1,2,4.2],[-3,2.2,4]];
+  for (const [px, py, pr] of puffs) {
+    ctx.moveTo((px + pr) * s, py * s);
+    ctx.arc(px * s, py * s, pr * s, 0, Math.PI * 2);
+  }
+  ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
+  // hlavička
+  ctx.fillStyle = dark;
+  ctx.beginPath(); ctx.ellipse(6.5 * s, -1.5 * s, 2.6 * s, 2.2 * s, 0.25, 0, Math.PI * 2); ctx.fill();
+  // ouško
+  ctx.beginPath(); ctx.ellipse(5.2 * s, -3.4 * s, 1.1 * s, 0.7 * s, -0.5, 0, Math.PI * 2); ctx.fill();
+  // očko
+  ctx.fillStyle = cosmic > 0.45 ? 'rgba(220,235,255,0.9)' : 'rgba(255,255,255,0.85)';
+  ctx.beginPath(); ctx.arc(7.2 * s, -1.8 * s, 0.5 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function easeOutBack(t) { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+
+function drawFlock() {
+  if (!fCtx) return;
+  const W = window.innerWidth, H = window.innerHeight;
+  fCtx.clearRect(0, 0, W, H);
+  const cosmic = lastCosmic < 0 ? 0 : lastCosmic;
+  const now = performance.now();
+  const base = Math.max(1.4, Math.min(2.6, W / 520)); // velikost dle šířky
+  for (const sh of flock) {
+    let scale = base;
+    if (sh.born) {
+      const t = (now - sh.born) / 450;
+      if (t < 0) continue;            // ještě se „nenarodila"
+      if (t < 1) scale = base * Math.max(0, easeOutBack(t));
+    }
+    drawOneSheep(fCtx, sh.fx * W, sh.fy * H, scale, sh.seed, cosmic);
+  }
+}
+
+function startFlockAnim() {
+  if (flockAniming) return;
+  flockAniming = true;
+  const step = () => {
+    drawFlock();
+    const now = performance.now();
+    const stillYoung = flock.some(s => s.born && now - s.born < 470);
+    if (stillYoung) requestAnimationFrame(step);
+    else { flockAniming = false; flock.forEach(s => s.born = 0); drawFlock(); }
+  };
+  requestAnimationFrame(step);
+}
+
+function flockTick() {
+  const n = readSheepCount();
+  if (!isFinite(n)) return;
+  const floor = Math.floor(n);
+  if (lastSheepFloor == null) {
+    // první načtení: dorovnej tiše na aktuální počet (bez animace)
+    if (flock.length === 0 && floor > 0) addSheep(Math.min(floor, FLOCK_CAP), false);
+    lastSheepFloor = floor;
+    return;
+  }
+  if (floor > lastSheepFloor && flock.length < FLOCK_CAP) {
+    const gained = floor - lastSheepFloor;
+    addSheep(gained, gained <= 60);   // velké skoky přidej rovnou bez bouřky popů
+  }
+  lastSheepFloor = Math.max(lastSheepFloor, floor);
+}
+
 // --- start -----------------------------------------------------------------
 function start() {
   syncCosmic();
@@ -115,6 +280,9 @@ function start() {
   wireChipPulse();
   // znovu navázat pulz kreditů, kdyby se chip přegeneroval
   setInterval(() => { if (!document.querySelector('.chip:first-child .chip-v.__wired')) wireChipPulse(); }, 1500);
+  // hračička: louka oveček na pozadí
+  flockSetup();
+  setInterval(flockTick, 600);
 }
 function wireChipPulse() {
   const chip = document.querySelector('.chip:first-child .chip-v');

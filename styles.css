@@ -12,6 +12,11 @@
 :root {
   --cosmic: 0;
   --m: calc(var(--cosmic) * 100%);
+  /* ostrý překlop panelů+textu: rychle a SPOLEČNĚ mezi fází 5 a 6,
+     aby text ani pozadí nikdy neuvázly v šedé (= nečitelné). Obloha
+     se přitom stmívá plynule přes --m. */
+  --msr: clamp(0, calc((var(--cosmic) - 0.36) * 7.7), 1);
+  --ms: calc(var(--msr) * 100%);
 
   /* konstantní akcenty (zelená ovce + zlaté bohatství) */
   --green:      oklch(0.62 0.11 150);
@@ -21,17 +26,19 @@
   --warn:       oklch(0.72 0.115 58);
   --bad:        oklch(0.62 0.135 35);
 
-  /* proměnlivá paleta: mix pastorální (světlá) ↔ kosmická (tmavá) dle --cosmic */
-  --paper:    color-mix(in oklch, oklch(0.992 0.008 90), oklch(0.30 0.045 288) var(--m));
-  --paper-2:  color-mix(in oklch, oklch(0.965 0.013 88), oklch(0.27 0.045 286) var(--m));
-  --sunk:     color-mix(in oklch, oklch(0.925 0.016 86), oklch(0.22 0.045 285) var(--m));
-  --ink:      color-mix(in oklch, oklch(0.31 0.022 68),  oklch(0.95 0.012 90) var(--m));
-  --ink-soft: color-mix(in oklch, oklch(0.47 0.022 72),  oklch(0.86 0.03 320) var(--m));
-  --ink-faint:color-mix(in oklch, oklch(0.63 0.018 78),  oklch(0.78 0.04 320) var(--m));
-  --line:     color-mix(in oklch, oklch(0.89 0.016 84),  oklch(0.80 0.05 320 / .25) var(--m));
-  --panel:    color-mix(in oklch, oklch(0.992 0.008 90), oklch(0.31 0.045 290 / .55) var(--m));
-  --panel-2:  color-mix(in oklch, oklch(0.955 0.012 88), oklch(0.27 0.045 288 / .55) var(--m));
-  --card-shadow: 0 1px 0 oklch(1 0 0 / calc(0.6 - var(--cosmic) * 0.55)) inset,
+  /* proměnlivá paleta: pastorální (světlá) ↔ kosmická (tmavá).
+     Pozadí panelů i barvy textu se MÍCHAJÍ STEJNÝM --ms, takže se
+     překlápějí současně a kontrast zůstává vždy zachovaný. */
+  --paper:    color-mix(in oklch, oklch(0.992 0.008 90), oklch(0.27 0.045 288) var(--ms));
+  --paper-2:  color-mix(in oklch, oklch(0.965 0.013 88), oklch(0.24 0.045 286) var(--ms));
+  --sunk:     color-mix(in oklch, oklch(0.925 0.016 86), oklch(0.19 0.045 285) var(--ms));
+  --ink:      color-mix(in oklch, oklch(0.31 0.022 68),  oklch(0.96 0.012 90) var(--ms));
+  --ink-soft: color-mix(in oklch, oklch(0.47 0.022 72),  oklch(0.88 0.03 320) var(--ms));
+  --ink-faint:color-mix(in oklch, oklch(0.63 0.018 78),  oklch(0.80 0.04 320) var(--ms));
+  --line:     color-mix(in oklch, oklch(0.89 0.016 84),  oklch(0.80 0.05 320 / .28) var(--ms));
+  --panel:    color-mix(in oklch, oklch(0.992 0.008 90), oklch(0.29 0.045 290 / .62) var(--ms));
+  --panel-2:  color-mix(in oklch, oklch(0.955 0.012 88), oklch(0.25 0.045 288 / .62) var(--ms));
+  --card-shadow: 0 1px 0 oklch(1 0 0 / calc(0.6 - var(--msr) * 0.55)) inset,
                  0 8px 22px oklch(0.3 0.04 280 / calc(0.10 + var(--cosmic) * 0.25));
 
   --serif: "Spectral", Georgia, serif;
@@ -86,7 +93,7 @@ h2, h3 { margin: 0; }
 .hud-title { font-size: 22px; font-family: var(--serif); font-weight: 600; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .hud-title .dim { font-size: 12px; color: var(--ink-faint); font-family: var(--sans); font-weight: 500; }
 .hud-hint { color: var(--gold-deep); font-size: 12.5px; margin: 5px 0 12px; }
-:root[style*="--cosmic"] .hud-hint, body.cosmic .hud-hint { color: var(--gold); }
+body.cosmic .hud-hint { color: var(--gold); }
 .chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
 .chip {
   background: linear-gradient(180deg, var(--paper), var(--paper-2));
@@ -197,6 +204,22 @@ table.stats td:last-child { text-align: right; font-weight: 600; }
   box-shadow: 0 6px 18px oklch(0.6 0.1 80/.4);
 }
 
+/* ---- footer ------------------------------------------------------------- */
+#footer {
+  position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 18px; background: var(--panel); border-top: 1px solid var(--line); font-size: 12px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+#footer button { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 7px 11px; cursor: pointer; font-family: var(--sans); }
+#footer button:hover { background: var(--panel); }
+#footer .danger { border-color: var(--bad); color: var(--bad); }
+#footer .danger:hover { background: var(--bad); color: oklch(0.99 0.02 30); }
+#footer input { flex: 1; min-width: 120px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 7px 9px; font-family: ui-monospace, monospace; }
+#footer .spacer { flex: 1; }
+#footer a { color: var(--ink-faint); text-decoration: none; }
+#footer a:hover { color: var(--gold-deep); }
+#save-msg { color: var(--green-deep); }
+
 /* ---- juice vrstva (přidává redesign.js) -------------------------------- */
 .fxlayer { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; }
 .fx-float { position: absolute; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums;
@@ -208,135 +231,4 @@ body.cosmic .fx-float { color: oklch(0.85 0.12 150); text-shadow: 0 0 8px oklch(
 .fx-pulse { animation: fxPulse .35s ease-out; }
 @keyframes fxPulse { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 
-/* ---- doplňky UI: #22 tabulka M/F · #24 rozpad příjmů · #25 delta · #29 nota - */
-table.mf { border-collapse: collapse; margin: 4px 0 8px; font-variant-numeric: tabular-nums; }
-table.mf th { font-size: 11px; font-weight: 600; color: var(--ink-faint); text-align: right; padding: 2px 0 4px 22px; }
-table.mf td { padding: 2px 0 2px 22px; text-align: right; color: var(--ink); }
-table.mf td:first-child, table.mf th:first-child { text-align: left; padding-left: 0; color: var(--ink-faint); }
-
-table.income td:nth-child(2) { text-align: right; color: var(--ink-soft); padding-right: 14px; }
-table.income tr.income-total td { border-bottom: none; border-top: 2px solid var(--line); padding-top: 6px; color: var(--green-deep); font-weight: 700; }
-body.cosmic table.income tr.income-total td { color: oklch(0.85 0.12 150); }
-
-.note { color: var(--gold-deep); font-weight: 600; }
-body.cosmic .note { color: var(--gold); }
-
-/* delta bublina po nákupu (#25) */
-.chip { position: relative; }
-.chip-d { position: absolute; top: 4px; right: 10px; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; opacity: 0; pointer-events: none; }
-.chip-d.show { animation: deltapop 1.4s ease-out; }
-.chip-d.bad { color: var(--bad); }
-.chip-d.good { color: var(--green-deep); }
-@keyframes deltapop { 0% { opacity: 0; transform: translateY(7px); } 14% { opacity: 1; transform: translateY(0); } 78% { opacity: 1; } 100% { opacity: 0; transform: translateY(-7px); } }
-
-/* ---- #32 horní nástroje (žárovka / nastavení / o hře) ------------------ */
-.hud-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.hud-tools { display: flex; gap: 6px; flex-shrink: 0; }
-.hud-tool {
-  background: var(--panel-2); color: var(--ink-soft); border: 1px solid var(--line);
-  border-radius: 50%; width: 34px; height: 34px; cursor: pointer; font-size: 15px; line-height: 1; padding: 0;
-  display: flex; align-items: center; justify-content: center; box-shadow: var(--card-shadow);
-  transition: transform .08s, background .15s, box-shadow .25s, color .15s;
-}
-.hud-tool:hover { background: var(--panel); color: var(--ink); transform: translateY(-1px); }
-.hud-tool:active { transform: translateY(1px) scale(.95); }
-.hud-tool.lit { border-color: var(--gold); color: var(--gold-deep); animation: toolGlow 1.8s ease-in-out infinite; }
-body.cosmic .hud-tool.lit { color: var(--gold); }
-@keyframes toolGlow {
-  0%,100% { box-shadow: 0 0 0 1px var(--gold), 0 0 7px oklch(0.78 0.105 84/.35); }
-  50% { box-shadow: 0 0 0 1px var(--gold), 0 0 16px oklch(0.78 0.105 84/.75); }
-}
-
-/* ---- #34 odznak nově odemčené záložky ---------------------------------- */
-.tab { position: relative; }
-.tab.new { border-color: var(--gold); animation: tabPulse 1.8s ease-in-out infinite; }
-@keyframes tabPulse {
-  0%,100% { box-shadow: inset 0 1px 2px oklch(0.4 0.03 70/.07); }
-  50% { box-shadow: 0 0 11px oklch(0.78 0.105 84/.55); }
-}
-.tab-badge {
-  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
-  margin-left: 7px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
-  background: linear-gradient(180deg, var(--gold), var(--gold-deep)); color: oklch(0.99 0.02 90);
-  font-size: 11px; font-weight: 800; line-height: 1; box-shadow: 0 0 8px oklch(0.78 0.105 84/.7);
-}
-
-/* ---- dvouřádková tlačítka: popisek + efekt / důvod nedostupnosti -------- */
-button.act { line-height: 1.2; }
-.b-main { display: block; }
-.b-sub { display: block; font-size: 11px; font-weight: 500; opacity: .82; margin-top: 2px; }
-button.act:disabled .b-sub { color: var(--bad); opacity: .95; }
-button.act:hover:not(:disabled) .b-sub { opacity: .95; }
-
-/* ---- segmentová / preset / „nejlepší koupě" tlačítka ------------------- */
-button.act.seg { padding: 6px 11px; }
-button.act.seg.on { background: linear-gradient(180deg, var(--green), var(--green-deep)); color: oklch(0.98 0.02 150); border-color: transparent; }
-button.act.preset { padding: 6px 10px; font-size: 12px; }
-button.act.best { outline: 2px solid var(--gold); outline-offset: 1px; }
-.flash { animation: flash .35s ease-out; }
-@keyframes flash { 0% { filter: brightness(1.5); } 100% { filter: none; } }
-
-/* ---- perky / milníky --------------------------------------------------- */
-.branch-h { margin: 11px 0 4px; font-weight: 700; color: var(--ink); }
-.item.done { border-color: var(--green); }
-
-/* ---- modály (vstup do fáze, 💡/⚙/❓) + toasty milníků ------------------ */
-.modal-bg {
-  position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 18px;
-  background: oklch(0.2 0.04 280 / .55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-}
-.modal {
-  position: relative; max-width: 460px; width: 100%; max-height: 86vh; overflow: auto;
-  background: linear-gradient(180deg, var(--paper), var(--panel-2)); border: 1px solid var(--line);
-  border-radius: var(--r-lg); padding: 20px 22px; box-shadow: 0 18px 50px oklch(0.2 0.05 280 / .5);
-}
-.modal h2 { font-family: var(--serif); font-size: 22px; margin-bottom: 10px; }
-.modal .btn-row { margin: 10px 0; }
-.modal-x {
-  position: absolute; top: 10px; right: 12px; width: 30px; height: 30px; border-radius: 50%; padding: 0;
-  background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-soft); cursor: pointer; font-size: 18px; line-height: 1;
-}
-.modal-x:hover { background: var(--bad); color: oklch(0.99 0.02 30); border-color: transparent; }
-.modal-tag { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--gold-deep); font-weight: 700; }
-.modal-lore { font-family: var(--serif); font-style: italic; color: var(--ink-soft); margin: 8px 0 12px; line-height: 1.5; }
-.unlocks { margin: 4px 0 0; padding-left: 18px; color: var(--ink); }
-.unlocks li { margin: 2px 0; }
-.modal input { width: 100%; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px; font-family: ui-monospace, monospace; margin: 8px 0; }
-.toasts { position: fixed; right: 16px; bottom: 16px; z-index: 110; display: flex; flex-direction: column; gap: 8px; }
-.toast {
-  background: linear-gradient(180deg, var(--gold), var(--gold-deep)); color: oklch(0.99 0.02 90);
-  padding: 10px 14px; border-radius: var(--r-md); font-size: 13px; font-weight: 700; box-shadow: 0 6px 18px oklch(0.6 0.1 80/.4);
-}
-
-/* ---- obsah modálů #32 (tip / o hře) ------------------------------------ */
-.tip-step { font-weight: 700; color: var(--green-deep); margin: 4px 0 12px; font-size: 15px; }
-body.cosmic .tip-step { color: oklch(0.85 0.12 150); }
-.about-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--line); }
-a.about-link {
-  display: inline-block; text-decoration: none; text-align: center;
-  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-md);
-  padding: 9px 14px; font-weight: 600; margin: 3px 6px 3px 0; box-shadow: var(--card-shadow);
-}
-a.about-link:hover { background: linear-gradient(180deg, var(--green), var(--green-deep)); color: oklch(0.98 0.02 150); border-color: transparent; }
-.sect-div { height: 1px; background: var(--line); margin: 13px 0; }
-button.act.danger { border-color: var(--bad); color: var(--bad); background: var(--panel-2); }
-button.act.danger:hover:not(:disabled) { background: var(--bad); color: oklch(0.99 0.02 30); border-color: transparent; filter: none; }
-
-/* ---- #35 inline oznámení nové fáze (místo modálu) ---------------------- */
-.phase-notice {
-  background: linear-gradient(180deg,
-    color-mix(in oklch, oklch(0.97 0.045 88), oklch(0.33 0.05 290) var(--m)),
-    color-mix(in oklch, oklch(0.93 0.05 86), oklch(0.30 0.05 290) var(--m)));
-  border: 1px solid var(--gold); border-radius: var(--r-lg); padding: 14px 16px;
-  box-shadow: 0 6px 18px oklch(0.7 0.11 80/.32); animation: pnIn .4s ease-out;
-}
-.phase-notice .pn-title { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--gold-deep); margin: 2px 0 4px; }
-body.cosmic .phase-notice .pn-title { color: var(--gold); }
-@keyframes pnIn { 0% { opacity: 0; transform: translateY(-8px); } 100% { opacity: 1; transform: translateY(0); } }
-
-/* ---- #33 Jatka: dvě automatiky vedle sebe ------------------------------ */
-.jatka-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.jcard { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px; }
-.jcard h4 { margin: 0 0 8px; font-size: 13px; color: var(--ink); }
-
-@media (max-width: 640px) { .genes { grid-template-columns: 1fr; } .jatka-cols { grid-template-columns: 1fr; } #app { padding: 12px; } }
+@media (max-width: 640px) { .genes { grid-template-columns: 1fr; } #app { padding: 12px; } }

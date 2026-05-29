@@ -19,6 +19,11 @@ function cosmic() {
   const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cosmic'));
   return isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
 }
+// ostrý překlop pro TEXT/ovce — flipne rychle mezi fází 5 a 6, aby legenda
+// ani ovce nikdy neuvázly v šedé (stejná logika jako --ms v CSS).
+function cosmicSharp() {
+  return Math.max(0, Math.min(1, (cosmic() - 0.36) * 7.7));
+}
 function mix(a, b, t) {
   const pa = [parseInt(a.slice(1,3),16),parseInt(a.slice(3,5),16),parseInt(a.slice(5,7),16)];
   const pb = [parseInt(b.slice(1,3),16),parseInt(b.slice(3,5),16),parseInt(b.slice(5,7),16)];
@@ -102,7 +107,7 @@ export function drawHerd(canvas, group, ceilingMult) {
   const c = group.counts;
   const mTotal = c.M.child + c.M.adult + c.M.old;
   const fTotal = c.F.child + c.F.adult + c.F.old;
-  const labelCol = mix('#4a4032', '#d8cfe8', t);
+  const labelCol = mix('#4a4032', '#d8cfe8', cosmicSharp());
   ctx.font = '600 11px "Hanken Grotesk", system-ui, sans-serif';
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';

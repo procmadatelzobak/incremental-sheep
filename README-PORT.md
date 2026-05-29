@@ -26,14 +26,23 @@ takže do `index.html` není nutné nic dalšího.
 
 ## Jak to funguje
 - **Proměna fází:** `redesign.js` čte číslo fáze z HUDu (`#hud-phase`) a nastavuje
-  CSS proměnnou `--cosmic` (0 = louka, 1 = vesmír). Celá paleta i pozadí jsou v
-  `styles.css` namíchané přes `color-mix(... var(--m))`, takže přechod je plynulý
-  (fáze 1–3 pastorální, ~4–6 soumrak, 7+ vesmír). Zelená + zlatá zůstávají konstantní.
+  CSS proměnnou `--cosmic` (0 = louka, 1 = vesmír).
+- **Čitelnost při přechodu:** obloha (pozadí stránky) se stmívá plynule, ale
+  **panely a text se překlápějí rychle a SPOLEČNĚ** v úzkém okně mezi fází 5 a 6
+  (proměnná `--ms` v `styles.css`). Díky tomu text ani jeho podklad nikdy
+  „neuvíznou" ve stejné šedé — kontrast je čitelný v každé fázi. Zelená + zlatá
+  zůstávají konstantní.
 - **Šťáva:** delegovaný posluchač na `button.act` → particle burst + pulz; kreditový
   chip pulzuje při změně a u nákupů vyskočí plovoucí „−cena".
 - **Plátno:** `canvas.js` kreslí stádo jako **hejno oveček** (chomáčky ovcí na pastvě
   s legendou ♂/♀ a genetickým skóre); čte `--cosmic` a v pozdních fázích se mění na
   noční scénu se svítícími ovcemi pod hvězdami. Počet zobrazených oveček roste s populací.
+- **Louka oveček (hračička):** `redesign.js` sleduje počet ovcí (chip „Ovce") a pokaždé,
+  když populace stoupne o další ovci, **přikreslí na pozadí jednu jednoduchou ovečku**
+  (s drobným „pop" odskokem), až do 1000. Pozice se pamatují v `localStorage`, takže po
+  refreshi zůstanou; ovečky se přebarvují podle `--cosmic`, aby byly čitelné na louce
+  i ve vesmíru. Vrstva je za UI a neklikatelná. Vyčistit lze smazáním klíče
+  `sheep-meadow-v1` v localStorage.
 
 ## Volitelné doladění (vyžaduje malou úpravu ui.js)
 - **Zlaté CTA tlačítko:** přidej třídu `primary` hlavnímu tlačítku (např. „+ Ovce")
