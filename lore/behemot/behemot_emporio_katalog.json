@@ -1,0 +1,1704 @@
+{
+  "kategorie": [
+    {
+      "nazev": "Genetická šmikátka a chromozomový kurvítka",
+      "polozky": [
+        {
+          "nazev": "Rezavý genetický nůžky",
+          "popis": "Na rychlý šmiknutí do dědičnosti, když příroda zas dělá drahoty jak baba na ouřadě."
+        },
+        {
+          "nazev": "Chromozomovej hřeben",
+          "popis": "Rozčeše DNA bordel do přehlednejch pramínků, teda pokud to zvíře přitom nevyroste vo další nohu."
+        },
+        {
+          "nazev": "Alelový kladívko",
+          "popis": "Dominantní vlastnosti se s tím dají jemně přesvědčit, že budou držet hubu a fungovat."
+        },
+        {
+          "nazev": "Recesivní vývrtka",
+          "popis": "Vytahuje zapadlý vlastnosti z genetickýho sklepa, kde měly nejspíš zůstat, ale co už."
+        },
+        {
+          "nazev": "Sekvenátor bečení",
+          "popis": "Přeloží ovčí bečení na podezřele přesný seznam genů, vad a důvodů ke zklamání."
+        },
+        {
+          "nazev": "Mutační kapátko",
+          "popis": "Kapneš dvakrát, počkáš do rána a pak se netvař překvapeně, že to svítí."
+        },
+        {
+          "nazev": "Genovej lak na paznehty",
+          "popis": "Kosmetická úprava s dědičným přesahem, pže proč by ovce nemohla mít ostudu i v rodokmenu."
+        },
+        {
+          "nazev": "Náhradní gen pro majestátnost",
+          "popis": "Dodá kusu výraz, že ví, co dělá. Realitu to samozřejmě nemění."
+        },
+        {
+          "nazev": "Chromozomový lepidlo",
+          "popis": "Drží rozpadlou genetiku pohromadě, dokud se na to nepodívá někdo s mikroskopem."
+        },
+        {
+          "nazev": "DNA špachtle",
+          "popis": "Na seškrábnutí vlastností, kerý se tam přilepily omylem nebo po blbým rozhodnutí."
+        },
+        {
+          "nazev": "Ovčí CRISPR z bazoše",
+          "popis": "Bez záruky, bez návodu, ale prodávající psal, že po doktorovi, takže klid."
+        },
+        {
+          "nazev": "Dědičná svorka proti chcípáctví",
+          "popis": "Přitáhne životaschopnost k tělu zvířete, aspoň tak dlouho, než se začne ptát veterinář."
+        },
+        {
+          "nazev": "Genovej filtr obyčejnosti",
+          "popis": "Odfiltruje nudný kusy, takže ti zbudou buď šampioni, nebo důkazní materiál."
+        },
+        {
+          "nazev": "Mikropipeta podezřelý naděje",
+          "popis": "Dávkuje genetickej optimismus po kapkách, aby se to nezvrhlo moc rychle."
+        },
+        {
+          "nazev": "Paznehtovej genový klíč",
+          "popis": "Odemkne vlastnosti ukrytý v linii, pokud se předtím nezlomí nebo nezačne hulit."
+        },
+        {
+          "nazev": "Kleštičky na přebytečnou evoluci",
+          "popis": "Když vývoj zvířete ujede někam, kam neměl, těmahle to prostě cvakneš."
+        },
+        {
+          "nazev": "Dědičnej přepínač nálady",
+          "popis": "Přepne agresivní kus na produktivní, nebo produktivní na něco, co chceš radši prodat."
+        },
+        {
+          "nazev": "Mutační pojistka",
+          "popis": "Tváří se, že brání katastrofám. Ve skutečnosti je jenom hezky zabalená."
+        },
+        {
+          "nazev": "Genetická výhybka",
+          "popis": "Odkloní problém do další generace, což je oblíbená metoda každé civilizace."
+        },
+        {
+          "nazev": "Krabička náhodnejch dědičnejch omylů",
+          "popis": "Levný mix vlastností pro zákazníky, co se nudí a nemají pud sebezáchovy."
+        }
+      ]
+    },
+    {
+      "nazev": "Radioaktivní krmivo a svítící žrádlo",
+      "polozky": [
+        {
+          "nazev": "Jaderný seno",
+          "popis": "Svítí ve tmě, takže ušetříš za lampy a přestaneš tvrdit, že nevidíš průser."
+        },
+        {
+          "nazev": "Uranový granule",
+          "popis": "Křupavý krmení pro vlnu s charakterem a veterináře s tikem v oku."
+        },
+        {
+          "nazev": "Plutoniová vojtěška",
+          "popis": "Pro kusy, kerý už nepotřebujou budoucnost, ale hodí se jim poločas rozpadu."
+        },
+        {
+          "nazev": "Cesiovej liz",
+          "popis": "Ovce si lízne a pak ju najdeš i v noci, pokud teda najdeš i odvahu."
+        },
+        {
+          "nazev": "Thorium mix",
+          "popis": "Klidnější radioaktivní varianta pro farmáře, co si chtějí připadat rozumně."
+        },
+        {
+          "nazev": "Gamma otruby",
+          "popis": "Křupou tak hezky, že ani nevadí, že trochu křupe i ovce."
+        },
+        {
+          "nazev": "Beta-karoten s beta zářením",
+          "popis": "Marketingově zdravý, fyzikálně zbytečně upřímný."
+        },
+        {
+          "nazev": "Superkritickej oves",
+          "popis": "Vaří se sám, žere se sám, reklamace se neberou."
+        },
+        {
+          "nazev": "Deuteriová melasa",
+          "popis": "Lepí se na zuby, žlab a základní zákony vesmíru."
+        },
+        {
+          "nazev": "Seno z vyloučený zóny",
+          "popis": "Ručně sbíraný tam, kam nikdo normální neleze, čili prémiová kvalita."
+        },
+        {
+          "nazev": "Izotopová řepa",
+          "popis": "Vypadá normálně, což je na ní asi ta nejzákeřnější vlastnost."
+        },
+        {
+          "nazev": "Palivová peleta pro berany",
+          "popis": "Startuje na kopnutí, dobíhá z kopce a občas přejde do režimu 'raketa'."
+        },
+        {
+          "nazev": "Radioaktivní jetel",
+          "popis": "Čtyřlístek pro štěstí, které trvá přesně do prvního měření."
+        },
+        {
+          "nazev": "Atomový šrot pro starší kusy",
+          "popis": "Důstojnej konec? Ne. Výnosnej konec? Třeba."
+        },
+        {
+          "nazev": "Reaktorový otruby",
+          "popis": "Zbytkový krmivo ze zdroje, na kterej se fakt neptej, šetříme čas."
+        },
+        {
+          "nazev": "Mléčnej prášek s poločasem",
+          "popis": "Na jehňata, co mají vyrůst rychle, divně a nejlépe bez papírování."
+        },
+        {
+          "nazev": "Fluorescenční granola",
+          "popis": "Dětičky svítí v ohradě jak kontrolky na špatně zapojeným serveru."
+        },
+        {
+          "nazev": "Olověný müsli",
+          "popis": "Bezpečnostní obal a krmení v jednom, pže proč kupovat dvě věci."
+        },
+        {
+          "nazev": "Neutronová sůl",
+          "popis": "Do napáječky pro kusy, kterým obyčejnej minerál připadá málo výbušnej."
+        },
+        {
+          "nazev": "Krmná tyč 'neptej se z čeho'",
+          "popis": "Výborná cena, výbornej výkon, výborný důvod nemít inspekci v okolí."
+        }
+      ]
+    },
+    {
+      "nazev": "Pastviny, pozemky a územní expanze",
+      "polozky": [
+        {
+          "nazev": "Skládací louka",
+          "popis": "Rozbalíš, přikolíkuješ a tváříš se, že tři metry čtvereční sou strategie."
+        },
+        {
+          "nazev": "Kapesní pastvina",
+          "popis": "Pro jednu smutnou ovci, jeden experiment a dvě budoucí výmluvy."
+        },
+        {
+          "nazev": "Trávník v kýblu",
+          "popis": "Zaručeně někde rostl, víc původu netřeba, nejseš celní správa."
+        },
+        {
+          "nazev": "Kus tundry",
+          "popis": "Studený, blbý, skoro zadarmo. Ideální, když chceš testovat odolnost a zoufalství."
+        },
+        {
+          "nazev": "Ostrovní parcela bez mapy",
+          "popis": "Na mapě není, takže se tam blbě doručujou pokuty i faktury."
+        },
+        {
+          "nazev": "Vertikální pastvina",
+          "popis": "Louka na zeď pro ovce, kerý už normální gravitace uráží."
+        },
+        {
+          "nazev": "Louka pod loukou",
+          "popis": "Technicky sklep, prakticky bonusová kapacita, právně mlha."
+        },
+        {
+          "nazev": "Přenosná step",
+          "popis": "Trochu práší, trochu se rozpadá, ale ovce sou zvyklý na horší management."
+        },
+        {
+          "nazev": "Horskej svah s bonusem",
+          "popis": "Bonus je, že slabý kusy se samy odvalí z evidence."
+        },
+        {
+          "nazev": "Bažinatá pastvina",
+          "popis": "Maso předmarinovaný bahnem, vlna předpraná zoufalstvím."
+        },
+        {
+          "nazev": "Vesmírná pastvina ve vakuu",
+          "popis": "Tráva drží na suchý zip, ovce drží na víře, obojí slabě."
+        },
+        {
+          "nazev": "Zrcadlová louka",
+          "popis": "Vypadá dvakrát větší, což účetnictví bohatě stačí."
+        },
+        {
+          "nazev": "Pololegální kontinentální výběh",
+          "popis": "Tak velkej, že se hranice řeší až po první stížnosti."
+        },
+        {
+          "nazev": "Louka z lepší reality",
+          "popis": "Z reality, kde stavební ouřad nestihl vzniknout. Krásný sci-fi."
+        },
+        {
+          "nazev": "Trávník s vlastním počasím",
+          "popis": "Většinou hnusným, ale aspoň lokálně suverénním."
+        },
+        {
+          "nazev": "Pronájem údolí",
+          "popis": "Platí do chvíle, než se vrátí majitel nebo sesuv půdy."
+        },
+        {
+          "nazev": "Minikontinent",
+          "popis": "Pro pokročilý šílence, co už ostrov považujou za kelímek."
+        },
+        {
+          "nazev": "Zelená plocha neznámýho vlastníka",
+          "popis": "Moje oblíbená kategorie, dokud někdo nezačne mávat listem vlastnictví."
+        },
+        {
+          "nazev": "Střešní pastvina",
+          "popis": "Ovce si zvyknou, sousedi ne, což je jejich problém."
+        },
+        {
+          "nazev": "Louka s nafouklou výměrou",
+          "popis": "Výměra papírově krásná, fyzicky trochu optimistická, prostě jako projektovej plán."
+        }
+      ]
+    },
+    {
+      "nazev": "Ovčí implantáty a podkožní vylepšení",
+      "polozky": [
+        {
+          "nazev": "Vlnozesilovač pod kůžu",
+          "popis": "Hučení ignoruj, to je zvuk produktivity."
+        },
+        {
+          "nazev": "Paznehtovej akcelerátor",
+          "popis": "Kus běhá rychlejc, brzdí hůř, zábava roste."
+        },
+        {
+          "nazev": "Druhej žaludek navíc",
+          "popis": "Zánovní, po koze, bez trapnejch otázek na kompatibilitu."
+        },
+        {
+          "nazev": "Umělej roh prestiže",
+          "popis": "Pro berany bez osobnosti, ale s touhou po respektu."
+        },
+        {
+          "nazev": "Bečící modem EDGE",
+          "popis": "Spojení slabý, vztek silnej, styl autentickej."
+        },
+        {
+          "nazev": "Vnitřní počítadlo sena",
+          "popis": "Konečně víš, kerá chlupatá potvora žere načerno."
+        },
+        {
+          "nazev": "Mikroreaktor na zahřívání rouna",
+          "popis": "Zimní výhoda a letní soudní spor v jednom."
+        },
+        {
+          "nazev": "Čip poslušnýho pohledu",
+          "popis": "Ovce pak vypadá, že chápe příkazy. Nechápe, ale vypadá."
+        },
+        {
+          "nazev": "Keramickej paznehtovej buffer",
+          "popis": "Leští chůzi do prémiovýho dupání."
+        },
+        {
+          "nazev": "Mléčnej turbokompresor",
+          "popis": "Občas z toho jde mlíko, občas tvaroh, občas zvuk, kterej neřeš."
+        },
+        {
+          "nazev": "Subdermální zvonec",
+          "popis": "Cinká i skrz vlnu, kůži a lehký existenciální utrpení."
+        },
+        {
+          "nazev": "Noční vidění pro pastvu",
+          "popis": "Když už zas leze do prdele světa, aspoň ví kudy."
+        },
+        {
+          "nazev": "Automatickej česací implantát",
+          "popis": "Pravidelně načechrá rouno a občas i nervy."
+        },
+        {
+          "nazev": "Vnitřní GPS",
+          "popis": "Přesnost zhruba 'tam někde', což je pořád lepší než tvoje evidence."
+        },
+        {
+          "nazev": "Keratinovej booster",
+          "popis": "Rouno tvrdne, účetní výnos taky, etika už míň."
+        },
+        {
+          "nazev": "Implantát dramatickýho výrazu",
+          "popis": "Čistě estetická demence pro ovce na promo obrázky."
+        },
+        {
+          "nazev": "Biologickej Wi-Fi ocas",
+          "popis": "Signál kolísá podle nálady a směru větru."
+        },
+        {
+          "nazev": "Žaludeční firewall",
+          "popis": "Blokuje levný seno, plísně a některý tvoje hloupý nápady."
+        },
+        {
+          "nazev": "Mléčnej stabilizátor",
+          "popis": "Ať to neteče jak státní rozpočet po dešti."
+        },
+        {
+          "nazev": "Čip 'nejsem nemocná, jen optimalizovaná'",
+          "popis": "Ideální pro farmáře, co potřebujou uklidnit svědomí a veterináře poslat pryč."
+        }
+      ]
+    },
+    {
+      "nazev": "Šlechtění, páření a rodokmenová ostuda",
+      "polozky": [
+        {
+          "nazev": "Párovací kostky",
+          "popis": "Pro chvíle, kdy plánování selhalo a hazard vypadá vědecky."
+        },
+        {
+          "nazev": "Beraní seznamka Premium",
+          "popis": "Samý alfa kusy, všici popsaní jako výjimeční, půlka z nich tupá jak vrata."
+        },
+        {
+          "nazev": "Ovulační gong",
+          "popis": "Naprosto důstojnej nástroj, když chceš farmu změnit v divadlo."
+        },
+        {
+          "nazev": "Rodokmenová tabule",
+          "popis": "Aby bylo pěkně vidět, kde přesně se to geneticky posralo."
+        },
+        {
+          "nazev": "Kalkulátor příbuzenskýho průseru",
+          "popis": "Spočítá, jestli to je ještě šlechtění, nebo už rodinná oslava."
+        },
+        {
+          "nazev": "Feromonovej sprej",
+          "popis": "Vůně úspěchu, bahna a mírně nucený romantiky."
+        },
+        {
+          "nazev": "Klec pro romantický kompromisy",
+          "popis": "Nehezká, funkční, omyvatelná, přesně jak život."
+        },
+        {
+          "nazev": "Pečeť plemenné nejistoty",
+          "popis": "Na kusy, u kterých si nejsi jistej, ale chceš je prodat dráž."
+        },
+        {
+          "nazev": "Tabulka 'tuhle linii už rači né'",
+          "popis": "Ušetří ti roky chyb, který bys stejně udělal."
+        },
+        {
+          "nazev": "Přepisovač rodokmenu",
+          "popis": "Pro slabý povahy, co nesnesou pravdu v tabulce."
+        },
+        {
+          "nazev": "Sametovej oplodňovací trychtýř",
+          "popis": "Protože i šílenství může mít prémiovou edici."
+        },
+        {
+          "nazev": "Dědičnej filtr ostudy",
+          "popis": "Odfiltruje nejhorší vlastnosti, případně důkazy, že si u toho přemýšlel."
+        },
+        {
+          "nazev": "Plemenný klobouk autority",
+          "popis": "Když ho nasadíš, vypadáš jako někdo, kdo ví, co kříží. Dočasně."
+        },
+        {
+          "nazev": "Inkubátor výmluv",
+          "popis": "Na jehňata i na vysvětlování, proč se to nepovedlo."
+        },
+        {
+          "nazev": "Mapa mutačních zkratek",
+          "popis": "Ukáže cesty k výsledku a taky k biologickýmu průseru."
+        },
+        {
+          "nazev": "Návnada na kvalitního berana",
+          "popis": "Smrdí jak úspěch, funguje jak podvod, prodává se výborně."
+        },
+        {
+          "nazev": "Svatební ohrádka",
+          "popis": "Bahno, plot, stres, romantika jako řemen."
+        },
+        {
+          "nazev": "Ovčí Tinder bez GDPR",
+          "popis": "Žádný souhlasy, žádný formuláře, konečně efektivita."
+        },
+        {
+          "nazev": "Genetická výhybka",
+          "popis": "Odkloní ostudu do jiné větve rodu, krásně manažerský řešení."
+        },
+        {
+          "nazev": "Sada 'toto bude dobrý'",
+          "popis": "Obsahuje provázek, cedulku a přesně nula důkazů."
+        }
+      ]
+    },
+    {
+      "nazev": "Mašiny na vlnu a chlupatej průmysl",
+      "polozky": [
+        {
+          "nazev": "Samostříhací rameno",
+          "popis": "Bere vlnu spolehlivě, uši jenom někdy, nebuď detailista."
+        },
+        {
+          "nazev": "Vlnožací kombajn",
+          "popis": "Vhodnej pro stádo, stodolu a menší bezpečnostní incident."
+        },
+        {
+          "nazev": "Česač rouna s náladou",
+          "popis": "Když má dobrej den, česá. Když ne, učí ovce létat."
+        },
+        {
+          "nazev": "Lis na luxusní balíky",
+          "popis": "Udělá z bordelu produkt a z produktu něco, co zní draze."
+        },
+        {
+          "nazev": "Vlnotrubka do skladu",
+          "popis": "Ucpe se přesně ve chvíli, kdy tvrdíš, že to máš vymyšlený."
+        },
+        {
+          "nazev": "Separátor hebkosti",
+          "popis": "Oddělí prémiový rouno od materiálu vhodnýho na rohožku."
+        },
+        {
+          "nazev": "Statickej nabíječ rouna",
+          "popis": "Ovce pak vypadá jak po hádce s bleskem a levnou prodlužkou."
+        },
+        {
+          "nazev": "Automatickej pytlovač chlupů",
+          "popis": "Cpe vlnu do pytlů a pytle do míst, kam se nedostaneš."
+        },
+        {
+          "nazev": "Měřič nadýchanosti",
+          "popis": "Ukazuje marketingový čísla, což je jediný, co zákazník chápe."
+        },
+        {
+          "nazev": "Průmyslovej cuchací válec",
+          "popis": "Rozcuchá ovci, vlnu i tvoje představy o bezpečnosti práce."
+        },
+        {
+          "nazev": "Navíječ kudrlin",
+          "popis": "Pro estetický úchyláky, co chtějí, aby vlna měla osobnost."
+        },
+        {
+          "nazev": "Kyselý odsmraďovadlo vlny",
+          "popis": "Smrad nezmizí, jen se přestane tvářit vítězně."
+        },
+        {
+          "nazev": "Ovčí fén 4000 W",
+          "popis": "Suší rouno, pojistky a naději, že to dopadne normálně."
+        },
+        {
+          "nazev": "Balíkovač Mk. II",
+          "popis": "Mk. I sežral berana, takže tohle je prý pokrok."
+        },
+        {
+          "nazev": "Vlnoportál",
+          "popis": "Vede do skladu, občas do jiný dimenze, ale sklad je taky chaos."
+        },
+        {
+          "nazev": "Automat 'runo dovnitř, výnos ven'",
+          "popis": "Výnos teda nevychází sám, ale cedulka vypadá dobře."
+        },
+        {
+          "nazev": "Ultrazvukovej rozcuchávač",
+          "popis": "Nesahá na ovci, jenom ji akusticky urazí."
+        },
+        {
+          "nazev": "Kompresor na chmýří",
+          "popis": "Z něžnýho rouna udělá tvrdou kostku ekonomiky."
+        },
+        {
+          "nazev": "Rounovej destilátor",
+          "popis": "Extrahuje hebkost, lanolin a poslední zbytky soudnosti."
+        },
+        {
+          "nazev": "Stroj na prémiový chlupy",
+          "popis": "Z neprémiový ovce udělá prémiovej popisek. To je byznys, vole."
+        }
+      ]
+    },
+    {
+      "nazev": "Masný technologie a porážkový aparáty",
+      "polozky": [
+        {
+          "nazev": "Řeznickej robot bez empatie",
+          "popis": "Dělá svou práci a nevede k tomu seminář o citech, díkybohu."
+        },
+        {
+          "nazev": "Marinádovej injektor",
+          "popis": "Napíchne výsledek chutí dřív, než se začneš ptát na původ."
+        },
+        {
+          "nazev": "Měřič výtěžnosti kýty",
+          "popis": "Ukáže, kolik masa je v kusu a kolik iluzí bylo ve farmáři."
+        },
+        {
+          "nazev": "Kostní separátor",
+          "popis": "Oddělí tvrdou realitu od měkkýho produktu."
+        },
+        {
+          "nazev": "Rychlouzírna",
+          "popis": "Vložíš maso, vyndáš delikatesu nebo důvod větrat."
+        },
+        {
+          "nazev": "Balicí linka 'rodinná farma'",
+          "popis": "Nalepí útulnou etiketu i na věc, co vznikla velmi průmyslově."
+        },
+        {
+          "nazev": "Biologickej tenderizér",
+          "popis": "Změkčí maso, svědomí ne, to si řeš jinde."
+        },
+        {
+          "nazev": "Převodník smutku na proteiny",
+          "popis": "Surová efektivita pro lidi, co neradi plýtvají emocema."
+        },
+        {
+          "nazev": "Šunkařskej algoritmus",
+          "popis": "Spočítá, jestli se kus vyplatí chovat, prodat nebo přeměnit na snídani."
+        },
+        {
+          "nazev": "Měřič morální únosnosti",
+          "popis": "Ručička většinou lže, ale uklidňuje začátečníky."
+        },
+        {
+          "nazev": "Kráječ na porce hanby",
+          "popis": "Dělá rovný řezy i v situacích, který rovný nejsou."
+        },
+        {
+          "nazev": "Masoportál do sklepa",
+          "popis": "Pošle produkt rovnou do zásob, bez trapnýho nošení."
+        },
+        {
+          "nazev": "Samoudící skříň",
+          "popis": "Čoudí sama, stěžuje si okolí, kvalita roste."
+        },
+        {
+          "nazev": "Pečeť Behemotovy kvality",
+          "popis": "Nic nezaručuje, ale vypadá to, že někdo ručí. A to stačí."
+        },
+        {
+          "nazev": "Kýtotiskárna",
+          "popis": "Lisuje maso do tvarů, kerý zákazník snáz chápe."
+        },
+        {
+          "nazev": "Chladicí bedna 'dočasně'",
+          "popis": "Dočasně znamená do kontroly nebo do zápachu, podle toho, co přijde dřív."
+        },
+        {
+          "nazev": "Aromatizér posledního okamžiku",
+          "popis": "Dodá produktu bylinkovou lež a lehkej kouř."
+        },
+        {
+          "nazev": "Kafilerní výhybka",
+          "popis": "Rozhodne, jestli je to odpad, produkt, nebo obojí s jinou etiketou."
+        },
+        {
+          "nazev": "Mlýnek na argumenty",
+          "popis": "Zpracuje i tvrdý kusy na něco, co se dá prodat v balíčku."
+        },
+        {
+          "nazev": "Porážková kalkulačka",
+          "popis": "Přestaneš dělat citový rozhodnutí a začneš dělat ty horší, ale výnosnější."
+        }
+      ]
+    },
+    {
+      "nazev": "Mléko, sýry a fermentační sajrajty",
+      "polozky": [
+        {
+          "nazev": "Mléčnej multiplikátor",
+          "popis": "Z jedný kapky udělá dvě podezřelý, ekonomika se raduje."
+        },
+        {
+          "nazev": "Sýrovej urychlovač zrání",
+          "popis": "Zraje to rychlejc než tvoje schopnost pochopit následky."
+        },
+        {
+          "nazev": "Automatickej dojič beze svědků",
+          "popis": "Pracuje potichu, protože některý věci je lepší neslyšet."
+        },
+        {
+          "nazev": "Kravskej převodník pro ovce",
+          "popis": "Ovce není kráva, ale stroj má vlastní názor."
+        },
+        {
+          "nazev": "Separátor podezřelý smetany",
+          "popis": "Oddělí smetanu, kal a některý otázky."
+        },
+        {
+          "nazev": "Jogurtová kapsle",
+          "popis": "Vhodíš do kýblu a doufáš, že to nebude mít osobnost."
+        },
+        {
+          "nazev": "Fermentační sud s vědomím",
+          "popis": "Bublá, přemýšlí, občas nesouhlasí."
+        },
+        {
+          "nazev": "Máselnej lis",
+          "popis": "Vytlačí z mlíka tuk a z farmáře poslední trpělivost."
+        },
+        {
+          "nazev": "Mlékoměr slávy",
+          "popis": "Ukazuje litry i pocit, že si konečně někdo všiml tvojí farmy."
+        },
+        {
+          "nazev": "Sýrovej krystalizátor",
+          "popis": "Z obyčejnýho sýra udělá věc ostrou jak komentář vod souseda."
+        },
+        {
+          "nazev": "Telepatickej dojič",
+          "popis": "Funguje na myšlenku, nejlíp na myšlenku 'už aby to bylo'."
+        },
+        {
+          "nazev": "Náhradní vemenný modul",
+          "popis": "Montáž není složitá, jenom nechutná a trochu diskutabilní."
+        },
+        {
+          "nazev": "Mléčná turbína",
+          "popis": "Točí se, cáká, vyrábí. Nějak."
+        },
+        {
+          "nazev": "Solankovej bazének",
+          "popis": "Sýr si zaplave a vyleze slanější, uraženější a dražší."
+        },
+        {
+          "nazev": "Tvarohovej kondenzátor",
+          "popis": "Zahušťuje mléčnej problém do tvaru, co jde nacpat do kelímku."
+        },
+        {
+          "nazev": "Lahvovač s poetickou etiketou",
+          "popis": "Etiketa lže hezčejc než prodejce na farmářským trhu."
+        },
+        {
+          "nazev": "Kultivační kámen do sýrárny",
+          "popis": "Prej v něm žije kultura. Podle smradu možná celá civilizace."
+        },
+        {
+          "nazev": "Mléčnej filtr proti pravdě",
+          "popis": "Odstraní pachy, hrudky a informace, kerý by zákazník neměl mít."
+        },
+        {
+          "nazev": "Automat na ovčí kefír",
+          "popis": "Vydává bublavej nápoj a drobný výčitky."
+        },
+        {
+          "nazev": "Dojicí orchestrion",
+          "popis": "Hraje při dojení, aby to vypadalo jako řemeslo a ne průmyslovej rituál."
+        }
+      ]
+    },
+    {
+      "nazev": "Kulty, rituály a ovčí náboženství",
+      "polozky": [
+        {
+          "nazev": "Svatý zvonec první ovce",
+          "popis": "Cinkneš a stádo si vzpomene, že má někam patřit, bohužel většinou ke žlabu."
+        },
+        {
+          "nazev": "Minioltář pastvy",
+          "popis": "Malá svatyně pro velkou touhu po větším počtu chlupů."
+        },
+        {
+          "nazev": "Kadidlo z přesušenýho sena",
+          "popis": "Voní jak stodola po zásahu mystiky a špatný ventilace."
+        },
+        {
+          "nazev": "Rituální střihačskej nůž",
+          "popis": "Na ceremonie, obřady a situace, kdy normální nůž není dost teatrální."
+        },
+        {
+          "nazev": "Beraní maska proroka",
+          "popis": "Nasadíš a můžeš bečet nesmysly s autoritou."
+        },
+        {
+          "nazev": "Sada na vyvolání Velké Ovce",
+          "popis": "Obsahuje svíčky, křídu a malou šanci, že se něco fakt ozve."
+        },
+        {
+          "nazev": "Liturgická deka z rouna",
+          "popis": "Hřeje tělo a zakrývá pochybnosti."
+        },
+        {
+          "nazev": "Kniha zakázanýho bečení",
+          "popis": "Plná textů, kerý ovce nemají číst, což je snadný, neumí číst."
+        },
+        {
+          "nazev": "Svíce z loje a ambicí",
+          "popis": "Hoří pomalu, smrdí rychle, působí významně."
+        },
+        {
+          "nazev": "Relikvie svatýho paznehtu",
+          "popis": "Nikdo neví, čí byl, ale relikvie bez otázek prodávají líp."
+        },
+        {
+          "nazev": "Pastýřská koruna víry",
+          "popis": "Pro chvíle, kdy nestačí řídit farmu a musíš založit kult."
+        },
+        {
+          "nazev": "Zpěvník monotónního mečení",
+          "popis": "Dvanáct hymnů, všechny zní stejně, což je žánrově přesný."
+        },
+        {
+          "nazev": "Obětní miska na granule",
+          "popis": "Do misky dáš granule, z misky zmizí granule, zázrak hotovej."
+        },
+        {
+          "nazev": "Zázračnej prach z podestýlky",
+          "popis": "Sypneš na problém a on je pak zaprášenej."
+        },
+        {
+          "nazev": "Ikona Ovčí Matky",
+          "popis": "Dívá se vyčítavě i na výnosný rozhodnutí."
+        },
+        {
+          "nazev": "Rituální roh poslušnosti",
+          "popis": "Zatroubíš a všichni tě ignorujou posvátnějším způsobem."
+        },
+        {
+          "nazev": "Posvěcenej minerální liz",
+          "popis": "Obsahuje sůl, víru a přirážku."
+        },
+        {
+          "nazev": "Amulet proti rozumu",
+          "popis": "Chrání majitele před pochybnostma, statistikou a zdrženlivostí."
+        },
+        {
+          "nazev": "Kalendář ovčích svátků",
+          "popis": "Každej třetí den je důvod něco koupit. Náboženství konečně užitečný."
+        },
+        {
+          "nazev": "Transparent 'více ovcí'",
+          "popis": "Program, manifest a ekonomickej plán v jednom hadru."
+        }
+      ]
+    },
+    {
+      "nazev": "Vesmírný vybavení a orbitální salašnictví",
+      "polozky": [
+        {
+          "nazev": "Skafandr pro ovci",
+          "popis": "Těsní skoro všude, což je ve vesmíru optimistická formulace."
+        },
+        {
+          "nazev": "Orbitální senomet",
+          "popis": "Vystřeluje seno po balistický křivce, přesnost na stodolu."
+        },
+        {
+          "nazev": "Raketa pro dobytek",
+          "popis": "Startuje hlasitě, přistává podle nálady a pojištění neřeší."
+        },
+        {
+          "nazev": "Lunární zvonec",
+          "popis": "Cinká v nízký gravitaci tak důstojně, až je to podezřelý."
+        },
+        {
+          "nazev": "Kosmická napáječka",
+          "popis": "Voda v koulích, ovce zmatený, věda spokojená."
+        },
+        {
+          "nazev": "Modulární salaš",
+          "popis": "Složíš na orbitě, pokud ti nechybí půlka šroubů a vůle žít."
+        },
+        {
+          "nazev": "Antigravitační ohrada",
+          "popis": "Udrží stádo tam, kde má být, kromě kusů s vlastním programem."
+        },
+        {
+          "nazev": "Meteoritickej liz",
+          "popis": "Minerály z vesmíru, chuť kamene, cena hysterie."
+        },
+        {
+          "nazev": "Solární střihačka",
+          "popis": "Funguje skvěle, dokud nezajde Slunce nebo rozum."
+        },
+        {
+          "nazev": "Skleník na měsíční trávu",
+          "popis": "Pěstuje trávu tam, kde tráva jasně řekla, že nechce bejt."
+        },
+        {
+          "nazev": "Beraní přistávací modul",
+          "popis": "Měkkej dopad není garantovanej, ale berani sou zvyklí hlavou napřed."
+        },
+        {
+          "nazev": "Navigační hvězda pro stádo",
+          "popis": "Ukazuje směr, ne smysl, to bys chtěl moc."
+        },
+        {
+          "nazev": "Vlněnej tepelnej štít",
+          "popis": "Absurdní, chlupatej, překvapivě účinnej, dokud nezačne hořet."
+        },
+        {
+          "nazev": "Kosmickej dojič",
+          "popis": "Dojí v mikrogravitaci, takže mlíko jde všude."
+        },
+        {
+          "nazev": "Kapsle pro jehňata",
+          "popis": "Malý bezpečný vejce pro malý nejistý investice."
+        },
+        {
+          "nazev": "Asteroidová pastvina",
+          "popis": "Málo trávy, hodně kovů, krásnej výhled na účetní zoufalství."
+        },
+        {
+          "nazev": "Gravitační kotva stáda",
+          "popis": "Aby ovce neodplavaly do marketingovýho oddělení."
+        },
+        {
+          "nazev": "Telemetrickej obojek",
+          "popis": "Hlásí polohu, tep a fakt, že zvíře zase nechápe vesmír."
+        },
+        {
+          "nazev": "Satelit na hledání ovcí",
+          "popis": "Najde zatoulaný kusy, požáry a tvoje špatný prostorový plánování."
+        },
+        {
+          "nazev": "Orbitální žlab",
+          "popis": "Krmivo krouží kolem planety, jako by to dávalo smysl."
+        }
+      ]
+    },
+    {
+      "nazev": "Dimenzionální artefakty a časoprostorovej bordel",
+      "polozky": [
+        {
+          "nazev": "Dveře do lepší pastviny",
+          "popis": "Většinou vedou na horší, ale s lepším osvětlením."
+        },
+        {
+          "nazev": "Kapsa s přídavným stádem",
+          "popis": "Strčíš tam dvě ovce, vytáhneš problém s evidencí."
+        },
+        {
+          "nazev": "Trhlina na ovčí zkratky",
+          "popis": "Zkracuje cestu mezi žlabem a katastrofou."
+        },
+        {
+          "nazev": "Nekonečnej pytel sena",
+          "popis": "Nekonečnej jenom do okamžiku, kdy ho začneš používat rozumně."
+        },
+        {
+          "nazev": "Paralelní beran",
+          "popis": "Z jiné reality, kde byl možná lepší. Tady je protivnej stejně."
+        },
+        {
+          "nazev": "Zrcadlová ovce",
+          "popis": "Vypadá jako kus navíc, chová se jako účetní chyba."
+        },
+        {
+          "nazev": "Dimenzionální loužička",
+          "popis": "Do jedné strany mokro, do druhé neznámý svět a plíseň."
+        },
+        {
+          "nazev": "Kompas do nesprávný reality",
+          "popis": "Spolehlivě ukazuje tam, kam ses neměl nikdy vydat."
+        },
+        {
+          "nazev": "Krabička alternativních rozhodnutí",
+          "popis": "Otevřeš a zjistíš, že jinde ses rozhodl ještě hůř."
+        },
+        {
+          "nazev": "Portálovej kůl do ohrady",
+          "popis": "Zatloukáš ho kladivem, realita se u toho tváří uraženě."
+        },
+        {
+          "nazev": "Pastva z budoucnosti",
+          "popis": "Tráva je výživná, ale ovce po ní začnou vzpomínat na zítřek."
+        },
+        {
+          "nazev": "Seno z reality, kde chutná líp",
+          "popis": "Zákazníkům se to neprokáže, ovcím je to jedno, obchod jede."
+        },
+        {
+          "nazev": "Duplikátor louky",
+          "popis": "Udělá druhou louku, ale taky druhou sadu problémů."
+        },
+        {
+          "nazev": "Trhlina pro odkládání mrtvol",
+          "popis": "Na dočasný úklid věcí, co se z dočasnýho stává podezřele trvalým."
+        },
+        {
+          "nazev": "Schrödingerovo jehně",
+          "popis": "Dokud nekoukneš, je živý, mrtvý a daňově zajímavý."
+        },
+        {
+          "nazev": "Ovce, která už existovala",
+          "popis": "Koupíš novou, ale ona má vzpomínky na tvůj bordel."
+        },
+        {
+          "nazev": "Skládací časoprostorovej chlívek",
+          "popis": "Zvenku malej, uvnitř větší, v katastru neexistuje."
+        },
+        {
+          "nazev": "Náhradní fyzikální zákon",
+          "popis": "Když gravitace, genetika nebo účetnictví začnou překážet."
+        },
+        {
+          "nazev": "Dimenzionální granule",
+          "popis": "Žerou se tady, tráví se jinde, uklízíš všude."
+        },
+        {
+          "nazev": "Okno do světa bez kontrol",
+          "popis": "Koukneš, zaslzíš, zavřeš a vrátíš se k realitě."
+        }
+      ]
+    },
+    {
+      "nazev": "Ekologický katastrofy na objednávku",
+      "polozky": [
+        {
+          "nazev": "Řízený přepasení krajiny",
+          "popis": "Když chceš z louky udělat učební pomůcku pro pojem 'holina'."
+        },
+        {
+          "nazev": "Balíček 'půda už není problém'",
+          "popis": "Protože půda prostě přestane bejt půdou."
+        },
+        {
+          "nazev": "Zrychlovač desertifikace",
+          "popis": "Poušť do týdne, když nerad čekáš na civilizační kolaps."
+        },
+        {
+          "nazev": "Kompostér kontinentů",
+          "popis": "Sežere organickej bordel v měřítku, který už není vtipný."
+        },
+        {
+          "nazev": "Bahenní expanzní sada",
+          "popis": "Rozšíří bahno tam, kde předtím byla naivní stabilita."
+        },
+        {
+          "nazev": "Mikroklimatickej rozvraceč",
+          "popis": "Změní počasí na lokální debilitu."
+        },
+        {
+          "nazev": "Srážkoměr s názorem",
+          "popis": "Měří déšť a soudí tě u toho."
+        },
+        {
+          "nazev": "Kyselý déšť v prášku",
+          "popis": "Rozpustíš ve vodě a zahrada pochopí chemii."
+        },
+        {
+          "nazev": "Invazní tráva Deluxe",
+          "popis": "Roste rychle, neumírá slušně a zabere i sousedovy výmluvy."
+        },
+        {
+          "nazev": "Přenosná eroze",
+          "popis": "Nasypeš na svah a čekáš, co se vodveze samo."
+        },
+        {
+          "nazev": "Lokální apokalypsa v kelímku",
+          "popis": "Malý balení pro začátečníky bez odpovědnosti."
+        },
+        {
+          "nazev": "Samomnožící mech",
+          "popis": "Nejdřív dekorace, potom infrastruktura, nakonec pán domu."
+        },
+        {
+          "nazev": "Kobylková simulace",
+          "popis": "Nejsou to kobylky, ale výsledek tě uklidní úplně stejně málo."
+        },
+        {
+          "nazev": "Skleníkový zvonec",
+          "popis": "Cinkneš a klima si dá další facku."
+        },
+        {
+          "nazev": "Biosférickej přetlakovač",
+          "popis": "Natlačí do systému víc života, než se do něj vejde."
+        },
+        {
+          "nazev": "Přetěžovač ekosystému",
+          "popis": "Pro farmáře, kterým rovnováha připadá málo výnosná."
+        },
+        {
+          "nazev": "Sada 'voda byla'",
+          "popis": "Vzpomínkový balíček pro bývalý mokřady."
+        },
+        {
+          "nazev": "Louka, co sežere okolí",
+          "popis": "Začne trávou, skončí plotem, sousedem a možná cestou."
+        },
+        {
+          "nazev": "Certifikát udržitelný zkázy",
+          "popis": "Papír hezkej, realita ožužlaná, všici spokojení kromě krajiny."
+        },
+        {
+          "nazev": "Ekologickej kouřostroj",
+          "popis": "Dělá atmosféru, doslova a bohužel."
+        }
+      ]
+    },
+    {
+      "nazev": "Automatizace, roboti a krámy, co tvrdí, že makají",
+      "polozky": [
+        {
+          "nazev": "Pastýřskej robot",
+          "popis": "Honí ovce, lidi i vlastní chybový hlášky."
+        },
+        {
+          "nazev": "Dron na počítání ovcí",
+          "popis": "Počítá přesně do chvíle, než ovce vleze pod strom nebo do dimenze."
+        },
+        {
+          "nazev": "Mechanickej pes bez svědomí",
+          "popis": "Štěká, běhá, neřeší, jestli ho stádo nenávidí."
+        },
+        {
+          "nazev": "Samostříhací rameno na kolečkách",
+          "popis": "Přijede, oškube, odjede, tváří se profesionálně."
+        },
+        {
+          "nazev": "Robotickej beran motivačního typu",
+          "popis": "Naráží do línějších kusů, někdy i do důvodů."
+        },
+        {
+          "nazev": "Sběrač vlny",
+          "popis": "Sežere chomáče ze země a vyplivne něco, co nazývá balík."
+        },
+        {
+          "nazev": "Sklízecí dron na seno",
+          "popis": "Lítá nízko, řeže rychle, sousedovy nervy taky."
+        },
+        {
+          "nazev": "Hlídací věž s algoritmem",
+          "popis": "Vyhodnotí hrozbu, i když žádná není, aby se nenudila."
+        },
+        {
+          "nazev": "Robotická napáječka",
+          "popis": "Dává vodu a pasivně agresivní pípnutí při každým odběru."
+        },
+        {
+          "nazev": "Skladník s klepety",
+          "popis": "Přenáší pytle, rozbíjí rohy, efektivita diskutabilní."
+        },
+        {
+          "nazev": "Bečící chatbot pro ovce",
+          "popis": "Komunikuje se stádem na úrovni, kterou si zaslouží."
+        },
+        {
+          "nazev": "Kalkulátor výhodnosti porážky",
+          "popis": "Zabije romantiku tabulkou, konečně užitečná matematika."
+        },
+        {
+          "nazev": "Autonomní dojič",
+          "popis": "Dojí sám, bloudí sám, někdy dojí úplně něco jinýho."
+        },
+        {
+          "nazev": "Dron s reproduktorem 'běž tam'",
+          "popis": "Neřeší argumenty, prostě řve směrový příkazy."
+        },
+        {
+          "nazev": "Opravář ohrad",
+          "popis": "Přijede, přivaří, zasekne se v blátě, standardní servis."
+        },
+        {
+          "nazev": "Robotická chůva pro jehňata",
+          "popis": "Hlídá mláďata a učí je nedůvěře k technice."
+        },
+        {
+          "nazev": "Třídicí pás na zvířata",
+          "popis": "Rozdělí kusy podle věku, výkonu a stupně podezřelosti."
+        },
+        {
+          "nazev": "AI pro smutný farmáře",
+          "popis": "Řekne ti, že to máš dobře, zatímco farma hoří."
+        },
+        {
+          "nazev": "Pastvinovej autopilot",
+          "popis": "Řídí přesuny stáda, když už nechceš předstírat, že to zvládáš."
+        },
+        {
+          "nazev": "Stroj, co tvrdí, že pracuje",
+          "popis": "Nejrealističtější automatizace, jakou sem kdy prodával."
+        }
+      ]
+    },
+    {
+      "nazev": "Časový manipulace a urychlování průseru",
+      "polozky": [
+        {
+          "nazev": "Hodiny rychlejšího růstu",
+          "popis": "Jehně vyroste dřív, než stihneš litovat nákupu."
+        },
+        {
+          "nazev": "Písek předčasnýho stáří",
+          "popis": "Nasypeš a zvíře přeskočí nudnou část života rovnou do výnosovýho rozhodování."
+        },
+        {
+          "nazev": "Jehněcí urychlovač",
+          "popis": "Zkracuje dětství, což je ekonomicky elegantní a lidsky hnusný."
+        },
+        {
+          "nazev": "Mléčnej časovač",
+          "popis": "Posouvá produkční okna podle toho, co se zrovna hodí tobě, ne biologii."
+        },
+        {
+          "nazev": "Střižná smyčka",
+          "popis": "Vrací ovci do okamžiku před ostříháním, aspoň teoreticky a za cenu migrény."
+        },
+        {
+          "nazev": "Chronometr páření",
+          "popis": "Slaďuje romantiku na minuty, protože nic neříká láska jako rozvrh."
+        },
+        {
+          "nazev": "Kapsle zítřejší vlny",
+          "popis": "Vytáhne budoucí rouno dneska a budoucnost pak ať si poradí."
+        },
+        {
+          "nazev": "Zpomalovač smrti",
+          "popis": "Nezachrání kus, jen protáhne účetní užitečnost a trapný pohledy."
+        },
+        {
+          "nazev": "Zrychlovač hniloby",
+          "popis": "Pro kompost, maso nebo plány, který už nemají cenu zachraňovat."
+        },
+        {
+          "nazev": "Včerejší seno",
+          "popis": "Je čerstvý, protože včera ještě bylo zítra."
+        },
+        {
+          "nazev": "Budíček pro evoluci",
+          "popis": "Zazvoní a geny si začnou panicky hledat práci."
+        },
+        {
+          "nazev": "Minutka reprodukčního optimismu",
+          "popis": "Nastavíš, cinkne, a farma začne bejt početnější než rozumná."
+        },
+        {
+          "nazev": "Stárnoucí přikrývka",
+          "popis": "Přikryješ ovci a ráno má výraz, že už všechno ví."
+        },
+        {
+          "nazev": "Mladicí deka",
+          "popis": "Na starý kusy, co se mají ještě tvářit užitečně."
+        },
+        {
+          "nazev": "Časovej obojek",
+          "popis": "Drží zvíře v produktivním věku, dokud nezačne pískat realita."
+        },
+        {
+          "nazev": "Kalendář s vymazaným dubnem",
+          "popis": "Pro sezóny, který se nepovedly a neměly by být v záznamech."
+        },
+        {
+          "nazev": "Hodinky pro líný berany",
+          "popis": "Ukážou jim, že čas běží. Nepomůže to, ale urazí je to."
+        },
+        {
+          "nazev": "Fermentační zkratka",
+          "popis": "Sýr dozraje za hodinu a bude chutnat jako rozhodnutí bez dozoru."
+        },
+        {
+          "nazev": "Časoprostorová žvýkačka",
+          "popis": "Žvýká čas kolem stáda, lepkavý to je všude."
+        },
+        {
+          "nazev": "Poločasovej budík",
+          "popis": "Cinkne přesně ve chvíli, kdy se něco začne rozpadat. Velmi často."
+        }
+      ]
+    },
+    {
+      "nazev": "Obrana stáda a bezpečnostní buzerace",
+      "polozky": [
+        {
+          "nazev": "Elektrická ohrada 'slušně to kopne'",
+          "popis": "Vhodná pro vlky, zloděje a zákazníky, co sahají na zboží."
+        },
+        {
+          "nazev": "Beraní pancíř",
+          "popis": "Udělá z tupýho nárazu strategickou událost."
+        },
+        {
+          "nazev": "Hlídací koza",
+          "popis": "Není to pes, ale má výraz, že tě žaluje."
+        },
+        {
+          "nazev": "Paznehtový miny",
+          "popis": "Nezabíjí, jen vysvětlujou, že tudy cesta nevede."
+        },
+        {
+          "nazev": "Dýmovnice z ovčího loje",
+          "popis": "Zakouří výběh smradlavou mlhou a morálním úpadkem."
+        },
+        {
+          "nazev": "Zvonec poplachu",
+          "popis": "Řve jak rozbitej router v noci, ale stádo se aspoň tváří aktivně."
+        },
+        {
+          "nazev": "Vlčí odpuzovač na baterky",
+          "popis": "Píská tak protivně, že vodradí i některý lidi."
+        },
+        {
+          "nazev": "Automatická praková věž",
+          "popis": "Míří přibližně, argumentuje přesvědčivě."
+        },
+        {
+          "nazev": "Plotový analyzátor keců",
+          "popis": "Pozná, když se někdo vymlouvá, že 'jenom prochází'."
+        },
+        {
+          "nazev": "Maskovací rouno",
+          "popis": "Ovce splyne s krajinou, pokud krajina vypadá jak špinavej polštář."
+        },
+        {
+          "nazev": "Protipovodňovej beran",
+          "popis": "Nedává smysl, ale zní tak silně, že se prodává."
+        },
+        {
+          "nazev": "Hlídací dron s klaksonem",
+          "popis": "Lítá a troubí na všechno, co se hejbe nebo vypadá vinně."
+        },
+        {
+          "nazev": "Sprej proti liškám",
+          "popis": "Smrdí tak, že možná utečeš i ty."
+        },
+        {
+          "nazev": "Noční alarm na černou vlnu",
+          "popis": "Když někdo šáhne na zásoby, začne řvát jak uraženej úředník."
+        },
+        {
+          "nazev": "Pancéřovej žlab",
+          "popis": "Pro farmáře, kterým už někdo ukradl i krmení, což je úroveň."
+        },
+        {
+          "nazev": "Stádní siréna",
+          "popis": "Zvuk jak konec směny v pekle, ovce ji milujou asi nikdy."
+        },
+        {
+          "nazev": "Detektor podezřelýho šustění",
+          "popis": "Zachytí predátora, zloděje i listí, takže budeš vzhůru furt."
+        },
+        {
+          "nazev": "Ochranná svorka na bránu",
+          "popis": "Jednoduchý kovový 'ne', pro lidi co nerozumí cedulím."
+        },
+        {
+          "nazev": "Odpuzovač inspektorů",
+          "popis": "Formálně dekorace, prakticky zvonek s nápisem 'pes volně'."
+        },
+        {
+          "nazev": "Bojovej zvon berana",
+          "popis": "Dá stádu pocit války, i když jde jenom o sousedovu kočku."
+        }
+      ]
+    },
+    {
+      "nazev": "Administrativa, papíry a certifikáty skoro-legality",
+      "polozky": [
+        {
+          "nazev": "Certifikát 'volnej chov'",
+          "popis": "Vypadá zeleně, voní tiskárnou, realitu radši neřeš."
+        },
+        {
+          "nazev": "Rodokmen na přání",
+          "popis": "Doplní předky, úspěchy a ticho tam, kde byly nehody."
+        },
+        {
+          "nazev": "Etiketa 'farmářská kvalita'",
+          "popis": "Nalepíš a zákazník se přestane ptát, dokud je font dost rustikální."
+        },
+        {
+          "nazev": "Povolení k podezřelý pastvě",
+          "popis": "Papír s razítkem, razítko s autoritou, autorita s dírou."
+        },
+        {
+          "nazev": "Falešně poctivej dodací list",
+          "popis": "Vypadá tak nudně, že ho nikdo nechce číst. Ideální."
+        },
+        {
+          "nazev": "Evidence kusů pro líný",
+          "popis": "Tabulka, kde se ovce samy tváří spočítaně."
+        },
+        {
+          "nazev": "Razítko 'kontrolováno'",
+          "popis": "Kým? To je přesně ta otázka, kterou nesnáším."
+        },
+        {
+          "nazev": "Sada alibi pro noční nákupy",
+          "popis": "Obsahuje tři vysvětlení, dvě účtenky a jeden pohled do prázdna."
+        },
+        {
+          "nazev": "Formulář 'nešlo jinak'",
+          "popis": "Univerzální papír pro následky rozhodnutí, kerý šly úplně jinak."
+        },
+        {
+          "nazev": "Zelená nálepka udržitelnosti",
+          "popis": "Když je něco zelený, lidi se uklidní. Primitivní, ale funguje."
+        },
+        {
+          "nazev": "Inspekční složka plná vaty",
+          "popis": "Čím víc stran, tím míň chuti cokoliv najít."
+        },
+        {
+          "nazev": "Příbalovej leták na nebezpečí",
+          "popis": "Malý písmo, velký následky, právně uklidňující."
+        },
+        {
+          "nazev": "Behemotův účetní lístek",
+          "popis": "Něco jako faktura, akorát s náladou a bez zbytečný důvěry."
+        },
+        {
+          "nazev": "Záznam o krmení zpětně",
+          "popis": "Doplní minulost do podoby, kterou snese kontrola."
+        },
+        {
+          "nazev": "Pastvinová licence",
+          "popis": "Opravňuje tě tvářit se, že to nebyla divočina."
+        },
+        {
+          "nazev": "Vývozní papír pro živý zboží",
+          "popis": "Pro případy, kdy ovce opouští realitu, okres nebo obojí."
+        },
+        {
+          "nazev": "Protokol o nehodě",
+          "popis": "Předvyplněnej, protože nehoda na týhle farmě není otázka jestli, ale kdy."
+        },
+        {
+          "nazev": "Cedule 'vstup na vlastní nebezpečí'",
+          "popis": "Krásně pasivně agresivní ochrana před blbcema."
+        },
+        {
+          "nazev": "Smlouva o mlčení se stádem",
+          "popis": "Ovce ji podepíšou paznehtem, čili právně stejně dobrý jak půlka světa."
+        },
+        {
+          "nazev": "Certifikát Behemotova původu",
+          "popis": "Garantuje, že věc prošla přes moje ruce. Což není uklidňující, ale je to fakt."
+        }
+      ]
+    },
+    {
+      "nazev": "Luxus, dekorace a zbytečnosti pro ovce s egem",
+      "polozky": [
+        {
+          "nazev": "Zlatej zvonec",
+          "popis": "Cinká stejně jak levnej, ale majitel se cítí míň chudě."
+        },
+        {
+          "nazev": "Sametová deka pro plemenný kusy",
+          "popis": "Ovce nepozná rozdíl, soused jo, což je hlavní."
+        },
+        {
+          "nazev": "Koruna alfa berana",
+          "popis": "Nasadíš kusu na hlavu a on stejně narazí do brány."
+        },
+        {
+          "nazev": "Rounovej parfém",
+          "popis": "Překryje ovčí realitu něčím, co připomíná drahej šampon a lež."
+        },
+        {
+          "nazev": "Pozlacená napáječka",
+          "popis": "Voda chutná stejně, ego líp."
+        },
+        {
+          "nazev": "Dekorativní bahno",
+          "popis": "Ručně vybraná špína pro prémiový výběhy."
+        },
+        {
+          "nazev": "Ovčí portrét na zakázku",
+          "popis": "Namaluje kus tak, že vypadá chytřejší než skutečnost."
+        },
+        {
+          "nazev": "Stádní vlajka",
+          "popis": "Aby i hromada chlupů měla národní otázku."
+        },
+        {
+          "nazev": "Pastýřskej trůn",
+          "popis": "Sedíš vysoko a blbě, ale velíš působivě."
+        },
+        {
+          "nazev": "Křišťálovej liz",
+          "popis": "Minerál pro ovce, co mají žrát a přitom vypadat jako šlechta."
+        },
+        {
+          "nazev": "Roh s rytinou",
+          "popis": "Na berana, co potřebuje osobní značku a možná terapeuta."
+        },
+        {
+          "nazev": "Vlněnej koberec pro vlnu",
+          "popis": "Ovce stojí na vlastním produktu. Symbolika jak cihla."
+        },
+        {
+          "nazev": "Prémiovej žlab z tmavýho dřeva",
+          "popis": "Dřevo drahý, granule stejný, pocit luxusu funguje."
+        },
+        {
+          "nazev": "Stájovej lustr",
+          "popis": "Když už máš bordel, ať je nasvícenej."
+        },
+        {
+          "nazev": "Pozlacený číslo do ucha",
+          "popis": "Evidence, ale udělaná zbytečně noblesně."
+        },
+        {
+          "nazev": "Dekorační srp měsíce",
+          "popis": "Pověsíš nad chlívek a všichni předstírají mystiku."
+        },
+        {
+          "nazev": "Sametovej náhubek",
+          "popis": "Nezabrání bečení, ale bečení pak vypadá dražší."
+        },
+        {
+          "nazev": "Pastvinovej kobereček",
+          "popis": "Aby ovce měly kam šlapat, když jim vadí příroda."
+        },
+        {
+          "nazev": "Rituální zrcadlo pro berany",
+          "popis": "Beran se vidí a okamžitě chce bojovat s vlastním názorem."
+        },
+        {
+          "nazev": "Luxusní cedule 'nekrmit'",
+          "popis": "Nikdo ju nebude respektovat, ale aspoň vypadá draze."
+        }
+      ]
+    },
+    {
+      "nazev": "Zdroje, suroviny a krámy na směnu",
+      "polozky": [
+        {
+          "nazev": "Balík špinavý vlny",
+          "popis": "Základní měna civilizace, kerá to vzdala."
+        },
+        {
+          "nazev": "Kostní moučka",
+          "popis": "Recyklace, výživa, nepříjemný ticho u stolu."
+        },
+        {
+          "nazev": "Lanolinovej maz",
+          "popis": "Klouže, lepí, opraví všechno kromě charakteru."
+        },
+        {
+          "nazev": "Sušenej hnůj",
+          "popis": "Palivo, hnojivo a argument proti civilizaci v jednom."
+        },
+        {
+          "nazev": "Kýbl bahna premium",
+          "popis": "Na rituály, stavebnictví a maskování účetních chyb."
+        },
+        {
+          "nazev": "Ovčí tuk",
+          "popis": "Svíčky, masti, mechanika, všecko bude smrdět stejně."
+        },
+        {
+          "nazev": "Starý rohy",
+          "popis": "Materiál pro výzdobu, nástroje nebo výhružný suvenýry."
+        },
+        {
+          "nazev": "Paznehtový odřezky",
+          "popis": "Použitelný v alchymii, řemesle a ve věcech, o kterých nemluv nahlas."
+        },
+        {
+          "nazev": "Vysušená krev",
+          "popis": "Hnojivo pro rostliny, co už viděly horší věci."
+        },
+        {
+          "nazev": "Pytel kostí",
+          "popis": "Surovina, dekorace, nebo zvukovej efekt při nešikovným pádu."
+        },
+        {
+          "nazev": "Mléčnej kámen",
+          "popis": "Ztvrdlej zbytek produkce, voní jako chyba ve sklepě."
+        },
+        {
+          "nazev": "Seno druhý jakosti",
+          "popis": "První jakost je pro bohatý a ovce nemají odbory."
+        },
+        {
+          "nazev": "Popel ze starý salaše",
+          "popis": "Stavební přísada, rituální prach a drobná připomínka požární bezpečnosti."
+        },
+        {
+          "nazev": "Rezavý drát",
+          "popis": "Opraví plot nebo způsobí příběh, podle šikovnosti."
+        },
+        {
+          "nazev": "Zbytky starý ohrady",
+          "popis": "Dřevo, hřebíky, třísky a nostalgie po době, kdy držela."
+        },
+        {
+          "nazev": "Sudy dešťovky",
+          "popis": "Voda s příchutí střechy, listí a nepatrnýho zoufalství."
+        },
+        {
+          "nazev": "Pytel soli",
+          "popis": "Na liz, konzervaci a symbolický sypání do ran."
+        },
+        {
+          "nazev": "Kus meteoritu",
+          "popis": "Kov z nebe, cena ze země vycucaná."
+        },
+        {
+          "nazev": "Bedna starý elektroniky",
+          "popis": "Polovina nefunguje, druhá funguje hůř, ale díly sou díly."
+        },
+        {
+          "nazev": "Sud neidentifikovaný kapaliny",
+          "popis": "Voní jako příležitost a pojišťovací výluka."
+        }
+      ]
+    },
+    {
+      "nazev": "Černotržní služby a pochybnej servis",
+      "polozky": [
+        {
+          "nazev": "Noční přesun stáda",
+          "popis": "Ráno je stádo jinde a nikdo si není jistej, jestli legálně."
+        },
+        {
+          "nazev": "Tichá kastrace bez keců",
+          "popis": "Rychlá služba pro kusy, co už přispěly dost."
+        },
+        {
+          "nazev": "Přepsání původu ovce",
+          "popis": "Z lokální chlupatý hrůzy udělá importní plemeno na papíře."
+        },
+        {
+          "nazev": "Likvidace nepovedený mutace",
+          "popis": "Diskrétní, efektivní, bez poetických řečí kolem."
+        },
+        {
+          "nazev": "Dovoz zboží bez zbytečnejch dotazů",
+          "popis": "Přivezu, složím, nevezmu kredity a nechci slyšet moralizování."
+        },
+        {
+          "nazev": "Rychlá dezinfekce reality",
+          "popis": "Po experimentu zůstane místo, co aspoň nevypadá jako důkaz."
+        },
+        {
+          "nazev": "Falešná kontrola kvality",
+          "popis": "Někdo přijde, kývne, něco zapíše a všem je líp."
+        },
+        {
+          "nazev": "Výcvik agresivního berana",
+          "popis": "Naučí se útočit cílenějc. Na koho, to je dražší tarif."
+        },
+        {
+          "nazev": "Odvoz přebytečný biomasy",
+          "popis": "Přijedem večer, ráno je čisto a otázky sou nevkusný."
+        },
+        {
+          "nazev": "Servis genetickýho bordelu",
+          "popis": "Pro případy, kdy zvíře získalo vlastnosti, kerý si systém neumí zobrazit."
+        },
+        {
+          "nazev": "Tajný očkování",
+          "popis": "Proti nemocem, nudě a někdy i zdravýmu rozumu."
+        },
+        {
+          "nazev": "Zrychlený rozmnožovací poradenství",
+          "popis": "Řeknu ti, kerý kusy dát k sobě, a pak se tomu budem společně divit."
+        },
+        {
+          "nazev": "Přesměrování inspekce",
+          "popis": "Nezaručuju, že nepřijde. Zaručuju, že půjde pomalejc a jinam."
+        },
+        {
+          "nazev": "Oprava ohrady po vlkovi",
+          "popis": "Vlk není v ceně, historka je zdarma."
+        },
+        {
+          "nazev": "Tichý export masa",
+          "popis": "Produkt odejde, papíry doženou realitu v lepším vesmíru."
+        },
+        {
+          "nazev": "Nastavení tajnýho skladu",
+          "popis": "Najdem místo, kam ani ty nebudeš chtít chodit, což je bezpečný."
+        },
+        {
+          "nazev": "Ladění ovčí nálady",
+          "popis": "Feromony, světlo, zvuky a pár neetickejch triků."
+        },
+        {
+          "nazev": "Audit produktivity stáda",
+          "popis": "Řeknu ti, kerý kusy žerou zadarmo. Nebude se ti to líbit."
+        },
+        {
+          "nazev": "Nouzovej odchyt z dimenze",
+          "popis": "Když se ovce vrátí špatně poskládaná, cena se násobí."
+        },
+        {
+          "nazev": "Behemotův diskrétní balíček",
+          "popis": "Nevím, cos koupil, ty nevíš, co dostaneš. Krásná obchodní rovnováha."
+        }
+      ]
+    },
+    {
+      "nazev": "Záhadný bedny, losy a náhodnej šrot",
+      "polozky": [
+        {
+          "nazev": "Malá bedna krámů",
+          "popis": "Levná, těžká a plná věcí, kerý se mi nechtělo třídit."
+        },
+        {
+          "nazev": "Velká bedna genetický nejistoty",
+          "popis": "Obsahuje nástroj, vzorek nebo důvod volat Behemota znova."
+        },
+        {
+          "nazev": "Radioaktivní mystery box",
+          "popis": "Poznáš ho podle toho, že nechceš poznat obsah rukama."
+        },
+        {
+          "nazev": "Bedna po armádě",
+          "popis": "Zelená, těžká, smrdí skladem a autoritou."
+        },
+        {
+          "nazev": "Balík 'farmář začátečník'",
+          "popis": "Seno, provaz, nůžky a první drobný bezpečnostní selhání."
+        },
+        {
+          "nazev": "Balík 'farmář už to vzdal'",
+          "popis": "Silnější nůžky, větší kýbl a formulář nešlo jinak."
+        },
+        {
+          "nazev": "Bedna vesmírnýho šrotu",
+          "popis": "Kabely, pláty, cosi pípá, pravděpodobně to není bomba. Pravděpodobně."
+        },
+        {
+          "nazev": "Dimenzionální lootbox",
+          "popis": "Otevřeš a buď něco získáš, nebo něco získá tebe."
+        },
+        {
+          "nazev": "Sýrovej balík překvapení",
+          "popis": "Něco zraje, něco uteklo, něco se dívá."
+        },
+        {
+          "nazev": "Balíček pro agresivní šlechtitele",
+          "popis": "Hodně nástrojů, málo brzd, přesně tvoje chyba."
+        },
+        {
+          "nazev": "Bedna 'neprošlo kontrolou'",
+          "popis": "Proto je levná. A zajímavá. A možná trestná."
+        },
+        {
+          "nazev": "Pytel přebytečnejch implantátů",
+          "popis": "Každej kus je na něco, některý aj do ovce."
+        },
+        {
+          "nazev": "Kufr obchodního zoufalství",
+          "popis": "Směs ležáků, vadnejch věcí a jednoho skutečnýho pokladu. Možná."
+        },
+        {
+          "nazev": "Sud náhodný kapaliny",
+          "popis": "Může to bejt hnojivo, palivo nebo předžalobní výzva."
+        },
+        {
+          "nazev": "Bedna 'po vědcích'",
+          "popis": "Plná popisků, které vypadají chytře a nic neuklidňujou."
+        },
+        {
+          "nazev": "Balíček černý ovce",
+          "popis": "Tematicky laděnej bordel pro kusy, co se nehodí do stáda ani systému."
+        },
+        {
+          "nazev": "Krabička nouzový produktivity",
+          "popis": "Otevři, když výnos padá a rozum už taky."
+        },
+        {
+          "nazev": "Plechovka poslední šance",
+          "popis": "Návod chybí, víčko drží, cena nízká, nervy vysoký."
+        },
+        {
+          "nazev": "Behemotův slepej výběr",
+          "popis": "Já vyberu, ty zaplatíš surovinama, vesmír se směje."
+        },
+        {
+          "nazev": "Bedna 'tohle sem tu neměl nechávat'",
+          "popis": "Nejdražší mystery box, protože i já mám občas pocit ohrožení."
+        }
+      ]
+    }
+  ]
+}
