@@ -114,7 +114,7 @@ async function loadOpenPulls() {
 }
 
 function listPreviewBranches() {
-  const out = git(['ls-remote', '--heads', PREVIEW_REMOTE, 'playtest/*', 'preview/*']);
+  const out = git(['ls-remote', '--heads', PREVIEW_REMOTE]);
   return out.split('\n').filter(Boolean).map(line => {
     const [sha, ref] = line.split(/\s+/);
     return { sha, name: ref.replace(/^refs\/heads\//, '') };
