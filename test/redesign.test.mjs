@@ -2,7 +2,7 @@
 // musí být přes podřetězec, ne přesná shoda. Dřív tu bylo === 'Ovce', což se
 // kvůli emoji nikdy netrefilo → počet ovcí se četl jako NaN a louka oveček na
 // pozadí zůstala navždy prázdná.
-import { flockSheepScale, isSheepChipLabel, maleDisplayCount } from '../src/redesign.js';
+import { flockSheepScale, flockTarget, isSheepChipLabel, maleDisplayCount } from '../src/redesign.js';
 import { ICONS } from '../src/icons.js';
 
 let pass = 0, fail = 0;
@@ -29,6 +29,13 @@ check('nenulové samice v menšině → aspoň 1 bílá', maleDisplayCount(1000,
 check('jediná zobrazená ovce ukáže většinu (samci)', maleDisplayCount(1, 8, 2) === 1);
 check('jediná zobrazená ovce ukáže většinu (samice)', maleDisplayCount(1, 2, 8) === 0);
 check('prázdná louka → 0', maleDisplayCount(0, 5, 5) === 0);
+
+// #54 (follow-up): počet oveček na louce sleduje aktuální populaci oběma směry.
+check('počet sleduje malou populaci (8 → 8)', flockTarget(8) === 8);
+check('zaokrouhluje dolů (8,9 → 8)', flockTarget(8.9) === 8);
+check('strop zobrazení (5000 → 1000)', flockTarget(5000) === 1000);
+check('vlastní strop (200, cap 100 → 100)', flockTarget(200, 100) === 100);
+check('nulová/neplatná populace → 0', flockTarget(0) === 0 && flockTarget(NaN) === 0 && flockTarget(-3) === 0);
 
 console.log(`redesign: ${pass} ok, ${fail} fail`);
 process.exit(fail ? 1 : 0);

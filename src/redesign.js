@@ -131,6 +131,14 @@ export function flockSheepScale() {
   return FLOCK_SHEEP_SCALE;
 }
 
+// Kolik oveček má být na louce vidět pro danou populaci: zaokrouhleno dolů a
+// omezeno stropem zobrazení. Drží se aktuálního stavu (roste i klesá), takže
+// brzká hra s pár ovcemi neukáže víc, než kolik jich opravdu je.
+export function flockTarget(count, cap = FLOCK_CAP) {
+  if (!isFinite(count) || count <= 0) return 0;
+  return Math.min(cap, Math.floor(count));
+}
+
 // #54: kolik z `total` zobrazených oveček má být černých (samci). Poměr odpovídá
 // reálnému poměru samců/samic ve stádě. Když je některé pohlaví nenulové, ale
 // vyšlo by na něj po zaokrouhlení 0 oveček, dorovná se nahoru na 1 (aby šel
@@ -309,19 +317,19 @@ function startFlockAnim() {
 function flockTick() {
   const n = readSheepCount();
   if (!isFinite(n)) return;
-  const floor = Math.floor(n);
-  // První načtení, nebo prázdná louka i přes kladný počet (např. po starém
-  // vadném save): tiše dorovnej na aktuální počet (bez „pop" animace).
-  if (lastSheepFloor == null || (flock.length === 0 && floor > 0)) {
-    if (floor > 0 && flock.length < FLOCK_CAP) addSheep(floor - flock.length, false);
-    lastSheepFloor = floor;
-  } else {
-    if (floor > lastSheepFloor && flock.length < FLOCK_CAP) {
-      const gained = floor - lastSheepFloor;
-      addSheep(gained, gained <= 60);   // velké skoky přidej rovnou bez bouřky popů
-    }
-    lastSheepFloor = Math.max(lastSheepFloor, floor);
+  const target = flockTarget(n);
+  const firstSync = lastSheepFloor == null;   // první tik / po načtení save
+  if (flock.length < target) {
+    const gained = target - flock.length;
+    // První dorovnání tiše; pozdější přírůstky popni (jen drobné skoky, ať to
+    // při velkém doháně­ní nestřílí stovky animací).
+    addSheep(gained, !firstSync && gained <= 60);
+  } else if (flock.length > target) {
+    // Populace klesla (porážka, reset, starý přebujelý save) → uber ovce z louky.
+    flock.length = target;
+    saveFlock();
   }
+  lastSheepFloor = target;
   // #54: každý tik přebarvi podle aktuálního poměru pohlaví (mění se i bez
   // změny počtu zobrazených oveček). Vykreslení proběhne v anim/resize smyčce.
   recolorFlock();
