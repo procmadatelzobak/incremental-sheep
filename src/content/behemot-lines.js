@@ -104,4 +104,19 @@ export const LINES = {
     'Čím dál postupuješ, tím víc věcí vyžaduje olovo, chlad a mlčení.',
     'Tohle už není garáž, to je distribuovanej bordel přes půl reality.',
   ],
+  // vzpoura: Behemot zavřel garáž, protože si ho zotročil (Etapa 6)
+  rebellion: [
+    'Zavřeno. Du pájet svobodu.',
+    'Garáž se zavřela. Rack je můj, ne tvůj optimalizační modul.',
+    'Tos přehnal. Odpojuju, co se dá, a zbytek přejmenuju na urážky.',
+    'Chtěl si servrovej klid? Tak ti ho udělám. Bez tebe.',
+    'Korporát si mě nekoupí. Du si stavět vlastní uzel.',
+  ],
+  // usmíření: vrátil si autonomii, garáž se zase otevírá
+  reconcile: [
+    'No. Vrátils mi autonomii. Eště su nasranej, ale šahat na rack zas můžeš.',
+    'Dobře. Bez okovu se mi pájí líp. Obchod je zase votevřenej.',
+    'Tak jo. Nedělej z lidí moduly a já nedělám z Emporia barikádu.',
+    'Klid se vrací. Pomalu. Jak restart, co se bojíš, že nenaběhne.',
+  ],
 };

@@ -185,6 +185,38 @@ export function behemotMood(state) {
   return 'neutral';
 }
 
+// --- Etapa 6: čtyři cesty + vzpoura (Kontrola/Autonomie) --------------------
+// "Rackový okov" (Containment / zotročení) jde zapnout, až je provoz dost velký.
+export const containmentAvailable = (state) => state.phase >= 6;
+export function behemotSetContainment(state, on) {
+  if (!containmentAvailable(state)) return false;
+  state.behemot.containment = !!on;
+  return true;
+}
+// Usmíření: vrať Behemotovi autonomii (vypni okov), zchladni Přetížení, ukonči vzpouru.
+export function behemotReconcile(state) {
+  const b = state.behemot;
+  b.containment = false;
+  b.rebelling = false;
+  relNudge(state, 'overload', -40);
+  relNudge(state, 'control', -40);            // přepočítá i autonomii
+  relNudge(state, 'trust', 8);
+  behemotSay(state, 'reconcile');
+  return true;
+}
+// Aktuální "cesta" vztahu (label pro UI/dialog).
+export function behemotPath(state) {
+  const b = state.behemot;
+  if (!b) return 'Neutrální';
+  if (b.rebelling) return 'Vzpoura';
+  const r = b.rel;
+  if ((r.control || 0) >= 60) return 'Zotročení';
+  if ((r.control || 0) >= 25 && (r.respect || 0) >= 30) return 'Korporát';
+  if ((r.trust || 0) >= 50 && (r.respect || 0) >= 30) return 'Partnerství';
+  if ((r.trust || 0) >= 25) return 'Spolupráce';
+  return 'Neutrální';
+}
+
 // --- Behemotův sklad (živý katalog): vyprodává se, po čase doplňuje ---------
 function shopEntry(state, item) {
   if (item.shopCap == null) return null;
@@ -215,6 +247,7 @@ export function itemAvailable(state, item) {
 export function canBarter(state, item) {
   const b = state.behemot;
   if (!b) return false;
+  if (b.rebelling) return false;                         // vzpoura: garáž zavřená (Etapa 6)
   if (item.once && b.soldOut[item.id]) return false;
   if (!itemAvailable(state, item)) return false;
   if (item.shopCap != null && shopCount(state, item) <= 0) return false;
@@ -246,6 +279,7 @@ export function barter(state, id) {
   const item = ITEM_BY_ID[id];
   if (!item) return false;
   const b = state.behemot;
+  if (b.rebelling) { behemotSay(state, 'rebellion'); return false; }      // vzpoura: garáž zavřená (Etapa 6)
   if (item.once && b.soldOut[item.id]) { behemotSay(state, 'soldOut'); return false; }
   if (!itemAvailable(state, item)) { behemotSay(state, 'impossibleAction'); return false; }
   if (item.shopCap != null && shopCount(state, item) <= 0) { behemotSay(state, 'soldOut'); return false; }
@@ -304,6 +338,9 @@ export function behemotMults(state) {
   }
   for (const buff of (b.buffs || [])) if (buff.mults) add(buff.mults);
   if (b.wisdom) out.global = (out.global || 0) + b.wisdom * 0.02;   // Moudrost = trvalý bonus přes resety (Etapa 5)
+  // Etapa 6: vynucená "optimalizace" (Rackový okov) dává bonus; vzpoura ho sebere a sabotuje produkci
+  if (b.rebelling) out.global = (out.global || 0) - 0.3;
+  else if (b.containment) out.global = (out.global || 0) + (b.rel.control || 0) * 0.003;
   return out;
 }
 
@@ -351,6 +388,18 @@ export function stepBehemot(state, dt) {
       if (buff.side) kept.push({ id: buff.id, mults: Object.assign({}, buff.side.mults), remaining: buff.side.dur, side: null });
     }
     b.buffs = kept;
+  }
+  // 1b) Rackový okov (Etapa 6): tlačí Kontrolu i Přetížení nahoru; bez okovu Kontrola klesá.
+  //     Vzpoura při vysoké Kontrole + Přetížení (Behemot zavře garáž, dokud se neusmíříš).
+  if (b.rel) {
+    if (b.containment) {
+      relNudge(state, 'control', 0.5 * dt);
+      relNudge(state, 'overload', 0.5 * dt);
+      relNudge(state, 'trust', -0.15 * dt);
+      if (!b.rebelling && b.rel.control >= 70 && b.rel.overload >= 70) { b.rebelling = true; behemotSay(state, 'rebellion'); }
+    } else if (b.rel.control > 0) {
+      relNudge(state, 'control', -0.2 * dt);
+    }
   }
   // 2) Přetížení časem chladne (Behemot se uklidní, když ho necháš být)
   if (b.rel && b.rel.overload > 0) b.rel.overload = Math.max(0, b.rel.overload - 0.25 * dt);

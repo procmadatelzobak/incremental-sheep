@@ -9,6 +9,7 @@ import {
   behemotSay, shopCount, restockEta,
   relPriceMult, barterCost, behemotMood, behemotSpam,
   emporioStage, emporioStageIndex, behemotPrestige,
+  containmentAvailable, behemotSetContainment, behemotReconcile, behemotPath,
 } from '../src/content/behemot.js';
 import { TRADEABLE } from '../src/econ/storage.js';
 
@@ -263,6 +264,42 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   const s = newGame(); s.behemot.wisdom = 5;
   check('Moudrost v behemotMults.global', (behemotMults(s).global || 0) > 0);
   check('Moudrost zvedne produkci', getMults(s).woolMult > base);
+}
+
+// 20) Etapa 6: okov → Kontrola/Přetížení rostou, vzpoura zamkne Emporio, usmíření ji ukončí
+{
+  const s = newGame(); s.phase = 6;
+  check('okov jde zapnout od fáze 6', behemotSetContainment(s, true) === true && s.behemot.containment);
+  const c0 = s.behemot.rel.control;
+  stepBehemot(s, 30);
+  check('okov zvedá Kontrolu', s.behemot.rel.control > c0);
+  check('okov zvedá Přetížení', s.behemot.rel.overload > 0);
+  check('okov dává globální bonus', (behemotMults(s).global || 0) > 0);
+  check('autonomie klesá s kontrolou', s.behemot.rel.autonomy < 100);
+  // dotlač do vzpoury
+  s.behemot.rel.control = 75; s.behemot.rel.overload = 75;
+  stepBehemot(s, 1);
+  check('vzpoura se spustí', s.behemot.rebelling === true);
+  check('vzpoura zamkne barter', canBarter(s, itemById('uranove_pelety')) === false);
+  check('vzpoura sabotuje produkci', (behemotMults(s).global || 0) < 0);
+  check('cesta = Vzpoura', behemotPath(s) === 'Vzpoura');
+  behemotReconcile(s);
+  check('usmíření ukončí vzpouru', s.behemot.rebelling === false);
+  check('usmíření vypne okov', s.behemot.containment === false);
+  check('usmíření zchladí Přetížení', s.behemot.rel.overload < 75);
+}
+
+// 21) okov je zamčený před fází 6; klasifikace cest vztahu
+{
+  const s = newGame(); s.phase = 3;
+  check('okov zamčený ve fázi 3', behemotSetContainment(s, true) === false && !s.behemot.containment);
+  check('výchozí cesta neutrální', behemotPath(s) === 'Neutrální');
+  const s2 = newGame(); s2.behemot.rel.control = 65;
+  check('vysoká Kontrola → Zotročení', behemotPath(s2) === 'Zotročení');
+  const s3 = newGame(); s3.behemot.rel.trust = 60; s3.behemot.rel.respect = 40;
+  check('vysoká Důvěra+Respekt → Partnerství', behemotPath(s3) === 'Partnerství');
+  const s4 = newGame(); s4.behemot.rebelling = true;
+  check('při vzpouře → cesta Vzpoura', behemotPath(s4) === 'Vzpoura');
 }
 
 console.log(`behemot: ${pass} ok, ${fail} fail`);

@@ -18,7 +18,7 @@ import { processFraction } from '../econ/processing.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
 import { ACHIEVEMENTS, unlockedTitles } from '../content/achievements.js';
-import { CATALOG, itemAvailable, canBarter, effectText, behemotSay, shopCount, restockEta, barterCost, relPriceMult, behemotMood, emporioStage, emporioStageIndex } from '../content/behemot.js';
+import { CATALOG, itemAvailable, canBarter, effectText, behemotSay, shopCount, restockEta, barterCost, relPriceMult, behemotMood, emporioStage, emporioStageIndex, behemotPath, containmentAvailable } from '../content/behemot.js';
 import { drawHerd } from '../render/canvas.js';
 import { ICONS, PHASE_ICONS, RES_ICONS, KIND_ICONS } from '../icons.js';
 
@@ -787,13 +787,22 @@ function relSection(s) {
     bar('Důvěra', 'trust', '#6aa84f'),
     bar('Respekt', 'respect', '#5b8def'),
     bar('Přetížení', 'overload', '#c0533b'),
+    bar('Kontrola', 'control', '#a06fd0'),
     liveSpan(() => {
       const mood = behemotMood(s);
       const moodTxt = mood === 'tense' ? 'naštvaný' : mood === 'warm' ? 'pohodový' : 'neutrální';
-      return `Ceny ×${relPriceMult(s).toFixed(2)} · nálada: ${moodTxt}`;
+      return `Ceny ×${relPriceMult(s).toFixed(2)} · nálada: ${moodTxt} · cesta: ${behemotPath(s)}`;
     }, 'dim small'),
-    liveSpan(() => { const w = s.behemot.wisdom || 0; const a = Object.keys((s.behemot.persistent && s.behemot.persistent.artifacts) || {}).length; return `Moudrost ${w} (+${Math.round(w * 2)} % produkce, přežívá reset) · artefaktů: ${a}`; }, 'dim small'),
-    liveSpan(() => `Kontrola ${Math.round(s.behemot.rel.control || 0)} · Autonomie ${Math.round(s.behemot.rel.autonomy != null ? s.behemot.rel.autonomy : 100)} (probudí se v pozdější etapě)`, 'dim small'));
+    liveSpan(() => { const w = s.behemot.wisdom || 0; const a = Object.keys((s.behemot.persistent && s.behemot.persistent.artifacts) || {}).length; return `Moudrost ${w} (+${Math.round(w * 2)} % produkce, přežívá reset) · artefaktů: ${a} · Autonomie ${Math.round(s.behemot.rel.autonomy != null ? s.behemot.rel.autonomy : 100)}`; }, 'dim small'),
+    // Etapa 6: temná cesta — Rackový okov (zotročení) a usmíření po vzpouře
+    h('div', { class: 'btn-row' },
+      containmentAvailable(s)
+        ? segBtn(s.behemot.containment ? 'Rackový okov: ZAP' : 'Rackový okov: vyp', !!s.behemot.containment, () => A.behemotSetContainment(s, !s.behemot.containment))
+        : h('span', { class: 'dim small', text: 'Rackový okov (zotročení) se odemkne ve fázi 6.' }),
+      s.behemot.rebelling ? aBtn('Usmířit se', () => true, () => A.behemotReconcile(s)) : null),
+    s.behemot.rebelling
+      ? h('div', { class: 'dim small', text: '⚠ Vzpoura! Garáž se zavřela — Emporio je zamčené a produkce sabotovaná. Usmiř se (vrátíš autonomii).' })
+      : (s.behemot.containment ? h('div', { class: 'dim small', text: 'Okov tlačí produkci nahoru, ale zvedá Přetížení i Kontrolu — při obojím vysokém přijde vzpoura.' }) : null));
 }
 function renderEmporio(s) {
   const st = emporioStage(s);

@@ -191,7 +191,7 @@ export function behemotBarter(state, id) { return barter(state, id); }
 export function behemotToggle(state, id) { return toggleItem(state, id); }
 export function behemotUse(state, id) { return useItem(state, id); }
 export function behemotSetFrac(state, res, frac) { return setBarterFrac(state, res, frac); }
-export { behemotSpam } from '../content/behemot.js';   // spam klikání: nálada + hláška (Etapa 3)
+export { behemotSpam, behemotSetContainment, behemotReconcile } from '../content/behemot.js';   // spam (E3) + okov/usmíření (E6)
 
 // --- prestiž ---------------------------------------------------------------
 export function armBlackHole(state) {

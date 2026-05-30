@@ -76,7 +76,8 @@ export function newGame(carry = null) {
       line: null,                // poslední kontextová hláška { key, text } (Etapa 2)
       lineN: 0,                  // rotace hlášek
       stageSeen: 0,              // nejvyšší dosažená "etapa Emporia", za kterou Behemot pogratuloval (Etapa 4)
-      // --- scaffolding pro pozdější etapy (v Etapě 1 inertní, ale stabilní save shape) ---
+      containment: false,        // "Rackový okov" — zotročení (Etapa 6)
+      rebelling: false,          // probíhá vzpoura (Etapa 6)
       rel: { trust: 0, respect: 0, control: 0, autonomy: 100, overload: 0 },
       wisdom: carry?.behemot?.wisdom || 0,
       persistent: carry?.behemot?.persistent || {},   // artefakty přežívající prestiž (Etapa 5)
