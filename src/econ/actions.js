@@ -8,6 +8,7 @@ import { costOf, upgradeCost, perkCost } from './economy.js';
 import { emptyStorage } from './storage.js';
 import { groupById } from '../io/state.js';
 import { createGroup, splitGroup } from '../sim/groups.js';
+import { defaultSoil } from '../sim/soil.js';
 import { seedGroupGenes } from '../sim/genetics.js';
 import { mixNormal } from '../sim/distribution.js';
 import { totalCount } from '../sim/cohort.js';
@@ -182,6 +183,24 @@ export function setFemalesPerMale(state, groupId, n) {
 }
 export function setAutotrade(state, res, frac) {
   state.storage.autotrade[res] = Math.max(0, Math.min(1, frac));
+  return true;
+}
+
+// --- bobky / hnojení (#63) — kvalita půdy je per stádo ---------------------
+export function setSoil(state, groupId, patch) {
+  const g = groupById(state, groupId); if (!g) return false;
+  if (!g.soil) g.soil = defaultSoil();
+  if ('input' in patch) g.soil.input = Math.max(0, Math.min(1, +patch.input || 0));
+  if ('convert' in patch) g.soil.convert = !!patch.convert;
+  if ('useStock' in patch) g.soil.useStock = !!patch.useStock;
+  if ('fertMode' in patch && ['off', 'percent', 'fixed'].includes(patch.fertMode)) g.soil.fertMode = patch.fertMode;
+  if ('fertValue' in patch) g.soil.fertValue = Math.max(0, +patch.fertValue || 0);
+  return true;
+}
+export function toggleSoil(state, groupId, key) {
+  const g = groupById(state, groupId); if (!g) return false;
+  if (!g.soil) g.soil = defaultSoil();
+  g.soil[key] = !g.soil[key];
   return true;
 }
 

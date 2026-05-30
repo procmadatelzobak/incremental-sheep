@@ -19,6 +19,10 @@ až k černé díře a singularitě — a poselství, že **víc ovcí nikdy nes
   **Maso a části** vznikají jen z porážky (smrt stářím nedá nic).
 - Vlna/mléko/maso se prodávají za **kredity**; za ně kupuješ ovce, vylepšení,
   rozšiřuješ a zahušťuješ pastviny a expanduješ.
+- Každá ovce dělá **bobky** (dítě poloviční, dospělá/stará plné). V záložce
+  **Pastviny** jimi (a umělým hnojivem za kredity) hnojíš půdu — **kvalita půdy**
+  (per stádo, se setrvačností) zvedá **kapacitu** pastvin. Čím líp pohnojeno, tím
+  víc ovcí; když půda chudne, množení se zastaví.
 - **11 fází** (každá mění pravidla): Stvoření → Množení → Královská (monopol) →
   Nesmrtelnost → Moudré ovce (vesmír) → Exodus (planety, kyslík, sklady) →
   Dysonova sféra → další sféry → Manažer stád → **Černá díra (prestiž reset)** →
@@ -47,13 +51,15 @@ npm test          # node test/all.mjs — bez závislostí
 - `test/integration.test.mjs` — nahrání `main.js` a běh smyčky se stubem prohlížeče.
 - `test/resume.test.mjs` — dohánění reálného času po probuzení uspaného tabu (#46).
 - `test/balance.test.mjs` — auto-hráč projde hru k singularitě a změří pacing.
+- `test/soil.test.mjs` — bobky a hnojení (#63): saturace, setrvačnost, kapacita, zásoba, save.
 
 ## Struktura
 
 - `index.html`, `styles.css` — kostra (dashboard) + plátno jako akcent.
 - `src/config.js` — všechny laditelné konstanty (geny, ceny, fáze, perky, balanc).
 - `src/sim/` — `distribution.js` (φ/Φ/Φ⁻¹, selekce), `cohort.js` (stárnutí/porody),
-  `genetics.js` (rozložení genů), `production.js`, `groups.js`, `simulation.js` (tick).
+  `genetics.js` (rozložení genů), `production.js`, `groups.js`, `simulation.js` (tick),
+  `soil.js` (bobky, kvalita půdy a hnojení → kapacita).
 - `src/econ/` — `economy.js` (ceny/multiplikátory), `storage.js` (sklad/autotrade),
   `processing.js` (Tkalcovny: vlna→sukno, mléko→sýr), `actions.js` (hráčské akce = API pro UI).
 - `src/content/` — `phases.js` (11 fází), `locations.js`, `projects.js` (sféra),
