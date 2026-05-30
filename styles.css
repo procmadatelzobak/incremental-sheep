@@ -99,6 +99,9 @@ h2, h3 { margin: 0; }
 .hud-hint { color: var(--gold-deep); font-size: 12.5px; margin: 5px 0 12px; }
 body.cosmic .hud-hint { color: var(--gold); }
 .chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
+/* druhý řádek (#68): ostatní suroviny — mírně potlačené a oddělené mezerou */
+.chips-extra { margin-top: 7px; }
+.chips-extra .chip-v { font-size: 15px; }
 .chip {
   background: linear-gradient(180deg, var(--paper), var(--paper-2));
   border: 1px solid var(--line); border-radius: var(--r-md);
@@ -108,15 +111,17 @@ body.cosmic .hud-hint { color: var(--gold); }
 .chip-v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
 /* mini trend pod hodnotou (#11): pevná výška řádku, ať HUD neposkakuje, když se
    trend u plné pastviny střídavě objevuje a mizí (#36) */
-.chip-t { display: block; min-height: 14px; line-height: 14px; font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
-.chip:first-child {
+.chip-t { display: block; min-height: 14px; line-height: 14px; font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* zlatý akcent jen na úplně prvním chipu (Kredity) — ne na prvním chipu řádku 2 */
+.chips-main .chip:first-child {
   background: linear-gradient(180deg,
     color-mix(in oklch, oklch(0.97 0.04 88), oklch(0.33 0.05 290) var(--m)),
     color-mix(in oklch, oklch(0.92 0.055 86), oklch(0.30 0.05 290) var(--m)));
   border-color: var(--gold);
 }
-.chip:first-child .chip-v { color: var(--gold-deep); }
-body.cosmic .chip:first-child .chip-v { color: var(--gold); }
+.chips-main .chip:first-child .chip-v { color: var(--gold-deep); }
+body.cosmic .chips-main .chip:first-child .chip-v { color: var(--gold); }
 
 /* ---- záložky ------------------------------------------------------------ */
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }

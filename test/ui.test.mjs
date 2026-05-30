@@ -291,6 +291,43 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('ukazatel reaguje na zaplnění (≈100 %)', parseFloat(fill.style.width) > 90);
 }
 
+// --- #68: horní panel — zásoba + /s + jednotková cena, dva řádky chipů ---
+{
+  const chipByLabel = (sub) => {
+    for (const c of hud().querySelectorAll('.chip')) {
+      const l = c.querySelectorAll('.chip-l')[0];
+      if (l && (l.textContent || '').includes(sub)) return c;
+    }
+    return null;
+  };
+  const cv = (c) => { const e = c && c.querySelectorAll('.chip-v')[0]; return e ? e.textContent : ''; };
+  const ct = (c) => { const e = c && c.querySelectorAll('.chip-t')[0]; return e ? e.textContent : ''; };
+  const vis = (c) => !!c && c.style.display !== 'none';
+
+  const s = newGame(); s.resources.credits = 1000; s.resources.wool = 50;
+  initUI(s, 'app', () => {});
+  check('HUD má hlavní i druhý řádek chipů', hud().querySelectorAll('.chips-main').length === 1 && hud().querySelectorAll('.chips-extra').length === 1);
+
+  const main = hud().querySelectorAll('.chips-main')[0];
+  const firstL = main && main.children[0] && main.children[0].querySelectorAll('.chip-l')[0];
+  check('Kredity zůstávají prvním chipem (zlatý akcent + čtení pulzu kreditů)', !!firstL && firstL.textContent.includes('Kredity'));
+  check('Stádo „Ovce" má pořád vlastní chip (louka oveček na pozadí)', !!chipByLabel('Ovce'));
+
+  s.rates = { wool: 3, _pop: totalCount(s.groups[0]) };
+  updateUI(s);
+  const wc = chipByLabel('Vlna');
+  check('Vlna: hlavní číslo je zásoba', cv(wc) === '50');
+  check('Vlna: podtitulek má rychlost /s i jednotkovou cenu kr/ks', ct(wc).includes('/s') && ct(wc).includes('kr/ks'));
+
+  // odemykání (#68): bobky (fáze 2) jsou v 2. řádku skryté, dokud nepadne fáze
+  const bob = chipByLabel('Bobky');
+  check('Bobky jsou ve fázi 1 skryté', !vis(bob));
+  s.phase = 2; s.resources.bobky = 12; s.rates = { bobky: 2, _pop: totalCount(s.groups[0]) };
+  updateUI(s);
+  check('Bobky se objeví po odemčení (fáze 2)', vis(bob));
+  check('Bobky (nezpeněžitelné): zásoba + /s, bez ceny', cv(bob) === '12' && ct(bob).includes('/s') && !ct(bob).includes('kr/ks'));
+}
+
 // --- #22/#28: počty samců/samic po stádiích + vysvětlení limitu samců ---
 {
   const s = newGame(); s.resources.credits = 1e6; s.phase = 2;
