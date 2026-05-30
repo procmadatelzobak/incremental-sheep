@@ -792,6 +792,7 @@ function relSection(s) {
       const moodTxt = mood === 'tense' ? 'naštvaný' : mood === 'warm' ? 'pohodový' : 'neutrální';
       return `Ceny ×${relPriceMult(s).toFixed(2)} · nálada: ${moodTxt}`;
     }, 'dim small'),
+    liveSpan(() => { const w = s.behemot.wisdom || 0; const a = Object.keys((s.behemot.persistent && s.behemot.persistent.artifacts) || {}).length; return `Moudrost ${w} (+${Math.round(w * 2)} % produkce, přežívá reset) · artefaktů: ${a}`; }, 'dim small'),
     liveSpan(() => `Kontrola ${Math.round(s.behemot.rel.control || 0)} · Autonomie ${Math.round(s.behemot.rel.autonomy != null ? s.behemot.rel.autonomy : 100)} (probudí se v pozdější etapě)`, 'dim small'));
 }
 function renderEmporio(s) {

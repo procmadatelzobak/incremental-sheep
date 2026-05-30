@@ -121,6 +121,13 @@ export function newGame(carry = null) {
     },
   };
   // přenesené perky, které okamžitě platí
+  // Behemot (Etapa 5): Moudrost dává náskok ve vztahu (umíš s ním jednat hned);
+  // fyzické artefakty (trvalé předměty) přežily reset a jsou pořád na farmě.
+  const bw = state.behemot.wisdom || 0;
+  state.behemot.rel.trust = Math.min(50, bw * 5);
+  state.behemot.rel.respect = Math.min(30, bw * 3);
+  const arts = (state.behemot.persistent && state.behemot.persistent.artifacts) || {};
+  for (const id in arts) { state.behemot.inv[id] = { qty: 1, active: true }; state.behemot.soldOut[id] = true; }
   return state;
 }
 

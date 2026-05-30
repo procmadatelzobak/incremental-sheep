@@ -8,7 +8,7 @@ import {
   barter, toggleItem, useItem, setBarterFrac, skimBarter, stepBehemot,
   behemotSay, shopCount, restockEta,
   relPriceMult, barterCost, behemotMood, behemotSpam,
-  emporioStage, emporioStageIndex,
+  emporioStage, emporioStageIndex, behemotPrestige,
 } from '../src/content/behemot.js';
 import { TRADEABLE } from '../src/econ/storage.js';
 
@@ -237,6 +237,32 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   const syr = itemById('syrovy_algoritmus');        // platí se sýrem (fáze 3)
   check('sýrová položka nedostupná ve fázi 2', itemAvailable({ phase: 2 }, syr) === false);
   check('sýrová položka dostupná ve fázi 3', itemAvailable({ phase: 3 }, syr) === true);
+}
+
+// 18) prestiž: Behemot „umírá", ale artefakty + Moudrost přežijí (§12 asymetrie)
+{
+  const s = newGame();
+  s.behemot.stock.wool = 2000;
+  barter(s, 'samostrihaci_rameno');                 // vlastníš trvalý předmět (artefakt)
+  s.behemot.buffs.push({ id: 'x', mults: {}, remaining: 5, side: null });
+  behemotPrestige(s);
+  check('artefakt zaznamenán do persistent', s.behemot.persistent.artifacts.samostrihaci_rameno === true);
+  check('Moudrost vzrostla o 1', s.behemot.wisdom === 1);
+  const carry = prestigeCarry(s);
+  const ns = newGame(carry);
+  check('Moudrost přežila reset', ns.behemot.wisdom === 1);
+  check('artefakt po resetu vlastněný a aktivní', !!(ns.behemot.inv.samostrihaci_rameno && ns.behemot.inv.samostrihaci_rameno.active));
+  check('artefakt je soldOut (už ho máš)', ns.behemot.soldOut.samostrihaci_rameno === true);
+  check('bedny i buffy se resetovaly', (ns.behemot.stock.wool || 0) === 0 && ns.behemot.buffs.length === 0);
+  check('Moudrost dává náskok důvěry', ns.behemot.rel.trust > 0);
+}
+
+// 19) Moudrost dává trvalý globální bonus (behemotMults → getMults)
+{
+  const base = getMults(newGame()).woolMult;
+  const s = newGame(); s.behemot.wisdom = 5;
+  check('Moudrost v behemotMults.global', (behemotMults(s).global || 0) > 0);
+  check('Moudrost zvedne produkci', getMults(s).woolMult > base);
 }
 
 console.log(`behemot: ${pass} ok, ${fail} fail`);

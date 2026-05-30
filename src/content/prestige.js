@@ -3,6 +3,7 @@
 // ===========================================================================
 import { BALANCE } from '../config.js';
 import { newGame, prestigeCarry } from '../io/state.js';
+import { behemotPrestige } from './behemot.js';
 
 export const canIgnite = (state) => state.phase >= 10 && state.prestige.centralWarehouse >= state.prestige.threshold;
 
@@ -15,6 +16,7 @@ function replaceState(state, fresh) {
 export function igniteBlackHole(state) {
   if (!canIgnite(state)) return 0;
   const award = BALANCE.prestige.award(state.prestige.centralWarehouse, BALANCE.prestige.blackHoleBase, state.prestige.runs);
+  behemotPrestige(state);                 // artefakty přežijí, Moudrost roste (Etapa 5)
   const carry = prestigeCarry(state);
   carry.knowledge += award;
   carry.knowledgeLifetime += award;
@@ -29,6 +31,7 @@ export const singularityAvailable = (state) => state.prestige.singularity && sta
 // Singularita = New Game+ smyčka (odemče Předmluvu, bonus Vědění).
 export function triggerSingularity(state) {
   if (!singularityAvailable(state)) return false;
+  behemotPrestige(state);                 // artefakty přežijí, Moudrost roste (Etapa 5)
   const carry = prestigeCarry(state);
   carry.knowledge += 100;
   carry.runs += 1;

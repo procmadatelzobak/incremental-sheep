@@ -303,7 +303,20 @@ export function behemotMults(state) {
     if (item && item.effect.type === 'mult') add(item.effect.mults);
   }
   for (const buff of (b.buffs || [])) if (buff.mults) add(buff.mults);
+  if (b.wisdom) out.global = (out.global || 0) + b.wisdom * 0.02;   // Moudrost = trvalý bonus přes resety (Etapa 5)
   return out;
+}
+
+// Prestiž (Etapa 5): Behemot „umírá" (rel/inventář/sklad se resetují), ale fyzické
+// artefakty (trvalé předměty) přežijí a roste Moudrost. Volá se PŘED prestigeCarry,
+// aby se zapsané hodnoty (state.behemot.persistent/wisdom) přenesly do dalšího běhu.
+export function behemotPrestige(state) {
+  const b = state.behemot;
+  if (!b) return;
+  if (!b.persistent) b.persistent = {};
+  if (!b.persistent.artifacts) b.persistent.artifacts = {};
+  for (const id in b.inv) { const it = ITEM_BY_ID[id]; if (it && it.once) b.persistent.artifacts[id] = true; }
+  b.wisdom = (b.wisdom || 0) + 1;
 }
 
 // Odkroj barterFrac z vyrobených surovin do beden (volá se v step() PŘED prodejem).
