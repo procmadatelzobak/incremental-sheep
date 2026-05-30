@@ -14,6 +14,7 @@ import { totalCount } from '../sim/cohort.js';
 import { claimSphere, sphereReady } from '../content/projects.js';
 import { igniteBlackHole, triggerSingularity, canIgnite, singularityAvailable } from '../content/prestige.js';
 import { landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost, densityPhaseCap, worldsColonized } from '../content/locations.js';
+import { barter, toggleItem, useItem, setBarterFrac } from '../content/behemot.js';
 
 const credits = (s) => s.resources.credits || 0;
 function spend(state, amount) {
@@ -184,6 +185,12 @@ export function setAutotrade(state, res, frac) {
   state.storage.autotrade[res] = Math.max(0, Math.min(1, frac));
   return true;
 }
+
+// --- Behemot Emporio: barter za suroviny (NE kredity → NEvyprázdní sklad, §9 výjimka) ---
+export function behemotBarter(state, id) { return barter(state, id); }
+export function behemotToggle(state, id) { return toggleItem(state, id); }
+export function behemotUse(state, id) { return useItem(state, id); }
+export function behemotSetFrac(state, res, frac) { return setBarterFrac(state, res, frac); }
 
 // --- prestiž ---------------------------------------------------------------
 export function armBlackHole(state) {

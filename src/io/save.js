@@ -38,6 +38,7 @@ function hydrate(data) {
   state.world = Object.assign({}, defaults.world, data.world || {});
   state.stats = Object.assign({}, defaults.stats, data.stats || {});
   state.achievements = data.achievements || {};
+  state.behemot = Object.assign({}, defaults.behemot, data.behemot || {});   // doplň Behemota do starých savů
   // pozemky: doplň nový model (staré savy měly locations → začnou s default rozlohou)
   const dl = (data.land && typeof data.land === 'object') ? data.land : {};
   state.land = {

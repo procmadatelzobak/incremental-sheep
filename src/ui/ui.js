@@ -18,6 +18,7 @@ import { processFraction } from '../econ/processing.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
 import { ACHIEVEMENTS, unlockedTitles } from '../content/achievements.js';
+import { CATALOG, itemAvailable, canBarter, effectText, behemotFlavor } from '../content/behemot.js';
 import { drawHerd } from '../render/canvas.js';
 import { ICONS, PHASE_ICONS, RES_ICONS, KIND_ICONS } from '../icons.js';
 
@@ -257,6 +258,8 @@ const TABS = [
   { id: 'genetics', label: ICONS.genes + ' Genetika', avail: () => true, render: renderGenetics },
   { id: 'slaughter', label: '🔪 Jatka', avail: s => cityUnlocked(s), render: renderSlaughter },
   { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
+  { id: 'emporio', label: '🔧 Emporio', avail: () => true, render: renderEmporio },
+  { id: 'behitems', label: '🎒 Předměty od Behemota', avail: s => !!(s.behemot && Object.keys(s.behemot.inv).length), render: renderBehemotItems },
   { id: 'lab', label: ICONS.lab + ' Laboratoř', avail: s => labUnlocked(s), render: renderLab },
   { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: s => s.phase >= 2, render: renderStations },
   { id: 'storage', label: ICONS.storage + ' Sklad', avail: s => s.phase >= 6, render: renderStorage },
@@ -713,6 +716,101 @@ function renderStorage(s) {
   return wrap;
 }
 
+// --- Behemot: Emporio (barter) + Předměty (inventář) -----------------------
+// "Bedny": kolik produkce dané suroviny odkládat Behemotovi místo prodeje za kredity.
+function emporioFrac(s, k) {
+  const frac = s.behemot.barterFrac[k] ?? 0;
+  return h('div', { class: 'item' },
+    h('div', { class: 'item-h' },
+      h('b', { text: (RES_ICONS[k] || '') + ' ' + RESOURCES[k].label }),
+      liveSpan(() => `v bedně: ${fmt(s.behemot.stock[k] || 0)}`, 'dim')),
+    h('div', { class: 'ctl-row' },
+      liveSpan(() => `Posílat Behemotovi: ${((s.behemot.barterFrac[k] ?? 0) * 100).toFixed(0)} %`),
+      h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: frac, oninput: e => { A.behemotSetFrac(s, k, +e.target.value); } })));
+}
+function emporioRow(s, item) {
+  const costStr = () => Object.keys(item.cost).map(k => `${fmt(item.cost[k])} ${RES_ICONS[k] || k}`).join(' + ');
+  if (item.once && s.behemot.soldOut[item.id]) {
+    return h('div', { class: 'item' },
+      h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: '✓ máš' })),
+      h('div', { class: 'dim small', text: effectText(item) }));
+  }
+  return h('div', { class: 'item' },
+    h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: item.cat })),
+    h('div', { class: 'dim small', text: effectText(item) }),
+    h('div', { class: 'dim small', text: '„' + item.flavor + '"' }),
+    h('div', { class: 'btn-row' },
+      aBtn('Barter', () => canBarter(s, item), () => A.behemotBarter(s, item.id), () => {
+        const miss = Object.keys(item.cost).filter(k => (s.behemot.stock[k] || 0) < item.cost[k]).map(k => RES_ICONS[k] || k);
+        return miss.length ? 'málo: ' + miss.join(' ') : '';
+      }),
+      liveSpan(() => 'cena: ' + costStr(), 'dim small')));
+}
+function renderEmporio(s) {
+  const wrap = h('div', {});
+  wrap.appendChild(h('div', { class: 'dim small', text: '„' + behemotFlavor(s, 'open') + '"' }));
+  const bins = h('div', { class: 'list' });
+  for (const k of TRADEABLE) { if (RESOURCES[k].phase > s.phase) continue; bins.appendChild(emporioFrac(s, k)); }
+  wrap.appendChild(section('Bedny pro Behemota (suroviny místo prodeje)', bins));
+  const avail = CATALOG.filter(it => itemAvailable(s, it));
+  if (!avail.length) {
+    wrap.appendChild(section('Nabídka', h('div', { class: 'dim', text: 'Behemot zatím nemá co nabídnout — produkuj víc druhů surovin.' })));
+    return wrap;
+  }
+  const cats = [];
+  for (const it of avail) if (!cats.includes(it.cat)) cats.push(it.cat);
+  for (const cat of cats) {
+    const list = h('div', { class: 'list' });
+    for (const it of avail) if (it.cat === cat) list.appendChild(emporioRow(s, it));
+    wrap.appendChild(section(cat, list));
+  }
+  return wrap;
+}
+function renderBehemotItems(s) {
+  const wrap = h('div', {});
+  const b = s.behemot;
+  // pasivní (once): zap/vyp
+  const passive = h('div', { class: 'list' });
+  let anyPassive = false;
+  for (const id in b.inv) {
+    const item = CATALOG.find(it => it.id === id);
+    if (!item || item.effect.type !== 'mult') continue;
+    anyPassive = true;
+    const e = b.inv[id];
+    passive.appendChild(h('div', { class: 'item' },
+      h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: effectText(item) })),
+      h('div', { class: 'btn-row' }, segBtn(e.active ? 'Zapnuto' : 'Vypnuto', e.active, () => A.behemotToggle(s, id)))));
+  }
+  if (anyPassive) wrap.appendChild(section('Pasivní předměty (zapni/vypni)', passive));
+  // spotřební: množství + použít
+  const cons = h('div', { class: 'list' });
+  let anyCons = false;
+  for (const id in b.inv) {
+    const item = CATALOG.find(it => it.id === id);
+    if (!item || item.effect.type !== 'buff' || b.inv[id].qty <= 0) continue;
+    anyCons = true;
+    cons.appendChild(h('div', { class: 'item' },
+      h('div', { class: 'item-h' }, h('b', { text: item.name }), liveSpan(() => `×${fmtCount(b.inv[id] ? b.inv[id].qty : 0)}`, 'dim')),
+      h('div', { class: 'dim small', text: effectText(item) }),
+      h('div', { class: 'btn-row' }, aBtn('Použít', () => !!(b.inv[id] && b.inv[id].qty > 0), () => A.behemotUse(s, id)))));
+  }
+  if (anyCons) wrap.appendChild(section('Spotřební (množství)', cons));
+  // běžící efekty (zbývající čas)
+  if (b.buffs.length) {
+    const running = h('div', { class: 'list' });
+    for (let i = 0; i < b.buffs.length; i++) {
+      const item = CATALOG.find(it => it.id === b.buffs[i].id);
+      const idx = i;
+      running.appendChild(h('div', { class: 'item' },
+        h('div', { class: 'item-h' }, h('b', { text: item ? item.name : b.buffs[i].id }),
+          liveSpan(() => { const bf = s.behemot.buffs[idx]; return bf ? `${Math.ceil(bf.remaining)} s` : '—'; }, 'dim'))));
+    }
+    wrap.appendChild(section('Běžící efekty', running));
+  }
+  if (!anyPassive && !anyCons && !b.buffs.length) wrap.appendChild(h('div', { class: 'dim', text: 'Zatím nic od Behemota.' }));
+  return wrap;
+}
+
 function renderManager(s) {
   const wrap = h('div', {});
   const list = h('div', { class: 'list' });
@@ -812,9 +910,14 @@ function renderKronika(s) {
 // --- jádro: build vs in-place refresh --------------------------------------
 function structSigOf(s) {
   const land = WORLD_ORDER.map(wk => s.land.worlds[wk].tier).join(',') + ':' + s.land.density + ':' + Object.keys(s.land.mods).length;
+  const beh = s.behemot
+    ? [Object.keys(s.behemot.inv).length, s.behemot.buffs.length,
+       Object.values(s.behemot.inv).filter(e => e.active).length,
+       CATALOG.filter(it => itemAvailable(s, it)).length].join(':')
+    : '';
   return [activeTab, s.phase, s.groups.length, land, s.activeGroupId,
     storageEnabled(s) ? 1 : 0, s.flags.immortal ? 1 : 0, sphereReady(s) ? 1 : 0,
-    singularityAvailable(s) ? 1 : 0, s.phase >= 10 ? 1 : 0].join('|');
+    singularityAvailable(s) ? 1 : 0, s.phase >= 10 ? 1 : 0, beh].join('|');
 }
 function refreshPanel() {
   for (const u of updaters) { try { u(); } catch (e) { /* prvek mohl zmizet */ } }

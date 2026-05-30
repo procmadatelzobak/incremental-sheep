@@ -88,6 +88,29 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('žádné NaN kredity po proklikání', isFinite(s.resources.credits));
 }
 
+// --- Behemot: Emporio (barter) + Předměty (inventář, zap/vyp) ---
+{
+  clickTab('Emporio');
+  check('panel Emporio má obsah', panel().children.length > 0);
+  s.behemot.stock.wool = 5000;          // naplň bedny, ať jde bartrovat
+  updateUI(s);                           // bez strukturální změny → refresh zpřístupní tlačítko Barter
+  const barterBtn = buttonsByText(panel(), 'Barter')[0];
+  check('Emporio: tlačítko Barter existuje', !!barterBtn);
+  const inv0 = Object.keys(s.behemot.inv).length;
+  if (barterBtn) barterBtn.click();
+  check('Emporio: barter přidá předmět do inventáře', Object.keys(s.behemot.inv).length > inv0);
+
+  updateUI(s);                           // záložka inventáře se po koupi zpřístupní
+  clickTab('Předměty od Behemota');
+  check('panel Předměty má obsah', panel().children.length > 0);
+  const toggleBtn = buttonsByText(panel(), 'Zapnuto')[0];
+  check('Inventář: přepínač aktivního předmětu existuje', !!toggleBtn);
+  if (toggleBtn) {
+    toggleBtn.click();
+    check('Inventář: vypnutí předmětu funguje', Object.values(s.behemot.inv).some(e => e.active) === false);
+  }
+}
+
 // --- updateUI nespadne ---
 {
   let ok = true;

@@ -66,6 +66,18 @@ export function newGame(carry = null) {
     resources: { credits: startCreditsFor(carry) },
     rates: {},
     storage: { warehouseLevel: 0, autotrade: {}, stockpile: {} },
+    behemot: {
+      stock: {},                 // surové suroviny odložené pro Behemota (bedny)
+      barterFrac: {},            // kolik produkce posílat Behemotovi (per surovina, 0..1)
+      inv: {},                   // { itemId: { qty, active } } — vlastněné předměty
+      buffs: [],                 // běžící spotřební buffy { id, mults, remaining, side }
+      soldOut: {},               // jednorázové (once) už pořízené
+      // --- scaffolding pro pozdější etapy (v Etapě 1 inertní, ale stabilní save shape) ---
+      rel: { trust: 0, respect: 0, control: 0, autonomy: 100, overload: 0 },
+      wisdom: carry?.behemot?.wisdom || 0,
+      persistent: carry?.behemot?.persistent || {},   // artefakty přežívající prestiž (Etapa 5)
+      path: null,
+    },
     upgrades: {},
     buys: { addSheep: 0, warehouse: 0 },
     projects: {
@@ -132,5 +144,6 @@ export function prestigeCarry(state) {
     maxSpheres: state.world.maxSpheres,
     maxStations: state.world.maxStations,
     everPasture: state.world.everPasture,
+    behemot: { wisdom: state.behemot.wisdom, persistent: state.behemot.persistent },   // artefakty/moudrost přežijí (Etapa 5); inv/stock/buffs/rel NE (§12)
   };
 }

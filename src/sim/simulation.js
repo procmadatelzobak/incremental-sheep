@@ -12,6 +12,7 @@ import { herdCapacity, worldEnv } from '../content/locations.js';
 import { stepProjects } from '../content/projects.js';
 import { checkPhase } from '../content/phases.js';
 import { updateRecords, checkAchievements } from '../content/achievements.js';
+import { skimBarter, stepBehemot } from '../content/behemot.js';
 
 function addInto(dst, src) { for (const k in src) dst[k] = (dst[k] || 0) + src[k]; }
 
@@ -58,8 +59,10 @@ export function step(state, dt) {
   applyProcessing(produced, state);     // vlna→sukno, mléko→sýr (fáze 3+, dle Tkalcoven)
 
   const credBefore = state.resources.credits || 0;
+  skimBarter(state, produced);          // odlož část surovin do beden pro Behemota (barter)
   applyProduced(state, produced, ctx);
   stepProjects(state, edt, ctx);
+  stepBehemot(state, edt);              // expirace spotřebních buffů + jejich postihy
 
   let total = 0;
   for (const g of state.groups) total += totalCount(g);

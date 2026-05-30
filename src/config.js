@@ -170,6 +170,8 @@ export const BALANCE = {
   },
   // ceny extrémních genů: strop genu × ceilingMult (fáze 5 + perky)
   ceiling: { phase5: 3, perPerk: 1 },
+  // Behemot Emporio: globální páky (ceny/efekty položek jsou inline v CATALOG)
+  behemot: { stockCap: 0, defaultBuffDur: 60, defaultPenaltyDur: 30 },
 };
 
 // --- SVĚTY (per-svět žebříček rozlohy; sdílí globální hustotu) --------------
