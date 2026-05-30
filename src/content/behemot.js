@@ -6,10 +6,11 @@
 //   • pasivní (once): efekt platí jen když je položka aktivní (zap/vyp),
 //   • spotřební (buff): drží se v množství, "Použít" spustí časovaný buff.
 //
-//  Etapa 2 — živý katalog + reaktivní hlášky:
-//   • spotřební položky mají Behemotův sklad (shopCap), který se vyprodává a po
-//     čase doplňuje (restockEvery) — důvod se vracet,
-//   • behemotSay() reaguje na akce (úspěch/málo/vyprodáno/spam/idle) hláškami.
+//  Etapa 2 — živý katalog + reaktivní hlášky (sklad/restock, behemotSay).
+//  Etapa 3 — vztahové osy: Důvěra/Respekt/Kontrola/Autonomie/Přetížení (state.behemot.rel)
+//   se hýbou chováním hráče (barter, spam, používání rizik) a ovlivňují CENY,
+//   rychlost restocku, RIZIKO ("sajrajt") a NÁLADU/hlášky. Přetížení časem chladne.
+//   (Kontrola/Autonomie zůstávají z větší části pro pozdější etapu zotročení.)
 //  Veškerá logika Behemota žije tady; ostatní soubory mají jen tenké napojení.
 //  Čísla jsou ilustrativní (lore/katalog = inspirace) a doladí se v balancingu.
 // ===========================================================================
@@ -70,8 +71,9 @@ export const CATALOG = [
     flavor: 'vlna ze zejtřka. dneska ji máš dneska. neptej se.' },
   { id: 'sajrajt_z_bedny', name: 'Sajrajt z bedny', cat: 'Černý trh', once: false, shopCap: 3, restockEvery: 45,
     cost: { bones: 800, brain: 400 },
+    // šance na dobrý výsledek klesá s Přetížením (Etapa 3) — nasraný Behemot prodává horší bedny
     effect: { type: 'buff', dur: 40,
-      roll: () => (Math.random() < 0.6 ? { mults: { global: 0.8 } } : { mults: { global: -0.25 } }) },
+      roll: (state) => (Math.random() < goodSajrajtChance(state) ? { mults: { global: 0.8 } } : { mults: { global: -0.25 } }) },
     flavor: 'bedna. nevim co v ní je. ty to teda zjistíš.' },
 ];
 
@@ -96,6 +98,51 @@ export function effectText(item) {
   return '';
 }
 
+// --- vztahové osy (Etapa 3) ------------------------------------------------
+// rel = { trust, respect, control, autonomy, overload }, vše 0..100.
+function relNudge(state, axis, delta) {
+  const r = state.behemot.rel;
+  r[axis] = clamp((r[axis] || 0) + delta, 0, 100);
+  if (axis === 'control') r.autonomy = clamp(100 - r.control, 0, 100);   // autonomie = doplněk kontroly
+  return r[axis];
+}
+// Pojmenované události hýbou osami. (Kontrola/Autonomie čekají na etapu zotročení.)
+export function relEvent(state, kind, risky) {
+  if (!state.behemot) return;
+  if (kind === 'barter') { relNudge(state, 'trust', 1.2); relNudge(state, 'respect', 0.4); relNudge(state, 'overload', -0.5); }
+  else if (kind === 'use') { relNudge(state, 'overload', risky ? 3 : 1.5); }
+  else if (kind === 'spam') { relNudge(state, 'overload', 5); relNudge(state, 'trust', -3); }
+}
+// Násobič cen: Důvěra zlevňuje, Přetížení zdražuje.
+export function relPriceMult(state) {
+  const r = (state.behemot && state.behemot.rel) || {};
+  return clamp(1 - (r.trust || 0) * 0.0025 + (r.overload || 0) * 0.0035, 0.7, 1.6);
+}
+// Efektivní cena položky v surovinách (po vlivu vztahu).
+export function barterCost(state, item) {
+  const m = relPriceMult(state);
+  const out = {};
+  for (const k in item.cost) out[k] = Math.ceil(item.cost[k] * m);
+  return out;
+}
+// Efektivní doba restocku: Přetížení zpomaluje, Respekt zrychluje.
+function effRestockEvery(state, item) {
+  const r = (state.behemot && state.behemot.rel) || {};
+  return (item.restockEvery || 30) * (1 + (r.overload || 0) * 0.01) / (1 + (r.respect || 0) * 0.005);
+}
+// Šance, že "sajrajt z bedny" dopadne dobře (klesá s Přetížením).
+function goodSajrajtChance(state) {
+  const r = (state.behemot && state.behemot.rel) || {};
+  return Math.max(0.25, 0.6 - (r.overload || 0) * 0.003);
+}
+// Nálada pro hlášky/UI.
+export function behemotMood(state) {
+  const r = (state.behemot && state.behemot.rel) || {};
+  if ((r.overload || 0) >= 55) return 'tense';
+  if ((r.trust || 0) >= 55) return 'warm';
+  return 'neutral';
+}
+
 // --- Behemotův sklad (živý katalog): vyprodává se, po čase doplňuje ---------
 function shopEntry(state, item) {
   if (item.shopCap == null) return null;
@@ -114,7 +161,7 @@ export function restockEta(state, item) {
   if (item.shopCap == null) return 0;
   const e = state.behemot.shop[item.id];
   if (!e || e.n >= item.shopCap) return 0;
-  return Math.max(0, (item.restockEvery || 30) - e.t);
+  return Math.max(0, effRestockEvery(state, item) - e.t);
 }
 
 // --- dostupnost / koupěschopnost ------------------------------------------
@@ -129,7 +176,8 @@ export function canBarter(state, item) {
   if (item.once && b.soldOut[item.id]) return false;
   if (!itemAvailable(state, item)) return false;
   if (item.shopCap != null && shopCount(state, item) <= 0) return false;
-  for (const k in item.cost) if ((b.stock[k] || 0) < item.cost[k]) return false;
+  const cost = barterCost(state, item);
+  for (const k in cost) if ((b.stock[k] || 0) < cost[k]) return false;
   return true;
 }
 
@@ -141,6 +189,11 @@ export function behemotSay(state, key) {
   const text = arr[b.lineN % arr.length];
   b.line = { key, text };
   return text;
+}
+// Spamování klikání: rýpne + zvedne Přetížení / ubere Důvěru (volá UI).
+export function behemotSpam(state) {
+  relEvent(state, 'spam');
+  return behemotSay(state, 'spamClicking');
 }
 
 // --- hráčské akce (volané přes wrappery v actions.js) ----------------------
@@ -154,13 +207,15 @@ export function barter(state, id) {
   if (item.once && b.soldOut[item.id]) { behemotSay(state, 'soldOut'); return false; }
   if (!itemAvailable(state, item)) { behemotSay(state, 'impossibleAction'); return false; }
   if (item.shopCap != null && shopCount(state, item) <= 0) { behemotSay(state, 'soldOut'); return false; }
-  for (const k in item.cost) if ((b.stock[k] || 0) < item.cost[k]) { behemotSay(state, 'notEnoughResources'); return false; }
+  const cost = barterCost(state, item);
+  for (const k in cost) if ((b.stock[k] || 0) < cost[k]) { behemotSay(state, 'notEnoughResources'); return false; }
   // úspěch: zaplať surovinami, přidej do inventáře, uber z Behemotova skladu
-  for (const k in item.cost) b.stock[k] = (b.stock[k] || 0) - item.cost[k];
+  for (const k in cost) b.stock[k] = (b.stock[k] || 0) - cost[k];
   const e = b.inv[id] || (b.inv[id] = { qty: 0, active: item.effect.type === 'mult' });
   e.qty++;
   if (item.once) { b.soldOut[id] = true; e.active = true; }
   if (item.shopCap != null) { const se = shopEntry(state, item); if (se) se.n = Math.max(0, se.n - 1); }
+  relEvent(state, 'barter');                                          // férový obchod buduje Důvěru
   behemotSay(state, (item.effect.side || item.effect.roll) ? 'suspiciousPurchase' : 'purchaseSuccess');
   return true;
 }
@@ -183,6 +238,7 @@ export function useItem(state, id) {
   let mults = eff.mults || {}, side = eff.side || null;
   if (eff.roll) { const r = eff.roll(state); mults = r.mults || {}; side = r.side || null; }   // RNG "sajrajt"
   b.buffs.push({ id, mults: Object.assign({}, mults), remaining: eff.dur, side });
+  relEvent(state, 'use', !!(eff.side || eff.roll));                   // používání rizik zvedá Přetížení
   return true;
 }
 // kolik produkce dané suroviny posílat Behemotovi do beden (0..1)
@@ -227,7 +283,7 @@ export function skimBarter(state, produced) {
   }
 }
 
-// Každý tik: expirace buffů (+ nasazení postihu) a doplňování Behemotova skladu.
+// Každý tik: expirace buffů (+ postih), chladnutí Přetížení a doplňování skladu.
 export function stepBehemot(state, dt) {
   const b = state.behemot;
   if (!b) return;
@@ -241,7 +297,9 @@ export function stepBehemot(state, dt) {
     }
     b.buffs = kept;
   }
-  // 2) restock Behemotova skladu (jen u položek, které už byly otevřené)
+  // 2) Přetížení časem chladne (Behemot se uklidní, když ho necháš být)
+  if (b.rel && b.rel.overload > 0) b.rel.overload = Math.max(0, b.rel.overload - 0.25 * dt);
+  // 3) restock Behemotova skladu (jen u položek, které už byly otevřené)
   if (b.shop) {
     for (const id in b.shop) {
       const item = ITEM_BY_ID[id];
@@ -249,7 +307,7 @@ export function stepBehemot(state, dt) {
       const e = b.shop[id];
       if (e.n >= item.shopCap) { e.t = 0; continue; }
       e.t += dt;
-      const every = item.restockEvery || 30;
+      const every = effRestockEvery(state, item);
       while (e.t >= every && e.n < item.shopCap) { e.t -= every; e.n++; }
     }
   }

@@ -7,6 +7,7 @@ import {
   CATALOG, itemById, itemAvailable, canBarter, behemotMults,
   barter, toggleItem, useItem, setBarterFrac, skimBarter, stepBehemot,
   behemotSay, shopCount, restockEta,
+  relPriceMult, barterCost, behemotMood, behemotSpam,
 } from '../src/content/behemot.js';
 import { TRADEABLE } from '../src/econ/storage.js';
 
@@ -165,6 +166,55 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   stepBehemot(s, 21);                           // > restockEvery → +1 kus
   check('restock doplnil kus', shopCount(s, item) >= 1);
   check('po restocku jde zase bartrovat', canBarter(s, item) === true);
+}
+
+// 13) vztahové osy se hýbou chováním hráče
+{
+  const s = newGame();
+  s.behemot.stock.wool = 1e5;
+  const t0 = s.behemot.rel.trust;
+  barter(s, 'samostrihaci_rameno');
+  check('barter zvedne důvěru', s.behemot.rel.trust > t0);
+
+  const s2 = newGame();
+  s2.behemot.rel.trust = 10;
+  const ov0 = s2.behemot.rel.overload;
+  behemotSpam(s2);
+  check('spam zvedne přetížení', s2.behemot.rel.overload > ov0);
+  check('spam ubere důvěru', s2.behemot.rel.trust < 10);
+  check('spam zahláškuje', s2.behemot.line.key === 'spamClicking');
+
+  const s3 = newGame();
+  s3.behemot.stock.wool = 1e5; s3.behemot.stock.meat = 1e5;
+  barter(s3, 'radioaktivni_krmivo');
+  const ov = s3.behemot.rel.overload;
+  useItem(s3, 'radioaktivni_krmivo');
+  check('použití rizika zvedne přetížení', s3.behemot.rel.overload > ov);
+}
+
+// 14) vztah ovlivňuje ceny a náladu
+{
+  const s = newGame();
+  check('výchozí cena ×1', Math.abs(relPriceMult(s) - 1) < 1e-9);
+  s.behemot.rel.trust = 100;
+  check('vysoká důvěra zlevňuje', relPriceMult(s) < 1);
+  const item = itemById('samostrihaci_rameno');
+  check('barterCost odráží slevu', barterCost(s, item).wool < item.cost.wool);
+
+  const s2 = newGame(); s2.behemot.rel.overload = 100;
+  check('vysoké přetížení zdražuje', relPriceMult(s2) > 1);
+  check('nálada tense při vysokém přetížení', behemotMood(s2) === 'tense');
+
+  const s3 = newGame(); s3.behemot.rel.trust = 80;
+  check('nálada warm při vysoké důvěře', behemotMood(s3) === 'warm');
+}
+
+// 15) přetížení časem chladne
+{
+  const s = newGame();
+  s.behemot.rel.overload = 50;
+  stepBehemot(s, 20);
+  check('přetížení klesá v čase', s.behemot.rel.overload < 50 && s.behemot.rel.overload >= 0);
 }
 
 console.log(`behemot: ${pass} ok, ${fail} fail`);

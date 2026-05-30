@@ -18,7 +18,7 @@ import { processFraction } from '../econ/processing.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
 import { ACHIEVEMENTS, unlockedTitles } from '../content/achievements.js';
-import { CATALOG, itemAvailable, canBarter, effectText, behemotSay, shopCount, restockEta } from '../content/behemot.js';
+import { CATALOG, itemAvailable, canBarter, effectText, behemotSay, shopCount, restockEta, barterCost, relPriceMult, behemotMood } from '../content/behemot.js';
 import { drawHerd } from '../render/canvas.js';
 import { ICONS, PHASE_ICONS, RES_ICONS, KIND_ICONS } from '../icons.js';
 
@@ -728,10 +728,11 @@ function noteBarterClick() {
   barterClicks.push(now);
   barterClicks = barterClicks.filter(t => now - t < 1500);
   noteEmporioActivity();
-  if (barterClicks.length >= 5) { barterClicks = []; behemotSay(S, 'spamClicking'); }
+  if (barterClicks.length >= 5) { barterClicks = []; A.behemotSpam(S); }   // spam → Přetížení + rýpnutí
 }
 function openEmporio() {
-  behemotSay(S, Object.keys(S.behemot.inv).length ? 'repeatVisit' : 'openShop');
+  const mood = behemotMood(S);                                              // uvítání dle nálady (Etapa 3)
+  behemotSay(S, mood === 'tense' ? 'tense' : mood === 'warm' ? 'warm' : (Object.keys(S.behemot.inv).length ? 'repeatVisit' : 'openShop'));
   noteEmporioActivity();
   activeTab = 'emporio';
   buildTabs(); rebuildPanel(); onAction();
@@ -748,20 +749,20 @@ function emporioFrac(s, k) {
       h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: frac, oninput: e => { A.behemotSetFrac(s, k, +e.target.value); noteEmporioActivity(); } })));
 }
 function emporioRow(s, item) {
-  const costStr = () => Object.keys(item.cost).map(k => `${fmt(item.cost[k])} ${RES_ICONS[k] || k}`).join(' + ');
   if (item.once && s.behemot.soldOut[item.id]) {
     return h('div', { class: 'item' },
       h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: '✓ máš' })),
       h('div', { class: 'dim small', text: effectText(item) }));
   }
-  // status: cena + (u spotřebních) skladem/vyprodáno + případně „málo surovin"
+  // status: cena (po vlivu vztahu) + (u spotřebních) skladem/vyprodáno + případně „málo surovin"
   const status = () => {
-    const parts = ['cena: ' + costStr()];
+    const c = barterCost(s, item);
+    const parts = ['cena: ' + Object.keys(c).map(k => `${fmt(c[k])} ${RES_ICONS[k] || k}`).join(' + ')];
     if (item.shopCap != null) {
       const n = shopCount(s, item);
       parts.push(n > 0 ? `skladem ${n}` : `vyprodáno (doplní za ${Math.ceil(restockEta(s, item))} s)`);
     }
-    if (Object.keys(item.cost).some(k => (s.behemot.stock[k] || 0) < item.cost[k])) parts.push('málo surovin');
+    if (Object.keys(c).some(k => (s.behemot.stock[k] || 0) < c[k])) parts.push('málo surovin');
     return parts.join(' · ');
   };
   return h('div', { class: 'item' },
@@ -773,10 +774,25 @@ function emporioRow(s, item) {
       aBtn('Barter', () => true, () => { const r = A.behemotBarter(s, item.id); noteBarterClick(); return r; }),
       liveSpan(status, 'dim small')));
 }
+// Vztah s Behemotem (Etapa 3): osy + jak ovlivňují ceny/náladu.
+function relSection(s) {
+  const bar = (label, key, color) => liveBar(() => (s.behemot.rel[key] || 0) / 100, () => `${label}: ${Math.round(s.behemot.rel[key] || 0)}`, color);
+  return section('Vztah s Behemotem',
+    bar('Důvěra', 'trust', '#6aa84f'),
+    bar('Respekt', 'respect', '#5b8def'),
+    bar('Přetížení', 'overload', '#c0533b'),
+    liveSpan(() => {
+      const mood = behemotMood(s);
+      const moodTxt = mood === 'tense' ? 'naštvaný' : mood === 'warm' ? 'pohodový' : 'neutrální';
+      return `Ceny ×${relPriceMult(s).toFixed(2)} · nálada: ${moodTxt}`;
+    }, 'dim small'),
+    liveSpan(() => `Kontrola ${Math.round(s.behemot.rel.control || 0)} · Autonomie ${Math.round(s.behemot.rel.autonomy != null ? s.behemot.rel.autonomy : 100)} (probudí se v pozdější etapě)`, 'dim small'));
+}
 function renderEmporio(s) {
   const wrap = h('div', {});
   // živá Behemotova hláška (reaguje na akce)
   wrap.appendChild(liveSpan(() => (s.behemot.line && s.behemot.line.text) || 'no co je. dyž už si tady, ber.', 'beh-say'));
+  wrap.appendChild(relSection(s));
   const bins = h('div', { class: 'list' });
   for (const k of TRADEABLE) { if (RESOURCES[k].phase > s.phase) continue; bins.appendChild(emporioFrac(s, k)); }
   wrap.appendChild(section('Bedny pro Behemota (suroviny místo prodeje)', bins));

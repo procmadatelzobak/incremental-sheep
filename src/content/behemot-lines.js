@@ -81,4 +81,18 @@ export const LINES = {
     'Tady seš eště malej pán, počkej na větší katastrofy.',
     'Odemkne se to pozdějc, až bude pozdějc horší nápad.',
   ],
+  // nálada dle vztahových os (Etapa 3): vysoké Přetížení = "tense", vysoká Důvěra = "warm"
+  tense: [
+    'Nešahej na to, eště to začne fungovat.',
+    'Ty seš zas chytrej jak kalkulačka bez baterek.',
+    'Mám toho dneska až po krk, tak buď rychlej.',
+    'Tvoje odvaha je obdivuhodná a tvůj úsudek trestuhodnej.',
+    'Čumíš na to jak ovce na daňový přiznání.',
+  ],
+  warm: [
+    'No, ty už aspoň víš, kde se platí věcma a ne sliby.',
+    'Dobrý. S tebó se obchodně nenudím, a to je vod Behemota poklona.',
+    'Vidíš, dyž chceš, umíš to. Skoro civilizovaný.',
+    'Tobě bych prodal i to, co normálně schovávám dozadu.',
+  ],
 };
