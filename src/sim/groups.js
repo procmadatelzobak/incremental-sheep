@@ -3,6 +3,7 @@
 // ===========================================================================
 import { seedGroupGenes } from './genetics.js';
 import { emptyCounts } from './cohort.js';
+import { defaultSoil } from './soil.js';
 
 const STAGE_MEAT = { adult: 1.0, old: 0.6, child: 0.25 };
 
@@ -59,6 +60,7 @@ export function createGroup(state, name) {
     species: 'base',
     genes: seedGroupGenes(0, 1), counts: emptyCounts(), bredFracF: 0,
     policy: { killOld: false, killMaleChildren: false, maxMales: 0, autoMales: false, femalesPerMale: 8, slaughterBeforeOld: false, cull: { enabled: false, gene: 'woolRate', cutFrac: 0.2 } },
+    soil: defaultSoil(),
   };
   state.groups.push(g);
   return g;
@@ -71,6 +73,7 @@ export function splitGroup(state, groupId) {
   const dst = createGroup(state, src.name + '′');
   dst.genes = JSON.parse(JSON.stringify(src.genes));
   dst.bredFracF = src.bredFracF;
+  dst.soil = Object.assign(defaultSoil(), src.soil);   // odštěpek dědí kvalitu i nastavení půdy
   for (const s of ['M', 'F']) for (const st of ['child', 'adult', 'old']) {
     const half = src.counts[s][st] / 2;
     src.counts[s][st] = half; dst.counts[s][st] = half;

@@ -494,5 +494,42 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('UI: základní „Nůžky" se u povýšeného nezobrazuje', !txt.includes('Nůžky'));
 }
 
+// --- #63: Pastviny — bobky a hnojení (tab od fáze 2, ovládání, dashboard) ---
+{
+  const a = newGame();   // fáze 1
+  initUI(a, 'app', () => {});
+  check('#63 Pastviny skryté ve fázi 1', !allButtons(tabs()).some(b => b.textContent.includes('Pastviny') && b.style.display !== 'none'));
+
+  const s = newGame(); s.phase = 2; s.resources.credits = 1e6;
+  s.groups[0].counts.M.adult = 30; s.groups[0].counts.F.adult = 30;
+  initUI(s, 'app', () => {});
+  check('#63 Pastviny viditelné od fáze 2', allButtons(tabs()).some(b => b.textContent.includes('Pastviny') && b.style.display !== 'none'));
+  clickTab('Pastviny');
+  check('#63 panel má kvalitu půdy, bobky i hnojivo', panel().textContent.includes('Kvalita půdy') && panel().textContent.includes('Hnojení z bobků') && panel().textContent.includes('Umělé hnojivo'));
+  // přepnutí umělého hnojiva na % z příjmu
+  buttonsByText(panel(), '% z příjmu')[0].click();
+  check('#63 přepnutí režimu nastaví fertMode', s.groups[0].soil.fertMode === 'percent');
+  // vypnutí konverze přes checkbox
+  const checks = panel().querySelectorAll('input').filter(i => i.attributes.type === 'checkbox');
+  check('#63 panel má přepínače (konverze, zásoba)', checks.length >= 2);
+  checks[0].checked = false;            // uživatel odškrtne konverzi (prohlížeč překlopí checked → change)
+  checks[0].dispatch('change');
+  check('#63 přepnutí konverze změní soil.convert', s.groups[0].soil.convert === false);
+  // smoke: proklik všech aktivních tlačítek bez chyby
+  let ok = true;
+  try { initUI(s, 'app', () => {}); clickTab('Pastviny'); for (const b of allButtons(panel())) { if (!b.disabled) b.click(); } } catch (e) { ok = false; console.error('  chyba v Pastviny:', e.message); }
+  check('#63 proklik Pastviny bez výjimky', ok);
+}
+
+// --- #63: dashboard Stáda hlásí stav půdy a zastavené množení ---------------
+{
+  const s = newGame(); s.phase = 2; s.resources.credits = 1e6;
+  s.groups[0].counts.F.adult = 1e7;   // přeplněno → množení se zastaví kapacitou půdy/pozemků
+  initUI(s, 'app', () => {});
+  clickTab('Stáda');
+  check('#63 Stáda ukazují stav pohnojení půdy', panel().textContent.includes('Půda: pohnojení'));
+  check('#63 Stáda hlásí zastavené množení při plné pastvině', panel().textContent.includes('množení dalších ovcí se zastavilo'));
+}
+
 console.log(`ui: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
