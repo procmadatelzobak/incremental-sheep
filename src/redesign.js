@@ -165,12 +165,14 @@ export function maleDisplayCount(total, M, F) {
 }
 
 function readSheepCount() {
-  // najdi chip populace (popisek „🐑 Ovce") a přečti jeho hodnotu
-  const labels = document.querySelectorAll('.chip .chip-l');
-  for (const l of labels) {
+  // chip populace má třídu .chip-pop (#68: chipy už nemají textový popisek, jen ikonu)
+  const v = document.querySelector('.chip-pop .chip-v');
+  if (v) return parseNum(v.textContent);
+  // fallback: starší layout s textovým popiskem „🐑 Ovce"
+  for (const l of document.querySelectorAll('.chip .chip-l')) {
     if (isSheepChipLabel(l.textContent)) {
-      const v = l.parentElement.querySelector('.chip-v');
-      if (v) return parseNum(v.textContent);
+      const vv = l.parentElement.querySelector('.chip-v');
+      if (vv) return parseNum(vv.textContent);
     }
   }
   return NaN;
