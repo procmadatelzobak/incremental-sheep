@@ -170,8 +170,27 @@ export const BALANCE = {
   },
   // ceny extrémních genů: strop genu × ceilingMult (fáze 5 + perky)
   ceiling: { phase5: 3, perPerk: 1 },
-  // Behemot Emporio: globální páky (ceny/efekty položek jsou inline v CATALOG)
-  behemot: { stockCap: 0, defaultBuffDur: 60, defaultPenaltyDur: 30 },
+  // Behemot Emporio — vyladitelné páky (ceny/efekty položek jsou inline v CATALOG)
+  behemot: {
+    stockCap: 0,                  // 0 = bez stropu zásoby v bednách
+    // ceny dle vztahu (relPriceMult): Důvěra zlevňuje, Přetížení zdražuje
+    trustDiscount: 0.0025, overloadSurcharge: 0.0035, priceMin: 0.7, priceMax: 1.6,
+    // osy: posuny událostmi + chladnutí Přetížení
+    overloadCool: 0.25,
+    barterTrust: 1.2, barterRespect: 0.4, barterCool: 0.5,
+    useOverload: 1.5, useOverloadRisky: 3,
+    spamOverload: 5, spamTrust: 3,
+    // restock dle vztahu (Přetížení zpomaluje, Respekt zrychluje)
+    restockOverloadSlow: 0.01, restockRespectFast: 0.005,
+    // "sajrajt": šance na dobrý výsledek klesá s Přetížením
+    sajrajtBase: 0.6, sajrajtOverloadPenalty: 0.003, sajrajtMin: 0.25,
+    // Moudrost (přežívá reset): bonus produkce + náskok ve vztahu
+    wisdomPerReset: 1, wisdomBonus: 0.02, wisdomBonusCap: 0.3, wisdomTrustHead: 5, wisdomRespectHead: 3,
+    // okov / vzpoura (Etapa 6)
+    containmentPhase: 6, controlGain: 0.5, containOverload: 0.5, containTrustDrop: 0.15, controlDecay: 0.2,
+    controlBonus: 0.003, rebellionPenalty: 0.3, rebelControl: 70, rebelOverload: 70,
+    reconcileOverload: 40, reconcileControl: 40, reconcileTrust: 8,
+  },
 };
 
 // --- SVĚTY (per-svět žebříček rozlohy; sdílí globální hustotu) --------------

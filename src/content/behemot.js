@@ -6,18 +6,21 @@
 //   • pasivní (once): efekt platí jen když je položka aktivní (zap/vyp),
 //   • spotřební (buff): drží se v množství, "Použít" spustí časovaný buff.
 //
-//  Etapa 2 — živý katalog + reaktivní hlášky (sklad/restock, behemotSay).
-//  Etapa 3 — vztahové osy: Důvěra/Respekt/Kontrola/Autonomie/Přetížení (state.behemot.rel)
-//   se hýbou chováním hráče (barter, spam, používání rizik) a ovlivňují CENY,
-//   rychlost restocku, RIZIKO ("sajrajt") a NÁLADU/hlášky. Přetížení časem chladne.
-//   (Kontrola/Autonomie zůstávají z větší části pro pozdější etapu zotročení.)
+//  Etapa 2 — živý katalog (sklad/restock) + reaktivní hlášky (behemotSay).
+//  Etapa 3 — vztahové osy (state.behemot.rel) → ceny/restock/riziko/nálada.
+//  Etapa 4 — fázová evoluce Emporia + hlubší katalog.
+//  Etapa 5 — prestiž-perzistence: artefakty přežijí reset, roste Moudrost.
+//  Etapa 6 — čtyři cesty + vzpoura: "Rackový okov" (Kontrola) vs. Autonomie.
 //  Veškerá logika Behemota žije tady; ostatní soubory mají jen tenké napojení.
-//  Čísla jsou ilustrativní (lore/katalog = inspirace) a doladí se v balancingu.
+//  Vyladitelné konstanty jsou v BALANCE.behemot (= B). Ceny/efekty položek jsou
+//  inline v CATALOG (lokálnost jako UPGRADES/WORLDS).
 // ===========================================================================
 import { RESOURCES, BALANCE } from '../config.js';
 import { unlocked } from '../io/state.js';
 import { clamp } from '../rng.js';
 import { LINES } from './behemot-lines.js';
+
+const B = BALANCE.behemot;
 
 // --- KATALOG ---------------------------------------------------------------
 // Položka: { id, name, cat, flavor, cost:{res:amt}, once, minPhase?,
@@ -148,17 +151,17 @@ function relNudge(state, axis, delta) {
   if (axis === 'control') r.autonomy = clamp(100 - r.control, 0, 100);   // autonomie = doplněk kontroly
   return r[axis];
 }
-// Pojmenované události hýbou osami. (Kontrola/Autonomie čekají na etapu zotročení.)
+// Pojmenované události hýbou osami.
 export function relEvent(state, kind, risky) {
   if (!state.behemot) return;
-  if (kind === 'barter') { relNudge(state, 'trust', 1.2); relNudge(state, 'respect', 0.4); relNudge(state, 'overload', -0.5); }
-  else if (kind === 'use') { relNudge(state, 'overload', risky ? 3 : 1.5); }
-  else if (kind === 'spam') { relNudge(state, 'overload', 5); relNudge(state, 'trust', -3); }
+  if (kind === 'barter') { relNudge(state, 'trust', B.barterTrust); relNudge(state, 'respect', B.barterRespect); relNudge(state, 'overload', -B.barterCool); }
+  else if (kind === 'use') { relNudge(state, 'overload', risky ? B.useOverloadRisky : B.useOverload); }
+  else if (kind === 'spam') { relNudge(state, 'overload', B.spamOverload); relNudge(state, 'trust', -B.spamTrust); }
 }
 // Násobič cen: Důvěra zlevňuje, Přetížení zdražuje.
 export function relPriceMult(state) {
   const r = (state.behemot && state.behemot.rel) || {};
-  return clamp(1 - (r.trust || 0) * 0.0025 + (r.overload || 0) * 0.0035, 0.7, 1.6);
+  return clamp(1 - (r.trust || 0) * B.trustDiscount + (r.overload || 0) * B.overloadSurcharge, B.priceMin, B.priceMax);
 }
 // Efektivní cena položky v surovinách (po vlivu vztahu).
 export function barterCost(state, item) {
@@ -170,12 +173,12 @@ export function barterCost(state, item) {
 // Efektivní doba restocku: Přetížení zpomaluje, Respekt zrychluje.
 function effRestockEvery(state, item) {
   const r = (state.behemot && state.behemot.rel) || {};
-  return (item.restockEvery || 30) * (1 + (r.overload || 0) * 0.01) / (1 + (r.respect || 0) * 0.005);
+  return (item.restockEvery || 30) * (1 + (r.overload || 0) * B.restockOverloadSlow) / (1 + (r.respect || 0) * B.restockRespectFast);
 }
 // Šance, že "sajrajt z bedny" dopadne dobře (klesá s Přetížením).
 function goodSajrajtChance(state) {
   const r = (state.behemot && state.behemot.rel) || {};
-  return Math.max(0.25, 0.6 - (r.overload || 0) * 0.003);
+  return Math.max(B.sajrajtMin, B.sajrajtBase - (r.overload || 0) * B.sajrajtOverloadPenalty);
 }
 // Nálada pro hlášky/UI.
 export function behemotMood(state) {
@@ -187,7 +190,7 @@ export function behemotMood(state) {
 
 // --- Etapa 6: čtyři cesty + vzpoura (Kontrola/Autonomie) --------------------
 // "Rackový okov" (Containment / zotročení) jde zapnout, až je provoz dost velký.
-export const containmentAvailable = (state) => state.phase >= 6;
+export const containmentAvailable = (state) => state.phase >= B.containmentPhase;
 export function behemotSetContainment(state, on) {
   if (!containmentAvailable(state)) return false;
   state.behemot.containment = !!on;
@@ -198,9 +201,9 @@ export function behemotReconcile(state) {
   const b = state.behemot;
   b.containment = false;
   b.rebelling = false;
-  relNudge(state, 'overload', -40);
-  relNudge(state, 'control', -40);            // přepočítá i autonomii
-  relNudge(state, 'trust', 8);
+  relNudge(state, 'overload', -B.reconcileOverload);
+  relNudge(state, 'control', -B.reconcileControl);   // přepočítá i autonomii
+  relNudge(state, 'trust', B.reconcileTrust);
   behemotSay(state, 'reconcile');
   return true;
 }
@@ -337,10 +340,10 @@ export function behemotMults(state) {
     if (item && item.effect.type === 'mult') add(item.effect.mults);
   }
   for (const buff of (b.buffs || [])) if (buff.mults) add(buff.mults);
-  if (b.wisdom) out.global = (out.global || 0) + b.wisdom * 0.02;   // Moudrost = trvalý bonus přes resety (Etapa 5)
+  if (b.wisdom) out.global = (out.global || 0) + Math.min(B.wisdomBonusCap, b.wisdom * B.wisdomBonus);   // Moudrost = trvalý bonus přes resety (Etapa 5), zastropovaný
   // Etapa 6: vynucená "optimalizace" (Rackový okov) dává bonus; vzpoura ho sebere a sabotuje produkci
-  if (b.rebelling) out.global = (out.global || 0) - 0.3;
-  else if (b.containment) out.global = (out.global || 0) + (b.rel.control || 0) * 0.003;
+  if (b.rebelling) out.global = (out.global || 0) - B.rebellionPenalty;
+  else if (b.containment) out.global = (out.global || 0) + (b.rel.control || 0) * B.controlBonus;
   return out;
 }
 
@@ -353,14 +356,14 @@ export function behemotPrestige(state) {
   if (!b.persistent) b.persistent = {};
   if (!b.persistent.artifacts) b.persistent.artifacts = {};
   for (const id in b.inv) { const it = ITEM_BY_ID[id]; if (it && it.once) b.persistent.artifacts[id] = true; }
-  b.wisdom = (b.wisdom || 0) + 1;
+  b.wisdom = (b.wisdom || 0) + B.wisdomPerReset;
 }
 
 // Odkroj barterFrac z vyrobených surovin do beden (volá se v step() PŘED prodejem).
 export function skimBarter(state, produced) {
   const b = state.behemot;
   if (!b || state.prestige.armed) return;            // při nasávání do černé díry neodkládáme
-  const cap = (BALANCE.behemot && BALANCE.behemot.stockCap) || 0;
+  const cap = B.stockCap || 0;
   for (const k in produced) {
     const frac = b.barterFrac[k] || 0;
     if (frac <= 0) continue;
@@ -375,7 +378,7 @@ export function skimBarter(state, produced) {
   }
 }
 
-// Každý tik: expirace buffů (+ postih), chladnutí Přetížení a doplňování skladu.
+// Každý tik: expirace buffů (+ postih), okov/vzpoura, chladnutí Přetížení a doplňování skladu.
 export function stepBehemot(state, dt) {
   const b = state.behemot;
   if (!b) return;
@@ -393,16 +396,16 @@ export function stepBehemot(state, dt) {
   //     Vzpoura při vysoké Kontrole + Přetížení (Behemot zavře garáž, dokud se neusmíříš).
   if (b.rel) {
     if (b.containment) {
-      relNudge(state, 'control', 0.5 * dt);
-      relNudge(state, 'overload', 0.5 * dt);
-      relNudge(state, 'trust', -0.15 * dt);
-      if (!b.rebelling && b.rel.control >= 70 && b.rel.overload >= 70) { b.rebelling = true; behemotSay(state, 'rebellion'); }
+      relNudge(state, 'control', B.controlGain * dt);
+      relNudge(state, 'overload', B.containOverload * dt);
+      relNudge(state, 'trust', -B.containTrustDrop * dt);
+      if (!b.rebelling && b.rel.control >= B.rebelControl && b.rel.overload >= B.rebelOverload) { b.rebelling = true; behemotSay(state, 'rebellion'); }
     } else if (b.rel.control > 0) {
-      relNudge(state, 'control', -0.2 * dt);
+      relNudge(state, 'control', -B.controlDecay * dt);
     }
   }
   // 2) Přetížení časem chladne (Behemot se uklidní, když ho necháš být)
-  if (b.rel && b.rel.overload > 0) b.rel.overload = Math.max(0, b.rel.overload - 0.25 * dt);
+  if (b.rel && b.rel.overload > 0) b.rel.overload = Math.max(0, b.rel.overload - B.overloadCool * dt);
   // 3) restock Behemotova skladu (jen u položek, které už byly otevřené)
   if (b.shop) {
     for (const id in b.shop) {

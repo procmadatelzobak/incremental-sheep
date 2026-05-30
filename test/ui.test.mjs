@@ -88,26 +88,33 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('žádné NaN kredity po proklikání', isFinite(s.resources.credits));
 }
 
-// --- Behemot: Emporio (speciální tlačítko v HUDu, NE záložka) + Předměty (zap/vyp) ---
+// --- Behemot: Emporio (popup z HUD tlačítka, NE záložka) + Předměty (zap/vyp) ---
 {
+  const app = document.getElementById('app');
   check('Emporio NENÍ mezi záložkami', buttonsByText(tabs(), 'Emporio').length === 0);
   const empBtn = buttonsByText(hud(), 'Emporio')[0];
   check('Emporio: speciální tlačítko v HUDu existuje', !!empBtn);
   empBtn.click();
-  check('panel Emporio má obsah', panel().children.length > 0);
+  const modal = app.querySelectorAll('.emporio-modal')[0];
+  check('Emporio: otevře se jako popup', !!modal);
+  check('Emporio: popup má obsah', !!modal && modal.children.length > 0);
   check('Emporio: otevření vyvolá Behemotovu hlášku', !!(s.behemot.line && s.behemot.line.text));
-  check('Emporio: hlavička ukazuje fázi garáže', panel().textContent.includes('Behemot Emporio'));
-  check('Emporio: vztahová sekce ukazuje cestu', panel().textContent.includes('cesta:'));
+  check('Emporio: popup ukazuje hlavičku fáze', app.textContent.includes('Behemot Emporio'));
+  check('Emporio: vztahová sekce ukazuje cestu', app.textContent.includes('cesta:'));
   s.behemot.stock.wool = 5000;          // naplň bedny, ať jde bartrovat
   updateUI(s);
-  const barterBtn = buttonsByText(panel(), 'Barter')[0];
+  const barterBtn = buttonsByText(app, 'Barter')[0];
   check('Emporio: tlačítko Barter existuje', !!barterBtn);
   const inv0 = Object.keys(s.behemot.inv).length;
   if (barterBtn) barterBtn.click();
   check('Emporio: barter přidá předmět do inventáře', Object.keys(s.behemot.inv).length > inv0);
   check('Emporio: barter vyvolá hlášku o úspěchu', s.behemot.line && s.behemot.line.key === 'purchaseSuccess');
+  const closeBtn = buttonsByText(app, '×')[0];
+  if (closeBtn) closeBtn.click();
+  check('Emporio: popup jde zavřít', app.querySelectorAll('.emporio-modal').length === 0);
 
-  updateUI(s);                           // záložka inventáře se po koupi zpřístupní
+  // „Předměty od Behemota" je normální záložka
+  updateUI(s);
   clickTab('Předměty od Behemota');
   check('panel Předměty má obsah', panel().children.length > 0);
   const toggleBtn = buttonsByText(panel(), 'Zapnuto')[0];

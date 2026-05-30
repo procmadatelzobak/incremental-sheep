@@ -304,6 +304,7 @@ body.cosmic .hud-emporio { color: var(--gold); }
 .emporio-s1 .beh-say { border-left-color: #5b8def; }
 .emporio-s2 .beh-say { border-left-color: #a06fd0; }
 .emporio-s3 .beh-say { border-left-color: #c9a227; }
+.emporio-modal { max-width: 560px; }   /* Emporio popup ("garáž") — víc obsahu než běžný modal */
 
 /* ---- #34 odznak nově odemčené záložky ---------------------------------- */
 .tab { position: relative; }

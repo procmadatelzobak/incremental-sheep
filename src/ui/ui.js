@@ -217,7 +217,7 @@ function updateHud(s) {
   hudPhase.textContent = `  •  ${PHASE_ICONS[s.phase] || ''} Fáze ${s.phase}: ${phaseName(s)}` + (sp > 1 ? `  ⏩ čas ×${sp.toFixed(1)}` : '');
   hudHint.textContent = '› ' + phaseHint(s);
   if (hudTools.tip) setClass(hudTools.tip, 'lit', stepActionable(s));   // žárovka svítí, když je co výhodně koupit
-  if (hudTools.emporio) setClass(hudTools.emporio, 'active', activeTab === 'emporio');
+  if (hudTools.emporio) setClass(hudTools.emporio, 'active', emporioOpen);
   const r = s.rates || {};
   const set = (k, txt, show) => { const c = hudChips[k]; if (!c) return; c.chip.style.display = show ? '' : 'none'; c.val.textContent = txt; };
   set('credits', fmt(s.resources.credits || 0), true);
@@ -722,6 +722,7 @@ function renderStorage(s) {
 // Emporio NENÍ záložka — otevírá se speciálním tlačítkem v HUDu (openEmporio).
 let barterClicks = [];          // časy posledních kliků (detekce spamování, reálný čas)
 let emporioActivityAt = 0;      // poslední aktivita v Emporiu (pro idle hlášku)
+let emporioModalEl = null, emporioBodyEl = null, emporioOpen = false;   // Emporio jako popup ("garáž")
 const noteEmporioActivity = () => { emporioActivityAt = Date.now(); };
 function noteBarterClick() {
   const now = Date.now();
@@ -730,7 +731,9 @@ function noteBarterClick() {
   noteEmporioActivity();
   if (barterClicks.length >= 5) { barterClicks = []; A.behemotSpam(S); }   // spam → Přetížení + rýpnutí
 }
+// Emporio je popup ("vejdeš do garáže"). Otevírá se vlastním tlačítkem v HUDu.
 function openEmporio() {
+  if (!root || emporioOpen) return;
   const stage = emporioStageIndex(S);
   if (stage > (S.behemot.stageSeen || 0)) {                                 // Emporio přerostlo do nové fáze (Etapa 4)
     S.behemot.stageSeen = stage;
@@ -740,8 +743,28 @@ function openEmporio() {
     behemotSay(S, mood === 'tense' ? 'tense' : mood === 'warm' ? 'warm' : (Object.keys(S.behemot.inv).length ? 'repeatVisit' : 'openShop'));
   }
   noteEmporioActivity();
-  activeTab = 'emporio';
-  buildTabs(); rebuildPanel(); onAction();
+  emporioOpen = true;
+  emporioBodyEl = h('div', { class: 'emporio-modal-body' });
+  const card = h('div', { class: 'modal emporio-modal' }, h('button', { class: 'modal-x', title: 'Zavřít', onclick: closeEmporio }, '×'), emporioBodyEl);
+  emporioModalEl = h('div', { class: 'modal-bg', onclick: (e) => { if (e.target === emporioModalEl) closeEmporio(); } }, card);
+  root.appendChild(emporioModalEl);
+  rebuildEmporio();
+  onAction();
+}
+// Přestaví obsah popupu. Sdílí pipeline panelu (updaters/refreshPanel) — proto
+// rebuildPanel() při otevřeném Emporiu deleguje sem (viz rebuildPanel).
+function rebuildEmporio() {
+  if (!emporioBodyEl) return;
+  updaters = [];
+  clear(emporioBodyEl);
+  emporioBodyEl.appendChild(renderEmporio(S));
+  structSig = structSigOf(S);
+  refreshPanel();
+}
+function closeEmporio() {
+  if (emporioModalEl && root) { try { root.removeChild(emporioModalEl); } catch (e) { /* ignore */ } }
+  emporioModalEl = null; emporioBodyEl = null; emporioOpen = false;
+  rebuildPanel();                                                           // obnov panel na pozadí
 }
 // "Bedny": kolik produkce dané suroviny odkládat Behemotovi místo prodeje za kredity.
 function emporioFrac(s, k) {
@@ -1007,17 +1030,13 @@ function phaseModalContent(phase) {
 }
 function rebuildPanel() {
   if (!panelEl) return;
-  let render;
-  if (activeTab === 'emporio') { render = renderEmporio; }      // speciální panel mimo TABS (#behemot)
-  else {
-    let tab = TABS.find(t => t.id === activeTab);
-    if (!tab || !tab.avail(S)) { activeTab = 'herds'; tab = TABS[0]; }
-    render = tab.render;
-  }
+  if (emporioOpen) { rebuildEmporio(); return; }                 // Emporio běží v popupu, ne v panelu
+  let tab = TABS.find(t => t.id === activeTab);
+  if (!tab || !tab.avail(S)) { activeTab = 'herds'; tab = TABS[0]; }
   updaters = [];
   clear(panelEl);
   if (phaseBannerQueue.length) panelEl.appendChild(phaseBannerEl(phaseBannerQueue[0]));   // #35
-  panelEl.appendChild(render(S));
+  panelEl.appendChild(tab.render(S));
   structSig = structSigOf(S);
   refreshPanel();
 }
@@ -1118,7 +1137,7 @@ export function initUI(state, mountId = 'app', actionCb = () => {}, opts = {}) {
 export function updateUI(state) {
   S = state;
   // idle v Emporiu: Behemot si rýpne, když dlouho nic neděláš (a rozjede další odpočet)
-  if (activeTab === 'emporio' && emporioActivityAt && Date.now() - emporioActivityAt > 22000) {
+  if (emporioOpen && emporioActivityAt && Date.now() - emporioActivityAt > 22000) {
     emporioActivityAt = Date.now(); behemotSay(state, 'idleInShop');
   }
   updateHud(state);
