@@ -7,6 +7,7 @@ import { applyProduced } from '../econ/storage.js';
 import { applyProcessing } from '../econ/processing.js';
 import { aging, births, totalCount } from './cohort.js';
 import { produce } from './production.js';
+import { stepSoil } from './soil.js';
 import { applyPolicyKills, slaughterYields } from './groups.js';
 import { herdCapacity, worldEnv } from '../content/locations.js';
 import { stepProjects } from '../content/projects.js';
@@ -51,10 +52,12 @@ export function step(state, dt) {
     }
   }
 
-  // 3) automatika (porážky) + produkce
+  // 3) automatika (porážky) + produkce + bobky/hnojení (#63)
   for (const g of state.groups) {
     addInto(produced, applyPolicyKills(g, ctx, state));
     addInto(produced, produce(g, edt, ctx, state));
+    const leftBobky = stepSoil(g, edt, state);     // posune kvalitu půdy; vrátí přebytek bobků do zásoby
+    if (leftBobky > 0) produced.bobky = (produced.bobky || 0) + leftBobky;
   }
   applyProcessing(produced, state);     // vlna→sukno, mléko→sýr (fáze 3+, dle Tkalcoven)
 

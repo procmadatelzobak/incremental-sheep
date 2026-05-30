@@ -3,7 +3,8 @@
 //  (globální track) + MODIFIKÁTORY ROZLOHY. Kapacita = rozloha × hustota ×
 //  modifikátory × baseCap. Produkční prostředí = vážený průměr dle podílu rozlohy.
 // ===========================================================================
-import { WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS, BALANCE } from '../config.js';
+import { WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS, BALANCE, SOIL } from '../config.js';
+import { totalCount } from '../sim/cohort.js';
 
 export function parcelsInWorld(state, wk) {
   const w = state.land.worlds[wk]; if (!w) return 0;
@@ -32,8 +33,23 @@ export function areaModMult(state) {
 }
 export const flockMult = (state) => 1 + 0.10 * ((state.prestige && state.prestige.perks && state.prestige.perks.flock) || 0);
 
+// Kapacitní násobič z kvality půdy (#63). Půda je per stádo, kapacita je sdílená,
+// takže bereme vážený průměr (dle populace) přes stáda. Bez ovcí = průměr stád.
+// Bonus se neprojeví do cen pozemků (ty mají vlastní addedCap) — je to bonus navíc.
+export function soilCapMult(state) {
+  if (!state || state.phase < SOIL.unlockPhase || !state.groups) return 1;
+  let pop = 0, weighted = 0, sum = 0, n = 0;
+  for (const g of state.groups) {
+    const m = 1 + SOIL.maxBonus * ((g.soil && g.soil.q) || 0);
+    const p = totalCount(g);
+    pop += p; weighted += p * m; sum += m; n++;
+  }
+  if (pop > 0) return weighted / pop;
+  return n > 0 ? sum / n : 1;
+}
+
 export function herdCapacity(state) {
-  return totalArea(state) * BALANCE.baseCap * densityMult(state) * areaModMult(state) * flockMult(state);
+  return totalArea(state) * BALANCE.baseCap * densityMult(state) * areaModMult(state) * flockMult(state) * soilCapMult(state);
 }
 
 // Produkční prostředí = vážený průměr env světů podle podílu efektivní rozlohy.

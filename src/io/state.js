@@ -4,6 +4,7 @@
 import { VERSION, BALANCE, RESOURCES, GENES } from '../config.js';
 import { seedGroupGenes } from '../sim/genetics.js';
 import { emptyCounts } from '../sim/cohort.js';
+import { defaultSoil } from '../sim/soil.js';
 
 export function defaultPolicy() {
   return {
@@ -33,6 +34,7 @@ export function newGame(carry = null) {
     counts: emptyCounts(),
     bredFracF: 0,
     policy: defaultPolicy(),
+    soil: defaultSoil(),       // kvalita půdy je pro každé stádo zvlášť (#63)
   };
   // malé startovní stádo, aby se hned množilo
   group.counts.M.adult = 2;

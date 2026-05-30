@@ -5,6 +5,7 @@ import { SAVE_KEY, VERSION, MAX_OFFLINE_SECONDS, TIME_SCALE, GENES } from '../co
 import { newGame, defaultPolicy } from './state.js';
 import { step } from '../sim/simulation.js';
 import { totalCount } from '../sim/cohort.js';
+import { defaultSoil } from '../sim/soil.js';
 import { clamp } from '../rng.js';
 
 function replacer(key, value) {
@@ -65,6 +66,9 @@ function hydrate(data) {
     if (typeof g.bredFracF !== 'number') g.bredFracF = 0;
     g.policy = Object.assign(defaultPolicy(), g.policy || {});   // doplní nové spínače Jatek (#33) do starých savů
     if (!g.policy.cull) g.policy.cull = { enabled: false, gene: 'woolRate', cutFrac: 0.2 };
+    g.soil = Object.assign(defaultSoil(), g.soil || {});        // bobky/hnojení (#63) do starých savů
+    g.soil.q = clamp(typeof g.soil.q === 'number' ? g.soil.q : 0, 0, 1);
+    g.soil.input = clamp(typeof g.soil.input === 'number' ? g.soil.input : 1, 0, 1);
   }
   state.rates = {};
   return state;

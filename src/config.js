@@ -36,6 +36,7 @@ export const RESOURCES = {
   wool:    { label: 'Vlna',     phase: 1, sell: true,  store: true,  value: 1.0 },
   meat:    { label: 'Maso',     phase: 1, sell: true,  store: true,  value: 6.0 },
   milk:    { label: 'Mléko',    phase: 2, sell: true,  store: true,  value: 2.7 },
+  bobky:   { label: 'Bobky',    phase: 2, sell: false, store: true },
   cloth:   { label: 'Sukno',    phase: 3, sell: true,  store: true,  value: 3 },
   cheese:  { label: 'Sýr',      phase: 3, sell: true,  store: true,  value: 5 },
   bones:   { label: 'Kosti',    phase: 5, sell: true,  store: true,  value: 4 },
@@ -244,3 +245,21 @@ export const AREA_MODS = [
   { key: 'underground', label: 'Podzemní haly', bonus: 1.5, icon: '⛏️', phase: 6 },
   { key: 'orbital', label: 'Orbitální prstence', bonus: 3.0, icon: '🛰️', phase: 7 },
 ];
+
+// --- BOBKY A HNOJENÍ (#63) — kvalita půdy zvedá kapacitu pastvin ------------
+// Saturace q ∈ [0,1] = supply/(supply+demand) (Hill, saturující). Nabídka bobků
+// roste s počtem ovcí (manurePerSheep × vážený počet), poptávka s rozlohou půdy
+// (demandPerArea × metry). Proto se 100 % blíží až s pokročilou hustotou
+// (vícepatrové farmy a výš). Kapacita = … × (1 + maxBonus × q). tau = setrvačnost
+// (sekundy) náběhu i poklesu kvality. Umělé hnojivo: bobky/s = fert.k × (kr/s)^exp
+// (exp<1 → čím víc utratíš, tím menší přírůstek; útrata může jít do nekonečna).
+export const SOIL = {
+  unlockPhase: 2,                                   // bobky a Pastviny od fáze 2
+  manurePerSheep: 1,                                // bobky/s na 1 (vážený) kus
+  stageManure: { child: 0.5, adult: 1, old: 1 },    // dítě poloviční, dospělá/stará plné
+  demandPerArea: 30,                                // referenční tok bobků/s na jednotku rozlohy
+  maxBonus: 0.6,                                    // +60 % kapacity při plné saturaci (q=1)
+  tau: 60,                                          // setrvačnost kvality (s)
+  fert: { k: 2, exp: 0.5 },                         // umělé hnojivo: bobky/s = k × (kr/s)^exp
+  defaultInput: 1,                                  // výchozí podíl výnosu bobků do půdy (100 %)
+};

@@ -7,9 +7,10 @@
 import { fmt, fmtCount } from '../format.js';
 import * as A from '../econ/actions.js';
 import { upgradeCost, perkCost, getMults } from '../econ/economy.js';
-import { VERSION, UPGRADES, upgradeName, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS } from '../config.js';
+import { VERSION, UPGRADES, upgradeName, PERKS, PERK_BRANCHES, GENES, RESOURCES, BALANCE, WORLDS, WORLD_ORDER, DENSITY_TIERS, AREA_MODS, SOIL } from '../config.js';
 import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { maleCapOf } from '../sim/groups.js';
+import { soilSnapshot, manureRate } from '../sim/soil.js';
 import { herdCapacity, totalArea, densityMult, densityMaxLevel, densityPhaseCap, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
 import { phaseName, phaseHint, phaseProgress, PHASE_INFO, PHASES } from '../content/phases.js';
 import { breedingScore, geneMin, geneMax, selectedNewbornDist } from '../sim/genetics.js';
@@ -264,6 +265,7 @@ const TABS = [
   { id: 'behitems', label: '🎒 Předměty od Behemota', avail: s => !!(s.behemot && Object.keys(s.behemot.inv).length), render: renderBehemotItems },
   { id: 'lab', label: ICONS.lab + ' Laboratoř', avail: s => labUnlocked(s), render: renderLab },
   { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: s => s.phase >= 2, render: renderStations },
+  { id: 'pastures', label: ICONS.soil + ' Pastviny', avail: s => s.phase >= SOIL.unlockPhase, render: renderPastures },
   { id: 'storage', label: ICONS.storage + ' Sklad', avail: s => s.phase >= 6, render: renderStorage },
   { id: 'manager', label: ICONS.manager + ' Manažer', avail: s => s.phase >= 9, render: renderManager },
   { id: 'prestige', label: ICONS.prestige + ' Prestiž', avail: s => s.phase >= 7 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
@@ -385,6 +387,15 @@ function renderHerds(s) {
     breedLine,
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmtCount(p)} / ${fmtCount(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
     liveSpan(() => limitText(s), 'dim small statusline'),
+    s.phase >= SOIL.unlockPhase ? liveSpan(() => {
+      const gg = group(), q = (gg.soil && gg.soil.q) || 0;
+      const pop = totalPopulation(s), cap = herdCapacity(s);
+      const dropping = typeof gg._soilTarget === 'number' && gg._soilTarget < q - 0.01;
+      let t = `${ICONS.soil} Půda: pohnojení ${(q * 100).toFixed(0)} % (kapacita +${(SOIL.maxBonus * q * 100).toFixed(0)} %).`;
+      if (pop >= cap * 0.98) t += ' Pastviny plné — množení dalších ovcí se zastavilo; zvyš pohnojení (Pastviny) nebo rozlohu (Pozemky).';
+      else if (dropping) t += ' ⚠ Půda chudne — kapacita i množení budou klesat.';
+      return t;
+    }, 'dim small statusline') : null,
     buyBlock));
 
   wrap.appendChild(incomeSection(s));
@@ -692,6 +703,67 @@ function renderStations(s) {
         aBtn(`${ICONS.sphere} Dokončit sféru!`, () => sphereReady(s), () => A.doClaimSphere(s), () => 'sféra ještě není hotová'),
         s.phase >= 8 ? cBtn(`${ICONS.laser} + Laser`, () => A.costFor(s, 'laser'), () => A.buyLaser(s), () => '+50 % rychlost stavby') : null)));
   }
+  return wrap;
+}
+
+// Pastviny (#63): bobky a hnojení. Kvalita půdy (per stádo) zvedá kapacitu pastvin.
+function renderPastures(s) {
+  const g = group();
+  const wrap = h('div', {});
+  if (s.groups.length > 1) {
+    wrap.appendChild(section('Stádo',
+      h('select', { onchange: e => { s.activeGroupId = +e.target.value; rebuildPanel(); } },
+        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmtCount(totalCount(x))})`)))));
+  }
+
+  // přehled kvality půdy + zásoby bobků
+  wrap.appendChild(section(ICONS.soil + ' Kvalita půdy',
+    liveBar(() => group().soil.q, () => {
+      const q = group().soil.q;
+      return `Pohnojení ${(q * 100).toFixed(0)} % → kapacita +${(SOIL.maxBonus * q * 100).toFixed(0)} %`;
+    }, '#8a6d3b'),
+    liveSpan(() => {
+      const snap = soilSnapshot(group(), s);
+      const tr = snap.target > snap.q + 0.01 ? ' ▲ stoupá' : snap.target < snap.q - 0.01 ? ' ▼ klesá' : ' ≈ ustáleno';
+      return `Saturace${tr}. Bobky: výroba ${fmt(snap.prod)}/s, do půdy ${fmt(snap.toSoil)}/s; pro plné hnojení by půda brala ~${fmt(snap.demand)}/s.`;
+    }, 'dim small statusline'),
+    liveSpan(() => `${ICONS.bobky} Zásoba bobků: ${fmt(s.resources.bobky || 0)} (přebytek ${fmt(soilSnapshot(group(), s).stored)}/s)`, 'dim small'),
+    h('div', { class: 'dim small' }, 'Čím lépe pohnojená půda, tím větší kapacita ovcí. Saturace souvisí s rozlohou půdy (metry), produkce bobků s počtem ovcí — 100 % se blíží až s pokročilou hustotou. Kvalita má setrvačnost: při výpadku pomalu klesá, po návratu zase stoupá.')));
+
+  // hnojení z bobků
+  const soil = g.soil;
+  wrap.appendChild(section(ICONS.bobky + ' Hnojení z bobků',
+    h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(soil.convert ? { checked: 'checked' } : {}), onchange: e => { A.setSoil(s, g.id, { convert: !!e.target.checked }); onAction(); rebuildPanel(); } }), ' Hnojit pastvinu bobky v reálném čase'),
+    h('div', { class: 'ctl-row' },
+      liveSpan(() => `Podíl výnosu do půdy: ${Math.round(group().soil.input * 100)} %`),
+      h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: soil.input, oninput: e => { A.setSoil(s, g.id, { input: +e.target.value }); } })),
+    h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(soil.useStock ? { checked: 'checked' } : {}), onchange: e => { A.setSoil(s, g.id, { useStock: !!e.target.checked }); onAction(); rebuildPanel(); } }), ' Při nedostatku brát bobky ze zásoby'),
+    h('div', { class: 'dim small' }, 'Bobky generuje každá ovce (dítě poloviční, dospělá a stará plné). Přebytek se ukládá do zásoby; ta se použije, když produkce nestačí.')));
+
+  // umělé hnojivo (za kredity)
+  const fm = soil.fertMode;
+  const fertValueRow = fm === 'off' ? null
+    : fm === 'percent'
+      ? h('div', { class: 'ctl-row' },
+          liveSpan(() => `Podíl příjmu na hnojivo: ${Math.round(group().soil.fertValue * 100)} %`),
+          h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: soil.fertValue, oninput: e => { A.setSoil(s, g.id, { fertValue: +e.target.value }); } }))
+      : h('div', { class: 'ctl-row' }, 'Kredity/s: ',
+          h('input', { type: 'number', min: 0, value: soil.fertValue, style: 'width:120px', onchange: e => { A.setSoil(s, g.id, { fertValue: +e.target.value }); } }));
+  wrap.appendChild(section(ICONS.immortality + ' Umělé hnojivo (za kredity)',
+    h('div', { class: 'ctl-row' }, 'Režim: ',
+      segBtn('Vypnuto', fm === 'off', () => A.setSoil(s, g.id, { fertMode: 'off' })),
+      segBtn('% z příjmu', fm === 'percent', () => A.setSoil(s, g.id, { fertMode: 'percent' })),
+      segBtn('Pevně /s', fm === 'fixed', () => A.setSoil(s, g.id, { fertMode: 'fixed' }))),
+    fertValueRow,
+    liveSpan(() => {
+      const so = group().soil;
+      if (so.fertMode === 'off') return 'Vypnuto — hnojíš jen bobky od ovcí.';
+      const income = (s.rates && s.rates._income) || 0;
+      const budget = so.fertMode === 'percent' ? so.fertValue * Math.max(0, income) : so.fertValue;
+      const manure = SOIL.fert.k * Math.pow(Math.max(0, budget), SOIL.fert.exp);
+      return `Utratíš ~${fmt(budget)} kr/s → +${fmt(manure)} bobků/s do půdy. Čím víc utratíš, tím menší přírůstek (křivka se zplošťuje), ale útrata může růst donekonečna.`;
+    }, 'dim small statusline'),
+    h('div', { class: 'dim small' }, 'Umělé hnojivo doplňuje půdu nezávisle na ovcích — pevnou částkou za sekundu, nebo procentem z příjmu.')));
   return wrap;
 }
 

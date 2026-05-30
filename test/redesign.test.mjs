@@ -2,7 +2,7 @@
 // musí být přes podřetězec, ne přesná shoda. Dřív tu bylo === 'Ovce', což se
 // kvůli emoji nikdy netrefilo → počet ovcí se četl jako NaN a louka oveček na
 // pozadí zůstala navždy prázdná.
-import { flockSheepScale, isSheepChipLabel, maleDisplayCount } from '../src/redesign.js';
+import { browserZoomScale, flockSheepScale, flockTarget, isSheepChipLabel, maleDisplayCount } from '../src/redesign.js';
 import { ICONS } from '../src/icons.js';
 
 let pass = 0, fail = 0;
@@ -16,7 +16,10 @@ check('ignoruje Vlnu', !isSheepChipLabel(ICONS.wool + ' Vlna/s'));
 check('ignoruje Maso', !isSheepChipLabel(ICONS.meat + ' Maso/s'));
 check('ignoruje Vědění', !isSheepChipLabel(ICONS.knowledge + ' Vědění'));
 check('zvládne prázdný i undefined vstup', !isSheepChipLabel('') && !isSheepChipLabel(undefined));
-check('velikost oveček nezávisí na šířce viewportu', flockSheepScale(360) === flockSheepScale(1920));
+check('výchozí velikost oveček je stabilní', flockSheepScale() === 2);
+check('browser zoom přes DPR zmenší kreslenou ovečku', flockSheepScale(2) === 1);
+check('browser zoom out přes DPR zvětší kreslenou ovečku', flockSheepScale(0.5) === 4);
+check('kompenzace zoomu má rozumné meze', browserZoomScale(10) === 0.5 && browserZoomScale(0.1) === 2);
 
 // #54: obarvení oveček podle pohlaví — počet černých (samců) drží reálný poměr.
 check('půl na půl → polovina samců', maleDisplayCount(100, 50, 50) === 50);
@@ -29,6 +32,13 @@ check('nenulové samice v menšině → aspoň 1 bílá', maleDisplayCount(1000,
 check('jediná zobrazená ovce ukáže většinu (samci)', maleDisplayCount(1, 8, 2) === 1);
 check('jediná zobrazená ovce ukáže většinu (samice)', maleDisplayCount(1, 2, 8) === 0);
 check('prázdná louka → 0', maleDisplayCount(0, 5, 5) === 0);
+
+// #54 (follow-up): počet oveček na louce sleduje aktuální populaci oběma směry.
+check('počet sleduje malou populaci (8 → 8)', flockTarget(8) === 8);
+check('zaokrouhluje dolů (8,9 → 8)', flockTarget(8.9) === 8);
+check('strop zobrazení (5000 → 1000)', flockTarget(5000) === 1000);
+check('vlastní strop (200, cap 100 → 100)', flockTarget(200, 100) === 100);
+check('nulová/neplatná populace → 0', flockTarget(0) === 0 && flockTarget(NaN) === 0 && flockTarget(-3) === 0);
 
 console.log(`redesign: ${pass} ok, ${fail} fail`);
 process.exit(fail ? 1 : 0);

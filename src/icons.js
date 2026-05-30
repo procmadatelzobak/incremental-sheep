@@ -8,6 +8,7 @@ export const ICONS = {
   sphere: '☀️', compute: '🧠', knowledge: '📚', blackHole: '🕳️', singularity: '✨',
   builder: '🏗️', laser: '🔦', immortality: '🧪', storage: '📦', manager: '🧑‍🌾',
   prestige: '🕳️', stats: '📊', kronika: '📜', upgrades: '🛠️', energy: '⚡', lab: '🔬',
+  soil: '🌱', bobky: '💩',
 };
 
 // ikona fáze (1–11)
@@ -24,4 +25,5 @@ export const KIND_ICONS = {
 export const RES_ICONS = {
   credits: '💰', wool: '🧶', meat: '🥩', milk: '🥛', cloth: '🧵', cheese: '🧀',
   bones: '🦴', skin: '🟫', brain: '🧠', compute: '🧠', energy: '⚡', knowledge: '📚',
+  bobky: '💩',
 };
