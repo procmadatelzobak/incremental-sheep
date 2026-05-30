@@ -118,7 +118,7 @@ function fmtShort(n) {
 const FLOCK_CAP = 1000;
 const FLOCK_KEY = storageKey('sheep-meadow-v1');
 const FLOCK_SHEEP_SCALE = 2;
-let fCanvas, fCtx, flock = [], flockAniming = false, lastSheepFloor = null;
+let fCanvas, fCtx, fBuf, fBufCtx, bufDirty = true, flock = [], flockAniming = false, lastSheepFloor = null;
 
 // Popisek populačního chipu má prefix s ikonou (viz ui.js: ICONS.sheep + ' Ovce'),
 // proto hledáme podřetězec, NE přesnou shodu. Dřív tu bylo === 'Ovce', což se kvůli
@@ -188,8 +188,18 @@ function flockSetup() {
   // za obsah (#app má z-index 1), ale nad pozadí stránky
   document.body.insertBefore(fCanvas, document.body.firstChild);
   fCtx = fCanvas.getContext('2d');
+  // #opt: offscreen vyrovnávací plátno s usazenými ovečkami — překresluje se jen
+  // při změně stáda, ne každý snímek. Animace pak jen „blitne" buffer + dokreslí
+  // pár právě se rodících oveček navrch (z ~1000 detailních kreseb/snímek → 1 drawImage).
+  fBuf = document.createElement('canvas');
+  fBufCtx = fBuf.getContext('2d');
   resizeFlock();
-  window.addEventListener('resize', () => { resizeFlock(); drawFlock(); });
+  let resizePending = false;
+  window.addEventListener('resize', () => {
+    if (resizePending) return;
+    resizePending = true;
+    requestAnimationFrame(() => { resizePending = false; resizeFlock(); drawFlock(); });
+  });
 
   // načti uložené pozice
   try {
@@ -209,6 +219,11 @@ function resizeFlock() {
   fCanvas.width = Math.round(window.innerWidth * dpr);
   fCanvas.height = Math.round(window.innerHeight * dpr);
   fCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (fBuf) {
+    fBuf.width = fCanvas.width; fBuf.height = fCanvas.height;
+    fBufCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  bufDirty = true;   // jiná velikost → buffer překreslit
 }
 
 function addSheep(n, animate) {
@@ -220,6 +235,7 @@ function addSheep(n, animate) {
       born: animate ? performance.now() + i * 55 : 0, // mírně rozfázovaný pop
     });
   }
+  bufDirty = true;   // změna členství stáda → buffer překreslit
   saveFlock();
   if (animate) startFlockAnim(); else drawFlock();
 }
@@ -241,7 +257,13 @@ function recolorFlock() {
   const M = sx ? sx.M : 0, F = sx ? sx.F : 0;
   const males = maleDisplayCount(flock.length, M, F);
   const order = flock.map((sh, i) => [sh.seed, i]).sort((a, b) => a[0] - b[0]);
-  for (let k = 0; k < order.length; k++) flock[order[k][1]].male = k < males;
+  let changed = false;
+  for (let k = 0; k < order.length; k++) {
+    const sh = flock[order[k][1]], m = k < males;
+    if (sh.male !== m) { sh.male = m; changed = true; }
+  }
+  if (changed) bufDirty = true;   // přebarvení → buffer překreslit (jinak ne)
+  return changed;
 }
 
 // jednoduchá ovečka: chomáček vlny + hlavička + nožičky
@@ -262,7 +284,9 @@ function drawOneSheep(ctx, x, y, scale, seed, cosmic, male) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(flip, 1);
-  if (cosmic > 0.45) { ctx.shadowColor = 'rgba(150,200,255,0.5)'; ctx.shadowBlur = 6 * s; }
+  // #opt: záře (shadowBlur) je drahá — u velkých stád ji vypneme (kosmické pozadí
+  // a hvězdy ji stejně z velké části nahradí), ať překreslení bufferu nezatuhne.
+  if (cosmic > 0.45 && flock.length <= 240) { ctx.shadowColor = 'rgba(150,200,255,0.5)'; ctx.shadowBlur = 6 * s; }
   // nožičky
   ctx.strokeStyle = dark; ctx.lineWidth = 1.4 * s; ctx.lineCap = 'round';
   ctx.beginPath();
@@ -294,20 +318,39 @@ function drawOneSheep(ctx, x, y, scale, seed, cosmic, male) {
 
 function easeOutBack(t) { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
 
+// #opt: usazené ovečky se kreslí jednou do bufferu (rebuildBuffer); každý snímek
+// pak jen „blitne" hotový buffer a navrch dokreslí jen ty, co se právě rodí.
+function rebuildBuffer(W, H) {
+  if (!fBufCtx) return;
+  fBufCtx.clearRect(0, 0, W, H);
+  const cosmic = lastCosmic < 0 ? 0 : lastCosmic;
+  const base = flockSheepScale(currentDpr());
+  for (const sh of flock) {
+    if (sh.born) continue;            // právě se rodící kreslíme živě na hlavní plátno
+    drawOneSheep(fBufCtx, sh.fx * W, sh.fy * H, base, sh.seed, cosmic, sh.male);
+  }
+  bufDirty = false;
+}
+
 function drawFlock() {
   if (!fCtx) return;
   const W = window.innerWidth, H = window.innerHeight;
-  fCtx.clearRect(0, 0, W, H);
+  if (bufDirty) rebuildBuffer(W, H);
+  // blit statického bufferu 1:1 v device pixelech (mimo dpr transform)
+  fCtx.save();
+  fCtx.setTransform(1, 0, 0, 1, 0, 0);
+  fCtx.clearRect(0, 0, fCanvas.width, fCanvas.height);
+  if (fBuf) fCtx.drawImage(fBuf, 0, 0);
+  fCtx.restore();
+  // animující se ovečky navrch (jen hrstka během „pop" odskoku)
   const cosmic = lastCosmic < 0 ? 0 : lastCosmic;
   const now = performance.now();
   const base = flockSheepScale(currentDpr());
   for (const sh of flock) {
-    let scale = base;
-    if (sh.born) {
-      const t = (now - sh.born) / 450;
-      if (t < 0) continue;            // ještě se „nenarodila"
-      if (t < 1) scale = base * Math.max(0, easeOutBack(t));
-    }
+    if (!sh.born) continue;
+    const t = (now - sh.born) / 450;
+    if (t < 0) continue;              // ještě se „nenarodila"
+    const scale = t < 1 ? base * Math.max(0, easeOutBack(t)) : base;
     drawOneSheep(fCtx, sh.fx * W, sh.fy * H, scale, sh.seed, cosmic, sh.male);
   }
 }
@@ -320,7 +363,7 @@ function startFlockAnim() {
     const now = performance.now();
     const stillYoung = flock.some(s => s.born && now - s.born < 470);
     if (stillYoung) requestAnimationFrame(step);
-    else { flockAniming = false; flock.forEach(s => s.born = 0); drawFlock(); }
+    else { flockAniming = false; flock.forEach(s => s.born = 0); bufDirty = true; drawFlock(); }
   };
   requestAnimationFrame(step);
 }
@@ -338,13 +381,14 @@ function flockTick() {
   } else if (flock.length > target) {
     // Populace klesla (porážka, reset, starý přebujelý save) → uber ovce z louky.
     flock.length = target;
+    bufDirty = true;
     saveFlock();
   }
   lastSheepFloor = target;
   // #54: každý tik přebarvi podle aktuálního poměru pohlaví (mění se i bez
   // změny počtu zobrazených oveček). Vykreslení proběhne v anim/resize smyčce.
   recolorFlock();
-  if (!flockAniming) drawFlock();
+  if (!flockAniming && bufDirty) drawFlock();
 }
 
 // --- start -----------------------------------------------------------------

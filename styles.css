@@ -98,25 +98,47 @@ h2, h3 { margin: 0; }
 .hud-title .dim { font-size: 12px; color: var(--ink-faint); font-family: var(--sans); font-weight: 500; }
 .hud-hint { color: var(--gold-deep); font-size: 12.5px; margin: 5px 0 12px; }
 body.cosmic .hud-hint { color: var(--gold); }
-.chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
+/* #opt: suroviny se vejdou na DVA řádky a každý řádek je JEDEN řádek bez zalomení.
+   Řádek 1 = kredity…maso (chips-main), řádek 2 = ostatní suroviny (chips-extra).
+   Chipy se rovnoměrně zUží, aby se řada vždy vešla na jeden řádek; uvnitř se obsah
+   skládá pod sebe (zásoba / rychlost za s / cena), takže i úzký chip zůstane čitelný. */
+.chips { display: flex; flex-wrap: nowrap; gap: 6px; }
 /* druhý řádek (#68): ostatní suroviny — mírně potlačené a oddělené mezerou */
 .chips-extra { margin-top: 7px; }
 .chips-extra .chip-v { font-size: 15px; }
 .chip {
   background: linear-gradient(180deg, var(--paper), var(--paper-2));
   border: 1px solid var(--line); border-radius: var(--r-md);
-  padding: 7px 11px; display: flex; flex-direction: column; min-width: 0; box-shadow: var(--card-shadow);
+  padding: 6px 9px; display: flex; flex-direction: column; box-shadow: var(--card-shadow);
+  flex: 1 1 0; min-width: 0;     /* stejně široké, zUží se aby se řada vešla na jeden řádek */
 }
 /* řádek 1 chipu (#68): ikona + zásoba + rychlost/s vedle sebe (název je jen v title) */
-.chip-top { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+/* uvnitř chipu: ikona + zásoba spolu na 1. řádku, rychlost/s se zalomí pod ně (#opt) */
+.chip-top { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 5px; row-gap: 1px; min-width: 0; }
 .chip-i { font-size: 13px; flex-shrink: 0; line-height: 1; }
 .chip-v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink);
-  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* rychlost/s (#11): vedle zásoby, drobně a potlačeně */
-.chip-t { font-size: 11px; line-height: 1; color: var(--ink-faint); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
+  white-space: nowrap; min-width: 0; }
+/* rychlost/s (#11): na vlastním řádku pod zásobou, drobně a potlačeně */
+.chip-t { flex-basis: 100%; font-size: 11px; line-height: 1.15; color: var(--ink-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* řádek 2 chipu (#68): jednotková cena v kreditech; pevná výška, ať HUD neposkakuje (#36) */
 .chip-p { min-height: 14px; line-height: 14px; font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* #opt: na užších oknech zmenši písmo i odsazení chipů, ať oba řádky surovin
+   (5 + až 8 chipů) zůstanou každý na jednom řádku bez ořezu hodnot. */
+@media (max-width: 720px) {
+  .chip { padding: 5px 7px; }
+  .chip-i { font-size: 12px; }
+  .chip-v { font-size: 14px; }
+  .chips-extra .chip-v { font-size: 13px; }
+  .chip-t, .chip-p { font-size: 10px; }
+}
+@media (max-width: 480px) {
+  .chips { gap: 4px; }
+  .chip { padding: 4px 5px; }
+  .chip-v { font-size: 12px; }
+  .chips-extra .chip-v { font-size: 11px; }
+  .chip-t, .chip-p { font-size: 9px; }
+}
 /* zlatý akcent jen na úplně prvním chipu (Kredity) — ne na prvním chipu řádku 2 */
 .chips-main .chip:first-child {
   background: linear-gradient(180deg,
@@ -168,7 +190,13 @@ button.act:hover:not(:disabled) {
 }
 button.act:active:not(:disabled) { transform: translateY(1px) scale(.985); }
 button.act:disabled { opacity: .45; cursor: not-allowed; filter: saturate(.5); }
-.btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+/* #opt: jednotně široká tlačítka — šířku určuje mřížka, NE délka textu, takže se
+   velikost nemění, když se podtitulek přepíná („chybí 💰" ↔ efekt) ani když se
+   mění čísla. Všechna akční tlačítka v řadě jsou stejně velká. */
+.btn-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; align-items: stretch; }
+.btn-row > button.act { margin: 0; width: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+/* doprovodné texty / odkazy (kapacita skladu, GitHub…) nemají být úzký sloupec */
+.btn-row > :not(button) { grid-column: 1 / -1; align-self: center; }
 
 /* hlavní/akcentní tlačítko: dej třídu .act + .primary, kde chceš zlatý CTA */
 button.act.primary {
@@ -202,6 +230,11 @@ button.act.primary:hover:not(:disabled) { filter: brightness(1.05); background: 
   box-shadow: inset 0 1px 2px oklch(0.4 0.03 70/.12); }
 .gene-sigma { position: absolute; top: 0; bottom: 0; background: color-mix(in oklch, oklch(0.5 0.02 150 / .14), oklch(0.9 0.05 320 / .18) var(--m)); border-radius: 4px; }
 .gene-mu { position: absolute; top: -2px; width: 4px; height: 12px; border-radius: 2px; transform: translateX(-2px); box-shadow: 0 0 6px currentColor; }
+/* gen na dobrém stropu (#opt): zvýrazněná značka μ + zlatý popisek — optimální
+   hodnoty tak nesplývají v jedné plné liště (funguje na obou koncích škály). */
+.gene-maxed .gene-mu { box-shadow: 0 0 0 1.5px oklch(0.99 0.02 90 / .9), 0 0 8px var(--gold); }
+.gene-maxed .gene-h { color: var(--gold-deep); font-weight: 600; }
+body.cosmic .gene-maxed .gene-h { color: var(--gold); }
 
 /* ---- ovládací prvky ----------------------------------------------------- */
 .ctl-row { display: flex; align-items: center; gap: 8px; margin: 7px 0; flex-wrap: wrap; }

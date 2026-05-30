@@ -158,9 +158,15 @@ function geneBar(key) {
     const sigF = Math.max(0.005, Math.min(0.5, d.sigma / span));
     const good = spec.lowerBetter ? (1 - muF) : muF;
     muEl.style.background = good > 0.66 ? '#6aa84f' : good > 0.33 ? '#c9a227' : '#b06a3a';
-    sigmaEl.style.left = Math.max(0, (muF - sigF) * 100) + '%';
-    sigmaEl.style.width = Math.min(100, sigF * 200) + '%';
+    // σ pruh = interval [μ−σ, μ+σ] oříznutý do mezí škály [0,1], aby nikdy
+    // nevyčníval mimo lištu (dřív u vysokých μ/σ přetékal vpravo ven) (#opt)
+    const bandLo = Math.max(0, muF - sigF), bandHi = Math.min(1, muF + sigF);
+    sigmaEl.style.left = (bandLo * 100) + '%';
+    sigmaEl.style.width = Math.max(0, (bandHi - bandLo) * 100) + '%';
     muEl.style.left = (muF * 100) + '%';
+    // vizuální signál „gen na dobrém stropu" — jinak vysoké/optimální hodnoty
+    // splývají v plné liště. U „nižší je lepší" je dobrý konec dole (#opt).
+    node.classList.toggle('gene-maxed', spec.lowerBetter ? d.mu <= lo : d.mu >= hi);
     valEl.textContent = d.mu.toFixed(spec.dec);
   });
 }
@@ -361,6 +367,16 @@ function incomeSection(s) {
     h('div', { class: 'dim small', text: 'Hrubá tržní hodnota produkce za sekundu. Zpracování v Laboratoři mění vlnu na sukno a mléko na sýr (dražší).' }));
 }
 
+// Tabulka počtů ovcí po pohlaví × stádiu (#22). Sdílená — zobrazuje se nahoře v Genetice.
+function herdSexStageTable() {
+  const cell = (sex, stage) => liveSpan(() => fmtCount(group().counts[sex][stage]));
+  return h('table', { class: 'mf' },
+    h('tr', {}, h('td', {}), h('th', { text: '🐏 Samci' }), h('th', { text: '🐑 Samice' })),
+    h('tr', {}, h('td', { class: 'dim', text: 'Děti' }), h('td', {}, cell('M', 'child')), h('td', {}, cell('F', 'child'))),
+    h('tr', {}, h('td', { class: 'dim', text: 'Dospělí' }), h('td', {}, cell('M', 'adult')), h('td', {}, cell('F', 'adult'))),
+    h('tr', {}, h('td', { class: 'dim', text: 'Staří' }), h('td', {}, cell('M', 'old')), h('td', {}, cell('F', 'old'))));
+}
+
 function renderHerds(s) {
   const g = group();
   const wrap = h('div', {});
@@ -373,7 +389,7 @@ function renderHerds(s) {
 
   const cv = h('canvas', { class: 'herdcanvas', width: 280, height: 90 });
   herdCanvasEl = cv;
-  reg(cv, (el) => drawHerd(el, group()));
+  reg(cv, (el) => drawHerd(el, group(), s.world.ceilingMult, s.phase));
   const buy = s.settings.buy || { sex: 'mix', qty: 1 };
   const sexRow = h('div', { class: 'ctl-row' }, 'Kupovat: ',
     segBtn('🐏 Samec', buy.sex === 'M', () => A.setBuy(s, { sex: 'M' })),
@@ -387,13 +403,7 @@ function renderHerds(s) {
     () => { const add = (s.settings.buy.qty || 1) * BALANCE.sheepPerUnit, pop = totalPopulation(s); return `+${fmtCount(add)} ${sexLbl[s.settings.buy.sex] || 'ovcí'} · stádo ${fmtCount(pop)}→${fmtCount(pop + add)}`; },
     { primaryFn: () => { const sa = A.suggestedAction(s); return !!sa && sa.kind === 'addSheep'; } });
   buyBtn.addEventListener('click', () => flashEl(herdCanvasEl));
-  // přehled počtů po pohlaví × stádiu (#22) — hráč vidí, kde ovce jsou a kam mizí
-  const mfCell = (sex, stage) => liveSpan(() => fmtCount(group().counts[sex][stage]));
-  const mfTable = h('table', { class: 'mf' },
-    h('tr', {}, h('td', {}), h('th', { text: '🐏 Samci' }), h('th', { text: '🐑 Samice' })),
-    h('tr', {}, h('td', { class: 'dim', text: 'Děti' }), h('td', {}, mfCell('M', 'child')), h('td', {}, mfCell('F', 'child'))),
-    h('tr', {}, h('td', { class: 'dim', text: 'Dospělí' }), h('td', {}, mfCell('M', 'adult')), h('td', {}, mfCell('F', 'adult'))),
-    h('tr', {}, h('td', { class: 'dim', text: 'Staří' }), h('td', {}, mfCell('M', 'old')), h('td', {}, mfCell('F', 'old'))));
+  // (přehled počtů po pohlaví × stádiu se přesunul nahoře do záložky Genetika)
   const breedLine = liveSpan(() => {
     const gg = group();
     const fert = Math.max(0.1, gg.genes.fertility.mu + (getMults(s).fertBonus || 0));
@@ -423,7 +433,6 @@ function renderHerds(s) {
     h('div', { class: 'stat-row' },
       liveSpan(() => `Ovce: ${fmtCount(totalPopulation(s))} / ${fmtCount(herdCapacity(s))}`),
       liveSpan(() => `Skóre: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`)),
-    mfTable,
     breedLine,
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmtCount(p)} / ${fmtCount(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
     liveSpan(() => limitText(s), 'dim small statusline'),
@@ -437,8 +446,6 @@ function renderHerds(s) {
       return t;
     }, 'dim small statusline') : null,
     buyBlock));
-
-  wrap.appendChild(incomeSection(s));
 
   if (cityUnlocked(s)) {
     wrap.appendChild(h('div', { class: 'dim small', text: '🔪 Automatika porážek (přebyteční samci, porážka před zestárnutím) je v záložce Jatka.' }));
@@ -461,6 +468,12 @@ function renderGenetics(s) {
       h('select', { onchange: e => { s.activeGroupId = +e.target.value; rebuildPanel(); } },
         ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmtCount(totalCount(x))})`)))));
   }
+
+  wrap.appendChild(section('Stav stáda (ovce podle pohlaví a věku)',
+    herdSexStageTable(),
+    h('div', { class: 'stat-row' },
+      liveSpan(() => `Ovce: ${fmtCount(totalPopulation(s))} / ${fmtCount(herdCapacity(s))}`),
+      liveSpan(() => `Skóre: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`))));
 
   const genes = h('div', { class: 'genes' });
   for (const k in GENES) if (GENES[k].phase <= s.phase) genes.appendChild(geneBar(k));
@@ -1080,8 +1093,10 @@ function renderStats(s) {
     ['Poraženo', () => fmtCount(s.stats.culled)],
     ['Vrchol populace', () => fmtCount(s.stats.peakPop)],
   ];
-  return section('Statistiky', h('table', { class: 'stats' },
-    ...rows.map(([a, fn]) => h('tr', {}, h('td', { class: 'dim', text: a }), h('td', {}, liveSpan(fn))))));
+  return h('div', {},
+    incomeSection(s),
+    section('Statistiky', h('table', { class: 'stats' },
+      ...rows.map(([a, fn]) => h('tr', {}, h('td', { class: 'dim', text: a }), h('td', {}, liveSpan(fn)))))));
 }
 
 function achRow(a, done) {

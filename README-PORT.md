@@ -51,6 +51,31 @@ takže do `index.html` není nutné nic dalšího.
   šlechtění) žije v `ui.js`; tenhle port dělá kompletní *restyling* + proměnu + šťávu.
   Když budeš chtít přenést i to, dej vědět — připravím upravený `ui.js`.
 
+## Optimalizace (tato revize)
+- **Stejně velká tlačítka:** `.btn-row` je teď mřížka se stejně širokými sloupci,
+  takže akční tlačítka mají jednotnou velikost a **nemění šířku** podle délky textu
+  (přepínání podtitulku „chybí 💰" ↔ efekt ani měnící se čísla už neposkakují).
+- **Chipy v HUDu:** skládají se flexově a každý je široký přesně podle obsahu —
+  dlouhé hodnoty (např. „1.2 mld") se **neořezávají**, jen se zalomí na další řádek.
+- **Výkon louky oveček:** usazené ovce se kreslí jednou do offscreen bufferu a každý
+  snímek se jen „blitne" (1× `drawImage`) + dokreslí se jen ty právě se rodící.
+  Z ~1000 detailních kreseb na snímek je tak 1. Buffer se překresluje jen při změně
+  stáda / barev / velikosti okna; drahá záře (`shadowBlur`) se nad 240 ovcí vypíná.
+- **Genetika — škála nepřetéká:** σ pruh u genu se oříznul do mezí lišty `[μ−σ, μ+σ] ∩ [0,1]`,
+  takže při vysokých hodnotách (např. Plodnost μ≫strop, velké σ) už nevyčnívá mimo graf
+  (dřív tekl až do 150 % šířky a zasahoval do layoutu). Gen na svém „dobrém" stropu navíc
+  dostane zlatý popisek + zvýrazněnou značku μ, ať vysoké hodnoty nesplývají v plné liště.
+  *(Pozn.: tahle dvě malá doladění jsou v `src/ui/ui.js` — funkce `geneBar`.)*
+- **Přeuspořádání úvodní stránky (`src/ui/ui.js`):** tabulka „co produkuje co a kolik"
+  (rozpad příjmů) se přesunula z úvodní záložky **Stáda** do záložky **Staty**; tabulka
+  počtů ovcí (samci/samice × děti/dospělí/staří) se přesunula **nahoru do Genetiky**.
+  Úvodní stránka tím zůstává čistší (ilustrace + nákup + stav stáda).
+- **Ilustrace stáda vyjadřuje postup hry (`src/render/canvas.js`):** krajina pod stádem
+  se proměňuje podle fáze — na obzoru postupně přibývají stavby (stodola → větrný mlýn →
+  vesnice → továrna → raketa → družice → planety → Dysonův prstenec → černá díra), obloha
+  i ovce přecházejí z louky do vesmíru a počet oveček roste s populací. `drawHerd` má nový
+  nepovinný parametr `phase` (ui.js ho předává `s.phase`; bez něj se odvodí z `--cosmic`).
+
 ## Kompatibilita
 - `--cosmic` používá `@property` a `color-mix(in oklch)` — funguje v aktuálních
   Chromium/Safari/Firefox. Ve starších prohlížečích se vzhled degraduje na statickou
