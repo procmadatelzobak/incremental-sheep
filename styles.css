@@ -107,11 +107,15 @@ body.cosmic .hud-hint { color: var(--gold); }
   border: 1px solid var(--line); border-radius: var(--r-md);
   padding: 7px 11px; display: flex; flex-direction: column; min-width: 0; box-shadow: var(--card-shadow);
 }
-.chip-l { font-size: 9.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
-.chip-v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
-/* mini trend pod hodnotou (#11): pevná výška řádku, ať HUD neposkakuje, když se
-   trend u plné pastviny střídavě objevuje a mizí (#36) */
-.chip-t { display: block; min-height: 14px; line-height: 14px; font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
+/* řádek 1 chipu (#68): ikona + zásoba + rychlost/s vedle sebe (název je jen v title) */
+.chip-top { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+.chip-i { font-size: 13px; flex-shrink: 0; line-height: 1; }
+.chip-v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink);
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* rychlost/s (#11): vedle zásoby, drobně a potlačeně */
+.chip-t { font-size: 11px; line-height: 1; color: var(--ink-faint); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
+/* řádek 2 chipu (#68): jednotková cena v kreditech; pevná výška, ať HUD neposkakuje (#36) */
+.chip-p { min-height: 14px; line-height: 14px; font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* zlatý akcent jen na úplně prvním chipu (Kredity) — ne na prvním chipu řádku 2 */
 .chips-main .chip:first-child {

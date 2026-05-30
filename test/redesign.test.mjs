@@ -1,7 +1,6 @@
-// Regrese: popisek populačního chipu je „🐑 Ovce" (s ikonou), takže rozpoznání
-// musí být přes podřetězec, ne přesná shoda. Dřív tu bylo === 'Ovce', což se
-// kvůli emoji nikdy netrefilo → počet ovcí se četl jako NaN a louka oveček na
-// pozadí zůstala navždy prázdná.
+// Regrese: populační chip se v HUDu rozpoznává primárně přes třídu .chip-pop (#68,
+// chipy už nemají textový popisek). isSheepChipLabel je fallback pro starší layout
+// s popiskem „🐑 Ovce" — shoda přes podřetězec (ne přesná), kvůli prefixu s emoji.
 import { browserZoomScale, flockSheepScale, flockTarget, isSheepChipLabel, maleDisplayCount } from '../src/redesign.js';
 import { ICONS } from '../src/icons.js';
 
