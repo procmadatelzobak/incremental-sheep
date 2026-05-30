@@ -1,25 +1,32 @@
 // ===========================================================================
-//  Behemot Emporio (Etapa 1): barterový obchod souseda-kutila. Behemot odmítá
-//  kredity ("svítící čísílka") a bere JEN fyzické suroviny (vlna, maso, mléko,
-//  kosti…). Hráč si část produkce odkládá do "beden" (state.behemot.stock) a tou
-//  platí. Předměty se NEspotřebují při koupi — vlastníš je v inventáři:
+//  Behemot Emporio: barterový obchod souseda-kutila. Behemot odmítá kredity
+//  ("svítící čísílka") a bere JEN fyzické suroviny (vlna, maso, mléko, kosti…).
+//  Hráč si část produkce odkládá do "beden" (state.behemot.stock) a tou platí.
+//  Předměty se NEspotřebují při koupi — vlastníš je v inventáři:
 //   • pasivní (once): efekt platí jen když je položka aktivní (zap/vyp),
 //   • spotřební (buff): drží se v množství, "Použít" spustí časovaný buff.
+//
+//  Etapa 2 — živý katalog + reaktivní hlášky:
+//   • spotřební položky mají Behemotův sklad (shopCap), který se vyprodává a po
+//     čase doplňuje (restockEvery) — důvod se vracet,
+//   • behemotSay() reaguje na akce (úspěch/málo/vyprodáno/spam/idle) hláškami.
 //  Veškerá logika Behemota žije tady; ostatní soubory mají jen tenké napojení.
 //  Čísla jsou ilustrativní (lore/katalog = inspirace) a doladí se v balancingu.
 // ===========================================================================
 import { RESOURCES, BALANCE } from '../config.js';
 import { unlocked } from '../io/state.js';
 import { clamp } from '../rng.js';
+import { LINES } from './behemot-lines.js';
 
 // --- KATALOG ---------------------------------------------------------------
 // Položka: { id, name, cat, flavor, cost:{res:amt}, once, minPhase?,
+//   shopCap?, restockEvery?,   // jen spotřební: Behemotův sklad + doplňování (s)
 //   effect: { type:'mult', mults:{...} }                                  // trvalý pasivní bonus (jen když active)
 //          | { type:'buff', mults:{...}, dur, side?:{ mults, dur }, roll? } // spotřební časovaný buff (+volitelný postih)
 // }
 // Dostupnost se gateuje surovinami v `cost` přes unlocked(): položka placená
 // mlékem se objeví až ve fázi 2, kostmi/mozky až ve fázi 5 — nabídka tak roste
-// s tím, co hráč zrovna produkuje (přesně dle zadání).
+// s tím, co hráč zrovna produkuje.
 // Klíče násobičů (aditivní %): wool, milk, meat, compute, price, birth, ceiling, global.
 export const CATALOG = [
   // --- pasivní (trvalá vylepšení, zap/vyp) ---
@@ -48,20 +55,20 @@ export const CATALOG = [
     cost: { brain: 2000 }, effect: { type: 'mult', mults: { compute: 0.20 } },
     flavor: 'pájka, co myslí za tebe. počítá líp než ty, to neni těžký.' },
 
-  // --- spotřební (buffy s množstvím; část s postihem = "sajrajt") ---
-  { id: 'radioaktivni_krmivo', name: 'Radioaktivní krmivo', cat: 'Krmivo', once: false,
+  // --- spotřební (buffy s množstvím; mají Behemotův sklad + restock) ---
+  { id: 'radioaktivni_krmivo', name: 'Radioaktivní krmivo', cat: 'Krmivo', once: false, shopCap: 5, restockEvery: 25,
     cost: { wool: 800, meat: 150 },
     effect: { type: 'buff', mults: { global: 0.6 }, dur: 60, side: { mults: { global: -0.3 }, dur: 30 } },
     flavor: 'krmivo, co svítí. produkce nahoru, pak chvilku dolů. normálně.' },
-  { id: 'uranove_pelety', name: 'Uranové pelety', cat: 'Krmivo', once: false,
+  { id: 'uranove_pelety', name: 'Uranové pelety', cat: 'Krmivo', once: false, shopCap: 5, restockEvery: 20,
     cost: { meat: 500 },
     effect: { type: 'buff', mults: { birth: 0.5 }, dur: 45, side: { mults: { birth: -0.25 }, dur: 20 } },
     flavor: 'uranový pelety. porody nahoru. potom se nediv.' },
-  { id: 'zitrejsi_vlna', name: 'Zítřejší vlna (kapsle)', cat: 'Čas', once: false,
+  { id: 'zitrejsi_vlna', name: 'Zítřejší vlna (kapsle)', cat: 'Čas', once: false, shopCap: 2, restockEvery: 60,
     cost: { wool: 6000, milk: 1200 },
     effect: { type: 'buff', mults: { wool: 1.0 }, dur: 30 },
     flavor: 'vlna ze zejtřka. dneska ji máš dneska. neptej se.' },
-  { id: 'sajrajt_z_bedny', name: 'Sajrajt z bedny', cat: 'Černý trh', once: false,
+  { id: 'sajrajt_z_bedny', name: 'Sajrajt z bedny', cat: 'Černý trh', once: false, shopCap: 3, restockEvery: 45,
     cost: { bones: 800, brain: 400 },
     effect: { type: 'buff', dur: 40,
       roll: () => (Math.random() < 0.6 ? { mults: { global: 0.8 } } : { mults: { global: -0.25 } }) },
@@ -89,6 +96,27 @@ export function effectText(item) {
   return '';
 }
 
+// --- Behemotův sklad (živý katalog): vyprodává se, po čase doplňuje ---------
+function shopEntry(state, item) {
+  if (item.shopCap == null) return null;
+  let e = state.behemot.shop[item.id];
+  if (!e) e = state.behemot.shop[item.id] = { n: item.shopCap, t: 0 };
+  return e;
+}
+// kolik kusů má Behemot teď skladem (neomezené pro položky bez shopCap)
+export function shopCount(state, item) {
+  if (item.shopCap == null) return Infinity;
+  const e = state.behemot.shop[item.id];
+  return e ? e.n : item.shopCap;            // neotevřená položka = plný sklad
+}
+// za kolik sekund přibude další kus (0 = plno / neomezené)
+export function restockEta(state, item) {
+  if (item.shopCap == null) return 0;
+  const e = state.behemot.shop[item.id];
+  if (!e || e.n >= item.shopCap) return 0;
+  return Math.max(0, (item.restockEvery || 30) - e.t);
+}
+
 // --- dostupnost / koupěschopnost ------------------------------------------
 export function itemAvailable(state, item) {
   if (item.minPhase && state.phase < item.minPhase) return false;
@@ -100,8 +128,19 @@ export function canBarter(state, item) {
   if (!b) return false;
   if (item.once && b.soldOut[item.id]) return false;
   if (!itemAvailable(state, item)) return false;
+  if (item.shopCap != null && shopCount(state, item) <= 0) return false;
   for (const k in item.cost) if ((b.stock[k] || 0) < item.cost[k]) return false;
   return true;
+}
+
+// --- hlášky (Etapa 2): reaktivní, klíč = herní událost ---------------------
+export function behemotSay(state, key) {
+  const b = state.behemot;
+  const arr = LINES[key] || LINES.openShop;
+  b.lineN = (b.lineN || 0) + 1;
+  const text = arr[b.lineN % arr.length];
+  b.line = { key, text };
+  return text;
 }
 
 // --- hráčské akce (volané přes wrappery v actions.js) ----------------------
@@ -110,12 +149,19 @@ export function canBarter(state, item) {
 // je tedy kanonická výjimka. Neopravovat na emptyStorage!
 export function barter(state, id) {
   const item = ITEM_BY_ID[id];
-  if (!item || !canBarter(state, item)) return false;
+  if (!item) return false;
   const b = state.behemot;
+  if (item.once && b.soldOut[item.id]) { behemotSay(state, 'soldOut'); return false; }
+  if (!itemAvailable(state, item)) { behemotSay(state, 'impossibleAction'); return false; }
+  if (item.shopCap != null && shopCount(state, item) <= 0) { behemotSay(state, 'soldOut'); return false; }
+  for (const k in item.cost) if ((b.stock[k] || 0) < item.cost[k]) { behemotSay(state, 'notEnoughResources'); return false; }
+  // úspěch: zaplať surovinami, přidej do inventáře, uber z Behemotova skladu
   for (const k in item.cost) b.stock[k] = (b.stock[k] || 0) - item.cost[k];
   const e = b.inv[id] || (b.inv[id] = { qty: 0, active: item.effect.type === 'mult' });
   e.qty++;
   if (item.once) { b.soldOut[id] = true; e.active = true; }
+  if (item.shopCap != null) { const se = shopEntry(state, item); if (se) se.n = Math.max(0, se.n - 1); }
+  behemotSay(state, (item.effect.side || item.effect.roll) ? 'suspiciousPurchase' : 'purchaseSuccess');
   return true;
 }
 // zap/vyp pasivní položky (jen ty s efektem 'mult')
@@ -181,29 +227,30 @@ export function skimBarter(state, produced) {
   }
 }
 
-// Expirace buffů; na konci buffu s `side` nasadí krátký postih (negativní buff).
+// Každý tik: expirace buffů (+ nasazení postihu) a doplňování Behemotova skladu.
 export function stepBehemot(state, dt) {
   const b = state.behemot;
-  if (!b || !b.buffs || !b.buffs.length) return;
-  const kept = [];
-  for (const buff of b.buffs) {
-    buff.remaining -= dt;
-    if (buff.remaining > 0) { kept.push(buff); continue; }
-    if (buff.side) kept.push({ id: buff.id, mults: Object.assign({}, buff.side.mults), remaining: buff.side.dur, side: null });
+  if (!b) return;
+  // 1) buffy
+  if (b.buffs && b.buffs.length) {
+    const kept = [];
+    for (const buff of b.buffs) {
+      buff.remaining -= dt;
+      if (buff.remaining > 0) { kept.push(buff); continue; }
+      if (buff.side) kept.push({ id: buff.id, mults: Object.assign({}, buff.side.mults), remaining: buff.side.dur, side: null });
+    }
+    b.buffs = kept;
   }
-  b.buffs = kept;
-}
-
-// --- hlášky (Etapa 1: malá vestavěná sada; plný dialog je Etapa 2) ----------
-const FLAVOR = {
-  open: [
-    'no co je. dyž už si tady, ber. ale platí se věcma, ne svítícíma čísílkama.',
-    'vitej v garáži. nešahej na to, na co nemáš suroviny.',
-    'kredity si strč do cloudu. tady beru vlnu, maso, kosti — fyzickou jistotu.',
-  ],
-};
-export function behemotFlavor(state, key) {
-  const arr = FLAVOR[key] || FLAVOR.open;
-  const i = (Object.keys(state.behemot.inv).length + state.phase) % arr.length;
-  return arr[i];
+  // 2) restock Behemotova skladu (jen u položek, které už byly otevřené)
+  if (b.shop) {
+    for (const id in b.shop) {
+      const item = ITEM_BY_ID[id];
+      if (!item || item.shopCap == null) continue;
+      const e = b.shop[id];
+      if (e.n >= item.shopCap) { e.t = 0; continue; }
+      e.t += dt;
+      const every = item.restockEvery || 30;
+      while (e.t >= every && e.n < item.shopCap) { e.t -= every; e.n++; }
+    }
+  }
 }

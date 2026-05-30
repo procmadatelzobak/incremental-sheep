@@ -72,6 +72,9 @@ export function newGame(carry = null) {
       inv: {},                   // { itemId: { qty, active } } — vlastněné předměty
       buffs: [],                 // běžící spotřební buffy { id, mults, remaining, side }
       soldOut: {},               // jednorázové (once) už pořízené
+      shop: {},                  // Behemotův sklad per spotřební položka { n, t } — vyprodává/doplňuje (Etapa 2)
+      line: null,                // poslední kontextová hláška { key, text } (Etapa 2)
+      lineN: 0,                  // rotace hlášek
       // --- scaffolding pro pozdější etapy (v Etapě 1 inertní, ale stabilní save shape) ---
       rel: { trust: 0, respect: 0, control: 0, autonomy: 100, overload: 0 },
       wisdom: carry?.behemot?.wisdom || 0,

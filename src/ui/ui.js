@@ -18,7 +18,7 @@ import { processFraction } from '../econ/processing.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
 import { ACHIEVEMENTS, unlockedTitles } from '../content/achievements.js';
-import { CATALOG, itemAvailable, canBarter, effectText, behemotFlavor } from '../content/behemot.js';
+import { CATALOG, itemAvailable, canBarter, effectText, behemotSay, shopCount, restockEta } from '../content/behemot.js';
 import { drawHerd } from '../render/canvas.js';
 import { ICONS, PHASE_ICONS, RES_ICONS, KIND_ICONS } from '../icons.js';
 
@@ -171,13 +171,15 @@ function buildHud() {
   hudEp = h('b', {}); hudPhase = h('span', { class: 'dim', id: 'hud-phase' });
   hudHint = h('div', { class: 'hud-hint' });
   // nástroje vpravo nahoře (#32): rada/tip, nastavení (export/import), o hře
+  // Emporio NENÍ záložka — je výjimečné, otevírá se vlastním tlačítkem nahoře (#behemot).
+  const empBtn = h('button', { class: 'hud-tool hud-emporio', title: 'Behemot Emporio — barter za suroviny (ne kredity)', onclick: openEmporio }, '🔧 Emporio');
   const tipBtn = h('button', { class: 'hud-tool', title: 'Rada pastýře a tip dne', onclick: openTipModal }, '💡');
   const gearBtn = h('button', { class: 'hud-tool', title: 'Nastavení — export/import hry', onclick: openSettingsModal }, '⚙');
   const infoBtn = h('button', { class: 'hud-tool', title: 'O hře', onclick: openAboutModal }, '❓');
-  hudTools = { tip: tipBtn, gear: gearBtn, info: infoBtn };
+  hudTools = { emporio: empBtn, tip: tipBtn, gear: gearBtn, info: infoBtn };
   const topRow = h('div', { class: 'hud-top' },
     h('div', { class: 'hud-title' }, hudEp, hudPhase),
-    h('div', { class: 'hud-tools' }, tipBtn, gearBtn, infoBtn));
+    h('div', { class: 'hud-tools' }, empBtn, tipBtn, gearBtn, infoBtn));
   const chips = h('div', { class: 'chips' });
   hudChips = {};
   for (const [k, lab] of [['credits', ICONS.credits + ' Kredity'], ['pop', ICONS.sheep + ' Ovce'], ['wool', ICONS.wool + ' Vlna/s'], ['milk', ICONS.milk + ' Mléko/s'], ['meat', ICONS.meat + ' Maso/s'], ['compute', ICONS.compute + ' Výpočet/s'], ['knowledge', ICONS.knowledge + ' Vědění']]) {
@@ -215,6 +217,7 @@ function updateHud(s) {
   hudPhase.textContent = `  •  ${PHASE_ICONS[s.phase] || ''} Fáze ${s.phase}: ${phaseName(s)}` + (sp > 1 ? `  ⏩ čas ×${sp.toFixed(1)}` : '');
   hudHint.textContent = '› ' + phaseHint(s);
   if (hudTools.tip) setClass(hudTools.tip, 'lit', stepActionable(s));   // žárovka svítí, když je co výhodně koupit
+  if (hudTools.emporio) setClass(hudTools.emporio, 'active', activeTab === 'emporio');
   const r = s.rates || {};
   const set = (k, txt, show) => { const c = hudChips[k]; if (!c) return; c.chip.style.display = show ? '' : 'none'; c.val.textContent = txt; };
   set('credits', fmt(s.resources.credits || 0), true);
@@ -258,7 +261,6 @@ const TABS = [
   { id: 'genetics', label: ICONS.genes + ' Genetika', avail: () => true, render: renderGenetics },
   { id: 'slaughter', label: '🔪 Jatka', avail: s => cityUnlocked(s), render: renderSlaughter },
   { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
-  { id: 'emporio', label: '🔧 Emporio', avail: () => true, render: renderEmporio },
   { id: 'behitems', label: '🎒 Předměty od Behemota', avail: s => !!(s.behemot && Object.keys(s.behemot.inv).length), render: renderBehemotItems },
   { id: 'lab', label: ICONS.lab + ' Laboratoř', avail: s => labUnlocked(s), render: renderLab },
   { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: s => s.phase >= 2, render: renderStations },
@@ -716,7 +718,24 @@ function renderStorage(s) {
   return wrap;
 }
 
-// --- Behemot: Emporio (barter) + Předměty (inventář) -----------------------
+// --- Behemot: Emporio (barter, speciální panel) + Předměty (inventář) ------
+// Emporio NENÍ záložka — otevírá se speciálním tlačítkem v HUDu (openEmporio).
+let barterClicks = [];          // časy posledních kliků (detekce spamování, reálný čas)
+let emporioActivityAt = 0;      // poslední aktivita v Emporiu (pro idle hlášku)
+const noteEmporioActivity = () => { emporioActivityAt = Date.now(); };
+function noteBarterClick() {
+  const now = Date.now();
+  barterClicks.push(now);
+  barterClicks = barterClicks.filter(t => now - t < 1500);
+  noteEmporioActivity();
+  if (barterClicks.length >= 5) { barterClicks = []; behemotSay(S, 'spamClicking'); }
+}
+function openEmporio() {
+  behemotSay(S, Object.keys(S.behemot.inv).length ? 'repeatVisit' : 'openShop');
+  noteEmporioActivity();
+  activeTab = 'emporio';
+  buildTabs(); rebuildPanel(); onAction();
+}
 // "Bedny": kolik produkce dané suroviny odkládat Behemotovi místo prodeje za kredity.
 function emporioFrac(s, k) {
   const frac = s.behemot.barterFrac[k] ?? 0;
@@ -726,7 +745,7 @@ function emporioFrac(s, k) {
       liveSpan(() => `v bedně: ${fmt(s.behemot.stock[k] || 0)}`, 'dim')),
     h('div', { class: 'ctl-row' },
       liveSpan(() => `Posílat Behemotovi: ${((s.behemot.barterFrac[k] ?? 0) * 100).toFixed(0)} %`),
-      h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: frac, oninput: e => { A.behemotSetFrac(s, k, +e.target.value); } })));
+      h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: frac, oninput: e => { A.behemotSetFrac(s, k, +e.target.value); noteEmporioActivity(); } })));
 }
 function emporioRow(s, item) {
   const costStr = () => Object.keys(item.cost).map(k => `${fmt(item.cost[k])} ${RES_ICONS[k] || k}`).join(' + ');
@@ -735,20 +754,29 @@ function emporioRow(s, item) {
       h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: '✓ máš' })),
       h('div', { class: 'dim small', text: effectText(item) }));
   }
+  // status: cena + (u spotřebních) skladem/vyprodáno + případně „málo surovin"
+  const status = () => {
+    const parts = ['cena: ' + costStr()];
+    if (item.shopCap != null) {
+      const n = shopCount(s, item);
+      parts.push(n > 0 ? `skladem ${n}` : `vyprodáno (doplní za ${Math.ceil(restockEta(s, item))} s)`);
+    }
+    if (Object.keys(item.cost).some(k => (s.behemot.stock[k] || 0) < item.cost[k])) parts.push('málo surovin');
+    return parts.join(' · ');
+  };
   return h('div', { class: 'item' },
     h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: item.cat })),
     h('div', { class: 'dim small', text: effectText(item) }),
     h('div', { class: 'dim small', text: '„' + item.flavor + '"' }),
     h('div', { class: 'btn-row' },
-      aBtn('Barter', () => canBarter(s, item), () => A.behemotBarter(s, item.id), () => {
-        const miss = Object.keys(item.cost).filter(k => (s.behemot.stock[k] || 0) < item.cost[k]).map(k => RES_ICONS[k] || k);
-        return miss.length ? 'málo: ' + miss.join(' ') : '';
-      }),
-      liveSpan(() => 'cena: ' + costStr(), 'dim small')));
+      // tlačítko je vždy klikatelné — barter() rozhodne (úspěch/málo/vyprodáno) a Behemot zahláškuje
+      aBtn('Barter', () => true, () => { const r = A.behemotBarter(s, item.id); noteBarterClick(); return r; }),
+      liveSpan(status, 'dim small')));
 }
 function renderEmporio(s) {
   const wrap = h('div', {});
-  wrap.appendChild(h('div', { class: 'dim small', text: '„' + behemotFlavor(s, 'open') + '"' }));
+  // živá Behemotova hláška (reaguje na akce)
+  wrap.appendChild(liveSpan(() => (s.behemot.line && s.behemot.line.text) || 'no co je. dyž už si tady, ber.', 'beh-say'));
   const bins = h('div', { class: 'list' });
   for (const k of TRADEABLE) { if (RESOURCES[k].phase > s.phase) continue; bins.appendChild(emporioFrac(s, k)); }
   wrap.appendChild(section('Bedny pro Behemota (suroviny místo prodeje)', bins));
@@ -942,12 +970,17 @@ function phaseModalContent(phase) {
 }
 function rebuildPanel() {
   if (!panelEl) return;
-  let tab = TABS.find(t => t.id === activeTab) || TABS[0];
-  if (!tab.avail(S)) { activeTab = 'herds'; tab = TABS[0]; }
+  let render;
+  if (activeTab === 'emporio') { render = renderEmporio; }      // speciální panel mimo TABS (#behemot)
+  else {
+    let tab = TABS.find(t => t.id === activeTab);
+    if (!tab || !tab.avail(S)) { activeTab = 'herds'; tab = TABS[0]; }
+    render = tab.render;
+  }
   updaters = [];
   clear(panelEl);
   if (phaseBannerQueue.length) panelEl.appendChild(phaseBannerEl(phaseBannerQueue[0]));   // #35
-  panelEl.appendChild(tab.render(S));
+  panelEl.appendChild(render(S));
   structSig = structSigOf(S);
   refreshPanel();
 }
@@ -1047,6 +1080,10 @@ export function initUI(state, mountId = 'app', actionCb = () => {}, opts = {}) {
 // volá main každý frame — jen aktualizuje hodnoty; strukturu překreslí při změně
 export function updateUI(state) {
   S = state;
+  // idle v Emporiu: Behemot si rýpne, když dlouho nic neděláš (a rozjede další odpočet)
+  if (activeTab === 'emporio' && emporioActivityAt && Date.now() - emporioActivityAt > 22000) {
+    emporioActivityAt = Date.now(); behemotSay(state, 'idleInShop');
+  }
   updateHud(state);
   const tsig = TABS.filter(t => t.avail(state)).map(t => t.id).join(',');
   if (tsig !== lastTabSig) { lastTabSig = tsig; buildTabs(); }

@@ -6,6 +6,7 @@ import { serialize, deserialize } from '../src/io/save.js';
 import {
   CATALOG, itemById, itemAvailable, canBarter, behemotMults,
   barter, toggleItem, useItem, setBarterFrac, skimBarter, stepBehemot,
+  behemotSay, shopCount, restockEta,
 } from '../src/content/behemot.js';
 import { TRADEABLE } from '../src/econ/storage.js';
 
@@ -122,6 +123,48 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   const s = newGame();
   check('woolMult konečné číslo', isFinite(getMults(s).woolMult));
   check('žádné aktivní bonusy na startu', Object.keys(behemotMults(s)).length === 0);
+}
+
+// 10) behemotSay: rotuje hlášky a ukládá aktuální do state.line
+{
+  const s = newGame();
+  const a = behemotSay(s, 'openShop');
+  const b = behemotSay(s, 'openShop');
+  check('say uloží aktuální hlášku do line', s.behemot.line.text === b && s.behemot.line.key === 'openShop');
+  check('say rotuje (nezopakuje hned)', a !== b);
+}
+
+// 11) barter nastavuje kontextové hlášky (úspěch / rizikový / chudoba)
+{
+  const s = newGame();
+  s.behemot.stock.wool = 1000;
+  barter(s, 'samostrihaci_rameno');
+  check('úspěch → purchaseSuccess', s.behemot.line.key === 'purchaseSuccess');
+
+  const s2 = newGame();
+  s2.behemot.stock.wool = 2000; s2.behemot.stock.meat = 2000;
+  barter(s2, 'radioaktivni_krmivo');           // má side → rizikové zboží
+  check('rizikový kus → suspiciousPurchase', s2.behemot.line.key === 'suspiciousPurchase');
+
+  const s3 = newGame();
+  barter(s3, 'samostrihaci_rameno');            // prázdné bedny
+  check('chudoba → notEnoughResources', s3.behemot.line.key === 'notEnoughResources');
+}
+
+// 12) živý katalog: Behemotův sklad se vyprodá a po čase doplní
+{
+  const s = newGame();
+  s.behemot.stock.meat = 1e6;
+  const item = itemById('uranove_pelety');      // shopCap 5, restockEvery 20, cost meat 500
+  check('výchozí sklad = shopCap', shopCount(s, item) === 5);
+  for (let i = 0; i < 5; i++) barter(s, 'uranove_pelety');
+  check('po 5 nákupech vyprodáno', shopCount(s, item) === 0);
+  check('vyprodáno blokuje canBarter', canBarter(s, item) === false);
+  check('barter vyprodaného → soldOut hláška', barter(s, 'uranove_pelety') === false && s.behemot.line.key === 'soldOut');
+  check('restockEta > 0 když vyprodáno', restockEta(s, item) > 0);
+  stepBehemot(s, 21);                           // > restockEvery → +1 kus
+  check('restock doplnil kus', shopCount(s, item) >= 1);
+  check('po restocku jde zase bartrovat', canBarter(s, item) === true);
 }
 
 console.log(`behemot: ${pass} ok, ${fail} fail`);
