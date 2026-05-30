@@ -127,8 +127,17 @@ export function isSheepChipLabel(text) {
   return /\bOvce\b/.test(text || '');
 }
 
-export function flockSheepScale() {
-  return FLOCK_SHEEP_SCALE;
+function currentDpr() {
+  return Math.max(0.1, window.devicePixelRatio || 1);
+}
+
+export function browserZoomScale(current) {
+  const dpr = Math.max(0.1, current || 1);
+  return Math.max(0.5, Math.min(2, 1 / dpr));
+}
+
+export function flockSheepScale(current = 1) {
+  return FLOCK_SHEEP_SCALE * browserZoomScale(current);
 }
 
 // Kolik oveček má být na louce vidět pro danou populaci: zaokrouhleno dolů a
@@ -194,7 +203,7 @@ function flockSetup() {
 
 function resizeFlock() {
   if (!fCanvas) return;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(2, currentDpr());
   fCanvas.width = Math.round(window.innerWidth * dpr);
   fCanvas.height = Math.round(window.innerHeight * dpr);
   fCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -289,7 +298,7 @@ function drawFlock() {
   fCtx.clearRect(0, 0, W, H);
   const cosmic = lastCosmic < 0 ? 0 : lastCosmic;
   const now = performance.now();
-  const base = flockSheepScale();
+  const base = flockSheepScale(currentDpr());
   for (const sh of flock) {
     let scale = base;
     if (sh.born) {
