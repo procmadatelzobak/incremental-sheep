@@ -5,7 +5,6 @@
 import { BALANCE, UPGRADES, upgradeName, PERKS, WORLDS, WORLD_ORDER, AREA_MODS } from '../config.js';
 import { fmt } from '../format.js';
 import { costOf, upgradeCost, perkCost } from './economy.js';
-import { emptyStorage } from './storage.js';
 import { groupById } from '../io/state.js';
 import { createGroup, splitGroup } from '../sim/groups.js';
 import { defaultSoil } from '../sim/soil.js';
@@ -15,14 +14,13 @@ import { totalCount } from '../sim/cohort.js';
 import { claimSphere, sphereReady } from '../content/projects.js';
 import { igniteBlackHole, triggerSingularity, canIgnite, singularityAvailable } from '../content/prestige.js';
 import { landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost, densityPhaseCap, worldsColonized } from '../content/locations.js';
-import { barter, toggleItem, useItem, setBarterFrac } from '../content/behemot.js';
+import { barter, toggleItem, useItem } from '../content/behemot.js';
 
 const credits = (s) => s.resources.credits || 0;
 function spend(state, amount) {
   if (credits(state) < amount) return false;
   state.resources.credits -= amount;
-  emptyStorage(state);
-  return true;
+  return true;   // §9 zrušeno: nákup už NEvyprazdňuje sklad (Behemot bere ze skladu)
 }
 
 // --- ceny pro UI (jednoduché úrovňové; rozloha/hustota mají vlastní fce) ----
@@ -124,8 +122,7 @@ export function buyPerk(state, key) {
 
 // --- fáze 6+: sklad; fáze 7+: stavitelé; fáze 8+: laser; sféra -------------
 export function buyWarehouse(state) {
-  if (state.phase < 6) return false;
-  if (!spend(state, costFor(state, 'warehouse'))) return false;
+  if (!spend(state, costFor(state, 'warehouse'))) return false;   // sklad jde zlepšovat od začátku
   state.storage.warehouseLevel++; state.buys.warehouse++;
   return true;
 }
@@ -191,7 +188,6 @@ export function setAutotrade(state, res, frac) {
 export function behemotBarter(state, id) { return barter(state, id); }
 export function behemotToggle(state, id) { return toggleItem(state, id); }
 export function behemotUse(state, id) { return useItem(state, id); }
-export function behemotSetFrac(state, res, frac) { return setBarterFrac(state, res, frac); }
 export { behemotSpam, behemotSetContainment, behemotReconcile } from '../content/behemot.js';   // spam (E3) + okov/usmíření (E6)
 
 // --- bobky / hnojení (#63) — kvalita půdy je per stádo ---------------------

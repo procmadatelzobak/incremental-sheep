@@ -262,11 +262,11 @@ const TABS = [
   { id: 'genetics', label: ICONS.genes + ' Genetika', avail: () => true, render: renderGenetics },
   { id: 'slaughter', label: '🔪 Jatka', avail: s => cityUnlocked(s), render: renderSlaughter },
   { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
-  { id: 'behitems', label: '🎒 Předměty od Behemota', avail: s => !!(s.behemot && Object.keys(s.behemot.inv).length), render: renderBehemotItems },
+  { id: 'behitems', label: '🎒 Unikátní předměty', avail: s => !!(s.behemot && Object.keys(s.behemot.inv).length), render: renderBehemotItems },
   { id: 'lab', label: ICONS.lab + ' Laboratoř', avail: s => labUnlocked(s), render: renderLab },
   { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: s => s.phase >= 2, render: renderStations },
   { id: 'pastures', label: ICONS.soil + ' Pastviny', avail: s => s.phase >= SOIL.unlockPhase, render: renderPastures },
-  { id: 'storage', label: ICONS.storage + ' Sklad', avail: s => s.phase >= 6, render: renderStorage },
+  { id: 'storage', label: ICONS.storage + ' Sklad', avail: () => true, render: renderStorage },
   { id: 'manager', label: ICONS.manager + ' Manažer', avail: s => s.phase >= 9, render: renderManager },
   { id: 'prestige', label: ICONS.prestige + ' Prestiž', avail: s => s.phase >= 7 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
   { id: 'kronika', label: ICONS.kronika + ' Kronika', avail: s => s.phase >= 2, render: renderKronika },
@@ -774,16 +774,16 @@ function renderStorage(s) {
     h('div', { class: 'btn-row' },
       cBtn(`${ICONS.storage} + Sklad`, () => A.costFor(s, 'warehouse'), () => A.buyWarehouse(s), () => `+${fmt(BALANCE.warehouse.capInc)} kapacity na surovinu`),
       liveSpan(() => `Kapacita na surovinu: ${fmt(resourceCap(s))}`, 'dim')),
-    h('div', { class: 'dim small', text: 'Strop platí pro každou surovinu zvlášť. Pozor: jakýkoli nákup vyprázdní sklad.' })));
+    h('div', { class: 'dim small', text: 'Sklad se plní automaticky a přebytek nad strop se prodá. Posuvníkem níže můžeš část prodávat rovnou. Nákup sklad NEvyprazdňuje — Behemot bere odsud.' })));
   const list = h('div', { class: 'list' });
   for (const k of TRADEABLE) {
     if (RESOURCES[k].phase > s.phase) continue;
-    const frac = s.storage.autotrade[k] ?? 1;
+    const frac = s.storage.autotrade[k] ?? 0;
     list.appendChild(h('div', { class: 'item' },
       h('div', { class: 'item-h' }, h('b', { text: (RES_ICONS[k] || '') + ' ' + RESOURCES[k].label }), liveSpan(() => fmt(s.resources[k] || 0), 'dim')),
       liveBar(() => { const c = resourceCap(s); return c ? Math.min(1, (s.resources[k] || 0) / c) : 0; }, () => `${fmt(s.resources[k] || 0)} / ${fmt(resourceCap(s))}`, '#5b8def'),
       h('div', { class: 'ctl-row' },
-        liveSpan(() => `Prodávat: ${((s.storage.autotrade[k] ?? 1) * 100).toFixed(0)} %`),
+        liveSpan(() => `Prodávat rovnou: ${((s.storage.autotrade[k] ?? 0) * 100).toFixed(0)} %`),
         h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: frac, oninput: e => { A.setAutotrade(s, k, +e.target.value); } }))));
   }
   wrap.appendChild(section('Suroviny (prodej / sklad po strop)', list));
@@ -794,7 +794,7 @@ function renderStorage(s) {
 // Emporio NENÍ záložka — otevírá se speciálním tlačítkem v HUDu (openEmporio).
 let barterClicks = [];          // časy posledních kliků (detekce spamování, reálný čas)
 let emporioActivityAt = 0;      // poslední aktivita v Emporiu (pro idle hlášku)
-let emporioModalEl = null, emporioBodyEl = null, emporioOpen = false;   // Emporio jako popup ("garáž")
+let emporioModalEl = null, emporioBodyEl = null, emporioOpen = false, emporioTab = 'nabidka';   // Emporio popup ("garáž") s vnitřními záložkami
 const noteEmporioActivity = () => { emporioActivityAt = Date.now(); };
 function noteBarterClick() {
   const now = Date.now();
@@ -806,6 +806,7 @@ function noteBarterClick() {
 // Emporio je popup ("vejdeš do garáže"). Otevírá se vlastním tlačítkem v HUDu.
 function openEmporio() {
   if (!root || emporioOpen) return;
+  emporioTab = 'nabidka';                                                   // popup vždy otevři na Nabídce
   const stage = emporioStageIndex(S);
   if (stage > (S.behemot.stageSeen || 0)) {                                 // Emporio přerostlo do nové fáze (Etapa 4)
     S.behemot.stageSeen = stage;
@@ -838,32 +839,22 @@ function closeEmporio() {
   emporioModalEl = null; emporioBodyEl = null; emporioOpen = false;
   rebuildPanel();                                                           // obnov panel na pozadí
 }
-// "Bedny": kolik produkce dané suroviny odkládat Behemotovi místo prodeje za kredity.
-function emporioFrac(s, k) {
-  const frac = s.behemot.barterFrac[k] ?? 0;
-  return h('div', { class: 'item' },
-    h('div', { class: 'item-h' },
-      h('b', { text: (RES_ICONS[k] || '') + ' ' + RESOURCES[k].label }),
-      liveSpan(() => `v bedně: ${fmt(s.behemot.stock[k] || 0)}`, 'dim')),
-    h('div', { class: 'ctl-row' },
-      liveSpan(() => `Posílat Behemotovi: ${((s.behemot.barterFrac[k] ?? 0) * 100).toFixed(0)} %`),
-      h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: frac, oninput: e => { A.behemotSetFrac(s, k, +e.target.value); noteEmporioActivity(); } })));
-}
+// Řádek nabídky: cena ze skladu (state.resources), efekt, hláška, barter tlačítko.
 function emporioRow(s, item) {
   if (item.once && s.behemot.soldOut[item.id]) {
     return h('div', { class: 'item' },
       h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: '✓ máš' })),
       h('div', { class: 'dim small', text: effectText(item) }));
   }
-  // status: cena (po vlivu vztahu) + (u spotřebních) skladem/vyprodáno + případně „málo surovin"
+  // status: cena (po vlivu vztahu) + kolik toho máš ve skladu + (u spotřebních) skladem/vyprodáno
   const status = () => {
     const c = barterCost(s, item);
-    const parts = ['cena: ' + Object.keys(c).map(k => `${fmt(c[k])} ${RES_ICONS[k] || k}`).join(' + ')];
+    const parts = ['cena: ' + Object.keys(c).map(k => `${fmt(c[k])} ${RES_ICONS[k] || k} (máš ${fmt(s.resources[k] || 0)})`).join(' + ')];
     if (item.shopCap != null) {
       const n = shopCount(s, item);
       parts.push(n > 0 ? `skladem ${n}` : `vyprodáno (doplní za ${Math.ceil(restockEta(s, item))} s)`);
     }
-    if (Object.keys(c).some(k => (s.behemot.stock[k] || 0) < c[k])) parts.push('málo surovin');
+    if (Object.keys(c).some(k => (s.resources[k] || 0) < c[k])) parts.push('málo ve skladu');
     return parts.join(' · ');
   };
   return h('div', { class: 'item' },
@@ -899,6 +890,7 @@ function relSection(s) {
       ? h('div', { class: 'dim small', text: '⚠ Vzpoura! Garáž se zavřela — Emporio je zamčené a produkce sabotovaná. Usmiř se (vrátíš autonomii).' })
       : (s.behemot.containment ? h('div', { class: 'dim small', text: 'Okov tlačí produkci nahoru, ale zvedá Přetížení i Kontrolu — při obojím vysokém přijde vzpoura.' }) : null));
 }
+// Emporio popup má vnitřní záložky: 🛒 Nabídka (katalog) / 🤝 Vztah.
 function renderEmporio(s) {
   const st = emporioStage(s);
   const wrap = h('div', { class: 'emporio emporio-s' + emporioStageIndex(s) });
@@ -908,13 +900,18 @@ function renderEmporio(s) {
     h('div', { class: 'dim small', text: st.desc })));
   // živá Behemotova hláška (reaguje na akce)
   wrap.appendChild(liveSpan(() => (s.behemot.line && s.behemot.line.text) || 'no co je. dyž už si tady, ber.', 'beh-say'));
-  wrap.appendChild(relSection(s));
-  const bins = h('div', { class: 'list' });
-  for (const k of TRADEABLE) { if (RESOURCES[k].phase > s.phase) continue; bins.appendChild(emporioFrac(s, k)); }
-  wrap.appendChild(section('Bedny pro Behemota (suroviny místo prodeje)', bins));
+  // vnitřní záložky popupu
+  const subtabs = [['nabidka', '🛒 Nabídka'], ['vztah', '🤝 Vztah']];
+  wrap.appendChild(h('div', { class: 'ctl-row emporio-subtabs' }, ...subtabs.map(([id, lab]) => {
+    const b = h('button', { class: 'act seg' + (emporioTab === id ? ' on' : ''), text: lab });
+    b.addEventListener('click', () => { emporioTab = id; noteEmporioActivity(); rebuildEmporio(); });
+    return b;
+  })));
+  if (emporioTab === 'vztah') { wrap.appendChild(relSection(s)); return wrap; }
+  // Nabídka: položky po kategoriích, platí se ZE SKLADU (state.resources)
   const avail = CATALOG.filter(it => itemAvailable(s, it));
   if (!avail.length) {
-    wrap.appendChild(section('Nabídka', h('div', { class: 'dim', text: 'Behemot zatím nemá co nabídnout — produkuj víc druhů surovin.' })));
+    wrap.appendChild(section('Nabídka', h('div', { class: 'dim', text: 'Behemot zatím nemá co nabídnout — produkuj víc druhů surovin (sklad se plní sám).' })));
     return wrap;
   }
   const cats = [];

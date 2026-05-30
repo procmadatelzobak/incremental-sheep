@@ -69,9 +69,7 @@ export function newGame(carry = null) {
     rates: {},
     storage: { warehouseLevel: 0, autotrade: {}, stockpile: {} },
     behemot: {
-      stock: {},                 // surové suroviny odložené pro Behemota (bedny)
-      barterFrac: {},            // kolik produkce posílat Behemotovi (per surovina, 0..1)
-      inv: {},                   // { itemId: { qty, active } } — vlastněné předměty
+      inv: {},                   // { itemId: { qty, active } } — vlastněné předměty (barter se platí ze skladu)
       buffs: [],                 // běžící spotřební buffy { id, mults, remaining, side }
       soldOut: {},               // jednorázové (once) už pořízené
       shop: {},                  // Behemotův sklad per spotřební položka { n, t } — vyprodává/doplňuje (Etapa 2)

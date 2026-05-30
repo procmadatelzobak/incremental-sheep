@@ -100,14 +100,21 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('Emporio: popup má obsah', !!modal && modal.children.length > 0);
   check('Emporio: otevření vyvolá Behemotovu hlášku', !!(s.behemot.line && s.behemot.line.text));
   check('Emporio: popup ukazuje hlavičku fáze', app.textContent.includes('Behemot Emporio'));
-  check('Emporio: vztahová sekce ukazuje cestu', app.textContent.includes('cesta:'));
-  s.behemot.stock.wool = 5000;          // naplň bedny, ať jde bartrovat
+  // vnitřní záložky popupu: Vztah ukazuje osy/cestu, Nabídka katalog
+  const vztahTab = buttonsByText(app, 'Vztah')[0];
+  check('Emporio: má vnitřní záložku Vztah', !!vztahTab);
+  if (vztahTab) vztahTab.click();
+  check('Emporio: záložka Vztah ukazuje cestu', app.textContent.includes('cesta:'));
+  const nabidkaTab = buttonsByText(app, 'Nabídka')[0];
+  if (nabidkaTab) nabidkaTab.click();
+  s.resources.wool = 5000;              // sklad — barter se z něj platí
   updateUI(s);
   const barterBtn = buttonsByText(app, 'Barter')[0];
   check('Emporio: tlačítko Barter existuje', !!barterBtn);
   const inv0 = Object.keys(s.behemot.inv).length;
   if (barterBtn) barterBtn.click();
   check('Emporio: barter přidá předmět do inventáře', Object.keys(s.behemot.inv).length > inv0);
+  check('Emporio: barter zaplatil ze skladu', s.resources.wool < 5000);
   check('Emporio: barter vyvolá hlášku o úspěchu', s.behemot.line && s.behemot.line.key === 'purchaseSuccess');
   const closeBtn = buttonsByText(app, '×')[0];
   if (closeBtn) closeBtn.click();
@@ -115,8 +122,8 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
 
   // „Předměty od Behemota" je normální záložka
   updateUI(s);
-  clickTab('Předměty od Behemota');
-  check('panel Předměty má obsah', panel().children.length > 0);
+  clickTab('Unikátní předměty');
+  check('panel Unikátní předměty má obsah', panel().children.length > 0);
   const toggleBtn = buttonsByText(panel(), 'Zapnuto')[0];
   check('Inventář: přepínač aktivního předmětu existuje', !!toggleBtn);
   if (toggleBtn) {

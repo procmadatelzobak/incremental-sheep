@@ -1,7 +1,8 @@
 // ===========================================================================
 //  Behemot Emporio: barterový obchod souseda-kutila. Behemot odmítá kredity
-//  ("svítící čísílka") a bere JEN fyzické suroviny (vlna, maso, mléko, kosti…).
-//  Hráč si část produkce odkládá do "beden" (state.behemot.stock) a tou platí.
+//  ("svítící čísílka") a bere JEN fyzické suroviny (vlna, maso, mléko, kosti…)
+//  PŘÍMO ZE SKLADU hráče (state.resources). Sklad se plní automaticky (viz
+//  econ/storage.js); Behemot z něj při barteru odečítá.
 //  Předměty se NEspotřebují při koupi — vlastníš je v inventáři:
 //   • pasivní (once): efekt platí jen když je položka aktivní (zap/vyp),
 //   • spotřební (buff): drží se v množství, "Použít" spustí časovaný buff.
@@ -11,7 +12,6 @@
 //  Etapa 4 — fázová evoluce Emporia + hlubší katalog.
 //  Etapa 5 — prestiž-perzistence: artefakty přežijí reset, roste Moudrost.
 //  Etapa 6 — čtyři cesty + vzpoura: "Rackový okov" (Kontrola) vs. Autonomie.
-//  Veškerá logika Behemota žije tady; ostatní soubory mají jen tenké napojení.
 //  Vyladitelné konstanty jsou v BALANCE.behemot (= B). Ceny/efekty položek jsou
 //  inline v CATALOG (lokálnost jako UPGRADES/WORLDS).
 // ===========================================================================
@@ -30,12 +30,12 @@ const B = BALANCE.behemot;
 // }
 // Dostupnost se gateuje surovinami v `cost` přes unlocked(): položka placená
 // mlékem se objeví až ve fázi 2, kostmi/mozky až ve fázi 5 — nabídka tak roste
-// s tím, co hráč zrovna produkuje.
+// s tím, co hráč zrovna produkuje. Cena se platí ze skladu (state.resources).
 // Klíče násobičů (aditivní %): wool, milk, meat, compute, price, birth, ceiling, global.
 export const CATALOG = [
   // --- pasivní (trvalá vylepšení, zap/vyp) ---
   { id: 'samostrihaci_rameno', name: 'Samostříhací rameno', cat: 'Vlna', once: true,
-    cost: { wool: 400 }, effect: { type: 'mult', mults: { wool: 0.12 } },
+    cost: { wool: 250 }, effect: { type: 'mult', mults: { wool: 0.12 } },
     flavor: 'todle si připevníš a vono to stříhá samo. skoro. nešahej na to za chodu.' },
   { id: 'vlnocesaci_kombajn', name: 'Vlnočesací kombajn', cat: 'Vlna', once: true,
     cost: { wool: 2500, meat: 200 }, effect: { type: 'mult', mults: { wool: 0.20, birth: -0.08 } },
@@ -247,6 +247,7 @@ export function itemAvailable(state, item) {
   for (const k in item.cost) if (!unlocked(state, k)) return false;   // gate dle produkovaných surovin
   return true;
 }
+// platí se ZE SKLADU (state.resources)
 export function canBarter(state, item) {
   const b = state.behemot;
   if (!b) return false;
@@ -255,7 +256,7 @@ export function canBarter(state, item) {
   if (!itemAvailable(state, item)) return false;
   if (item.shopCap != null && shopCount(state, item) <= 0) return false;
   const cost = barterCost(state, item);
-  for (const k in cost) if ((b.stock[k] || 0) < cost[k]) return false;
+  for (const k in cost) if ((state.resources[k] || 0) < cost[k]) return false;
   return true;
 }
 
@@ -275,9 +276,8 @@ export function behemotSpam(state) {
 }
 
 // --- hráčské akce (volané přes wrappery v actions.js) ----------------------
-// POZN: barter NEVOLÁ emptyStorage — pravidlo §9 ("nákup vyprázdní sklad") je
-// vázané na nákup za KREDITY (viz spend() v actions.js). Behemot kredity odmítá,
-// je tedy kanonická výjimka. Neopravovat na emptyStorage!
+// Barter platí ZE SKLADU (state.resources). Sklad se plní automaticky a nákupy
+// ho NEvyprazdňují (§9 zrušeno), takže Behemot bere z toho, co máš naskladněno.
 export function barter(state, id) {
   const item = ITEM_BY_ID[id];
   if (!item) return false;
@@ -287,9 +287,9 @@ export function barter(state, id) {
   if (!itemAvailable(state, item)) { behemotSay(state, 'impossibleAction'); return false; }
   if (item.shopCap != null && shopCount(state, item) <= 0) { behemotSay(state, 'soldOut'); return false; }
   const cost = barterCost(state, item);
-  for (const k in cost) if ((b.stock[k] || 0) < cost[k]) { behemotSay(state, 'notEnoughResources'); return false; }
-  // úspěch: zaplať surovinami, přidej do inventáře, uber z Behemotova skladu
-  for (const k in cost) b.stock[k] = (b.stock[k] || 0) - cost[k];
+  for (const k in cost) if ((state.resources[k] || 0) < cost[k]) { behemotSay(state, 'notEnoughResources'); return false; }
+  // úspěch: zaplať ze skladu, přidej do inventáře, uber z Behemotova skladu
+  for (const k in cost) state.resources[k] = (state.resources[k] || 0) - cost[k];
   const e = b.inv[id] || (b.inv[id] = { qty: 0, active: item.effect.type === 'mult' });
   e.qty++;
   if (item.once) { b.soldOut[id] = true; e.active = true; }
@@ -320,11 +320,6 @@ export function useItem(state, id) {
   relEvent(state, 'use', !!(eff.side || eff.roll));                   // používání rizik zvedá Přetížení
   return true;
 }
-// kolik produkce dané suroviny posílat Behemotovi do beden (0..1)
-export function setBarterFrac(state, res, frac) {
-  state.behemot.barterFrac[res] = clamp(frac, 0, 1);
-  return true;
-}
 
 // --- napojení na simulaci --------------------------------------------------
 // Aktivní násobiče Behemota (aktivní pasivní položky + běžící buffy). Aditivní %.
@@ -347,7 +342,7 @@ export function behemotMults(state) {
   return out;
 }
 
-// Prestiž (Etapa 5): Behemot „umírá" (rel/inventář/sklad se resetují), ale fyzické
+// Prestiž (Etapa 5): Behemot „umírá" (rel/inventář se resetují), ale fyzické
 // artefakty (trvalé předměty) přežijí a roste Moudrost. Volá se PŘED prestigeCarry,
 // aby se zapsané hodnoty (state.behemot.persistent/wisdom) přenesly do dalšího běhu.
 export function behemotPrestige(state) {
@@ -357,25 +352,6 @@ export function behemotPrestige(state) {
   if (!b.persistent.artifacts) b.persistent.artifacts = {};
   for (const id in b.inv) { const it = ITEM_BY_ID[id]; if (it && it.once) b.persistent.artifacts[id] = true; }
   b.wisdom = (b.wisdom || 0) + B.wisdomPerReset;
-}
-
-// Odkroj barterFrac z vyrobených surovin do beden (volá se v step() PŘED prodejem).
-export function skimBarter(state, produced) {
-  const b = state.behemot;
-  if (!b || state.prestige.armed) return;            // při nasávání do černé díry neodkládáme
-  const cap = B.stockCap || 0;
-  for (const k in produced) {
-    const frac = b.barterFrac[k] || 0;
-    if (frac <= 0) continue;
-    const def = RESOURCES[k];
-    if (!def || !def.sell || !unlocked(state, k)) continue;
-    const amt = produced[k];
-    if (amt <= 0) continue;
-    const take = amt * frac;
-    b.stock[k] = (b.stock[k] || 0) + take;
-    produced[k] = amt - take;
-    if (cap > 0 && b.stock[k] > cap) b.stock[k] = cap;
-  }
 }
 
 // Každý tik: expirace buffů (+ postih), okov/vzpoura, chladnutí Přetížení a doplňování skladu.

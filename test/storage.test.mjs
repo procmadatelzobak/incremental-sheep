@@ -15,8 +15,8 @@ function check(name, cond) { if (cond) pass++; else { fail++; console.error('  F
   s.phase = 6;
   s.storage.warehouseLevel = 1;
   const cap = resourceCap(s);
-  check('resourceCap = úroveň × capInc', cap === BALANCE.warehouse.capInc);
-  check('sklad zapnutý na fázi 6 s úrovní > 0', storageEnabled(s));
+  check('resourceCap = base0 + úroveň × capInc', cap === BALANCE.warehouse.base0 + BALANCE.warehouse.capInc);
+  check('sklad běží (od začátku)', storageEnabled(s));
 
   // ulož všechno (autotrade 0) — vlna i maso musí mít VLASTNÍ strop, ne sdílený
   s.storage.autotrade = { wool: 0, meat: 0 };

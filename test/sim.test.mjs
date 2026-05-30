@@ -274,10 +274,12 @@ function autoPlayer() {
 // 7) #11: tik počítá trend příjmu a růstu stáda
 {
   const s = newGame();
-  run(s, 30);
+  // Sklad se teď plní automaticky a přebytek se prodá → příjem teče, jakmile je
+  // strop naplněný (default „ukládat"). Necháme doběhnout přes základní strop.
+  run(s, 400);
   check('rates: příjem kreditů /s je číslo', typeof s.rates._income === 'number' && s.rates._income >= 0);
   check('rates: růst stáda /s je číslo', typeof s.rates._popGrowth === 'number');
-  check('rostoucí stádo má kladný příjem', s.rates._income > 0);
+  check('po naplnění skladu má rostoucí stádo kladný příjem', s.rates._income > 0);
 }
 
 // 8) stárnutí: statistiky born/died a konzervace populace

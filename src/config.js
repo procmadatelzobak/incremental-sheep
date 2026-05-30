@@ -155,7 +155,7 @@ export const BALANCE = {
   },
   landUnlockReq: 3,         // kolik parcel tieru pro odemčení dalšího
   tierUnlockMult: 12,       // odemčení dalšího tieru = cena parcely × tato hodnota
-  warehouse: { capInc: 5000 },   // přírůstek stropu skladu PRO KAŽDOU SUROVINU ZVLÁŠŤ (#38)
+  warehouse: { capInc: 5000, base0: 300 },   // strop na surovinu = base0 + úroveň × capInc (sklad běží od začátku, #38)
   // zpracování (fáze 3+): poměr raw → processed
   processing: { wool: { to: 'cloth', ratio: 1 }, milk: { to: 'cheese', ratio: 1 } },
   // projekty

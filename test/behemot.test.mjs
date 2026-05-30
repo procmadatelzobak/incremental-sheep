@@ -1,48 +1,41 @@
-// Behemot Emporio (Etapa 1): barter, inventář (zap/vyp + množství), buffy, gate, prestiž-asymetrie.
+// Behemot Emporio: barter (ze SKLADU), inventář (zap/vyp + množství), buffy, gate,
+// živý katalog, vztahové osy, prestiž-perzistence, okov/vzpoura.
 import { newGame, prestigeCarry } from '../src/io/state.js';
 import { step } from '../src/sim/simulation.js';
 import { getMults } from '../src/econ/economy.js';
-import { serialize, deserialize } from '../src/io/save.js';
+import { deserialize } from '../src/io/save.js';
 import {
   CATALOG, itemById, itemAvailable, canBarter, behemotMults,
-  barter, toggleItem, useItem, setBarterFrac, skimBarter, stepBehemot,
+  barter, toggleItem, useItem, stepBehemot,
   behemotSay, shopCount, restockEta,
   relPriceMult, barterCost, behemotMood, behemotSpam,
   emporioStage, emporioStageIndex, behemotPrestige,
   containmentAvailable, behemotSetContainment, behemotReconcile, behemotPath,
 } from '../src/content/behemot.js';
-import { TRADEABLE } from '../src/econ/storage.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) { if (cond) pass++; else { fail++; console.error('  FAIL:', name); } }
 function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) step(state, dt); }
 
-// 1) skimBarter: odkrojí frac z produced do beden a o tu část nezvedne příjem
+// 1) barter platí ZE SKLADU (state.resources) a ze skladu odečte cenu
 {
   const s = newGame();
-  setBarterFrac(s, 'wool', 0.5);
-  const produced = { wool: 100 };
-  skimBarter(s, produced);
-  check('skim plní bedny', s.behemot.stock.wool === 50);
-  check('skim ubere z produced', produced.wool === 50);
-
-  const s2 = newGame();
-  setBarterFrac(s2, 'wool', 1);
-  run(s2, 40);
-  check('běh: bedna vlny roste', (s2.behemot.stock.wool || 0) > 0);
-  check('běh: skoro žádný příjem z prodané vlny', s2.stats.woolLifetime === 0);
+  s.resources.wool = 1000;
+  const ok = barter(s, 'samostrihaci_rameno');   // cost wool 250
+  check('barter ze skladu prošel', ok === true);
+  check('barter odečetl cenu ze skladu', s.resources.wool === 750);
+  check('předmět vlastněný a aktivní', !!(s.behemot.inv.samostrihaci_rameno && s.behemot.inv.samostrihaci_rameno.active));
 }
 
-// 2) barter odečte balíček ze zásoby a NEVYMAŽE obchodovatelný sklad (§9 výjimka)
+// 2) barter sebere jen cenu, ostatní suroviny ve skladu nechá; once → soldOut
 {
   const s = newGame();
-  s.behemot.stock.wool = 1000;
-  for (const k of TRADEABLE) s.resources[k] = 0;
-  s.resources.wool = 777;                 // strážní hodnota: barter ji nesmí vynulovat
-  const ok = barter(s, 'samostrihaci_rameno');   // cost { wool: 400 }
+  s.resources.wool = 1000;
+  s.resources.meat = 500;                  // jiná surovina — barter za vlnu se jí nesmí dotknout
+  const ok = barter(s, 'samostrihaci_rameno');   // cost { wool: 250 }
   check('barter prošel', ok === true);
-  check('barter odečetl z beden', s.behemot.stock.wool === 600);
-  check('barter NEvyprázdnil sklad', s.resources.wool === 777);
+  check('odečetl jen vlnu', s.resources.wool === 750);
+  check('jinou surovinu nechal být', s.resources.meat === 500);
   check('předmět v inventáři, aktivní', s.behemot.inv.samostrihaci_rameno && s.behemot.inv.samostrihaci_rameno.qty === 1 && s.behemot.inv.samostrihaci_rameno.active === true);
   check('once → soldOut', s.behemot.soldOut.samostrihaci_rameno === true);
 }
@@ -51,7 +44,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 {
   const base = getMults(newGame()).woolMult;
   const s = newGame();
-  s.behemot.stock.wool = 1000;
+  s.resources.wool = 1000;
   barter(s, 'samostrihaci_rameno');       // +12 % vlna
   check('aktivní předmět zvedne woolMult', getMults(s).woolMult > base + 1e-9);
   toggleItem(s, 'samostrihaci_rameno');   // vyp
@@ -63,7 +56,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 // 4) spotřební buff: použití nasadí buff, po vypršení naběhne postih a pak zmizí
 {
   const s = newGame();
-  s.behemot.stock.wool = 5000; s.behemot.stock.meat = 5000;
+  s.resources.wool = 5000; s.resources.meat = 5000;
   barter(s, 'radioaktivni_krmivo');       // buff global +0.6 / 60 s, side −0.3 / 30 s
   check('spotřební kus v inventáři', s.behemot.inv.radioaktivni_krmivo.qty === 1);
   const used = useItem(s, 'radioaktivni_krmivo');
@@ -87,27 +80,25 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 // 6) jednorázovou (once) položku nelze koupit dvakrát
 {
   const s = newGame();
-  s.behemot.stock.wool = 1000;
+  s.resources.wool = 1000;
   check('1. barter ok', barter(s, 'samostrihaci_rameno') === true);
   check('2. barter zamítnut (soldOut)', barter(s, 'samostrihaci_rameno') === false);
   check('množství zůstalo 1', s.behemot.inv.samostrihaci_rameno.qty === 1);
   check('canBarter false po koupi', canBarter(s, itemById('samostrihaci_rameno')) === false);
 }
 
-// 7) prestiž-asymetrie: moudrost/artefakty přežijí reset, inventář/bedny/buffy NE
+// 7) prestiž-asymetrie: moudrost/artefakty přežijí reset, inventář/buffy NE
 {
   const s = newGame();
   s.behemot.wisdom = 5;
   s.behemot.persistent = { rack: 1 };
   s.behemot.inv = { samostrihaci_rameno: { qty: 1, active: true } };
-  s.behemot.stock = { wool: 999 };
   s.behemot.buffs = [{ id: 'x', mults: { global: 0.5 }, remaining: 10, side: null }];
   const carry = prestigeCarry(s);
   const ns = newGame(carry);
   check('moudrost přežije', ns.behemot.wisdom === 5);
   check('artefakty přežijí', ns.behemot.persistent.rack === 1);
   check('inventář se resetuje', Object.keys(ns.behemot.inv).length === 0);
-  check('bedny se resetují', (ns.behemot.stock.wool || 0) === 0);
   check('buffy se resetují', ns.behemot.buffs.length === 0);
 }
 
@@ -118,7 +109,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   delete json.behemot;                      // simuluj save z doby před Behemotem
   const str = btoa(unescape(encodeURIComponent(JSON.stringify(json))));
   const r = deserialize(str);
-  check('starý save dostane behemot', !!(r.behemot && typeof r.behemot.stock === 'object' && typeof r.behemot.inv === 'object'));
+  check('starý save dostane behemot', !!(r.behemot && typeof r.behemot.inv === 'object'));
 }
 
 // 9) sanity: čistá hra nemění základní násobiče (žádná regrese)
@@ -140,24 +131,24 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 // 11) barter nastavuje kontextové hlášky (úspěch / rizikový / chudoba)
 {
   const s = newGame();
-  s.behemot.stock.wool = 1000;
+  s.resources.wool = 1000;
   barter(s, 'samostrihaci_rameno');
   check('úspěch → purchaseSuccess', s.behemot.line.key === 'purchaseSuccess');
 
   const s2 = newGame();
-  s2.behemot.stock.wool = 2000; s2.behemot.stock.meat = 2000;
+  s2.resources.wool = 2000; s2.resources.meat = 2000;
   barter(s2, 'radioaktivni_krmivo');           // má side → rizikové zboží
   check('rizikový kus → suspiciousPurchase', s2.behemot.line.key === 'suspiciousPurchase');
 
   const s3 = newGame();
-  barter(s3, 'samostrihaci_rameno');            // prázdné bedny
+  barter(s3, 'samostrihaci_rameno');            // prázdný sklad
   check('chudoba → notEnoughResources', s3.behemot.line.key === 'notEnoughResources');
 }
 
 // 12) živý katalog: Behemotův sklad se vyprodá a po čase doplní
 {
   const s = newGame();
-  s.behemot.stock.meat = 1e6;
+  s.resources.meat = 1e6;
   const item = itemById('uranove_pelety');      // shopCap 5, restockEvery 20, cost meat 500
   check('výchozí sklad = shopCap', shopCount(s, item) === 5);
   for (let i = 0; i < 5; i++) barter(s, 'uranove_pelety');
@@ -173,7 +164,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 // 13) vztahové osy se hýbou chováním hráče
 {
   const s = newGame();
-  s.behemot.stock.wool = 1e5;
+  s.resources.wool = 1e5;
   const t0 = s.behemot.rel.trust;
   barter(s, 'samostrihaci_rameno');
   check('barter zvedne důvěru', s.behemot.rel.trust > t0);
@@ -187,7 +178,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   check('spam zahláškuje', s2.behemot.line.key === 'spamClicking');
 
   const s3 = newGame();
-  s3.behemot.stock.wool = 1e5; s3.behemot.stock.meat = 1e5;
+  s3.resources.wool = 1e5; s3.resources.meat = 1e5;
   barter(s3, 'radioaktivni_krmivo');
   const ov = s3.behemot.rel.overload;
   useItem(s3, 'radioaktivni_krmivo');
@@ -243,7 +234,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 // 18) prestiž: Behemot „umírá", ale artefakty + Moudrost přežijí (§12 asymetrie)
 {
   const s = newGame();
-  s.behemot.stock.wool = 2000;
+  s.resources.wool = 2000;
   barter(s, 'samostrihaci_rameno');                 // vlastníš trvalý předmět (artefakt)
   s.behemot.buffs.push({ id: 'x', mults: {}, remaining: 5, side: null });
   behemotPrestige(s);
@@ -254,7 +245,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   check('Moudrost přežila reset', ns.behemot.wisdom === 1);
   check('artefakt po resetu vlastněný a aktivní', !!(ns.behemot.inv.samostrihaci_rameno && ns.behemot.inv.samostrihaci_rameno.active));
   check('artefakt je soldOut (už ho máš)', ns.behemot.soldOut.samostrihaci_rameno === true);
-  check('bedny i buffy se resetovaly', (ns.behemot.stock.wool || 0) === 0 && ns.behemot.buffs.length === 0);
+  check('buffy se resetovaly', ns.behemot.buffs.length === 0);
   check('Moudrost dává náskok důvěry', ns.behemot.rel.trust > 0);
 }
 
