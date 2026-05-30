@@ -8,6 +8,7 @@ import {
   barter, toggleItem, useItem, setBarterFrac, skimBarter, stepBehemot,
   behemotSay, shopCount, restockEta,
   relPriceMult, barterCost, behemotMood, behemotSpam,
+  emporioStage, emporioStageIndex,
 } from '../src/content/behemot.js';
 import { TRADEABLE } from '../src/econ/storage.js';
 
@@ -215,6 +216,27 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
   s.behemot.rel.overload = 50;
   stepBehemot(s, 20);
   check('přetížení klesá v čase', s.behemot.rel.overload < 50 && s.behemot.rel.overload >= 0);
+}
+
+// 16) fázová evoluce Emporia podle fáze hry
+{
+  const s = newGame();
+  s.phase = 1; check('fáze 1 → Garážový bazar', emporioStage(s).name === 'Garážový bazar');
+  s.phase = 3; check('fáze 3 → Servrový terminál', emporioStage(s).name === 'Servrový terminál');
+  s.phase = 6; check('fáze 6 → Distribuovaný uzel', emporioStage(s).name === 'Distribuovaný uzel');
+  s.phase = 9; check('fáze 9 → Uzel před singularitou', emporioStage(s).name === 'Uzel před singularitou');
+  check('index Emporia roste s fází', emporioStageIndex({ phase: 1 }) < emporioStageIndex({ phase: 9 }));
+}
+
+// 17) hlubší katalog: pozdní položky se odemykají správnou fází/surovinou
+{
+  check('katalog se rozrostl', CATALOG.length >= 20);
+  const svet = itemById('skladaci_svetadil');      // minPhase 8
+  check('světadíl nedostupný ve fázi 5', itemAvailable({ phase: 5 }, svet) === false);
+  check('světadíl dostupný ve fázi 8', itemAvailable({ phase: 8 }, svet) === true);
+  const syr = itemById('syrovy_algoritmus');        // platí se sýrem (fáze 3)
+  check('sýrová položka nedostupná ve fázi 2', itemAvailable({ phase: 2 }, syr) === false);
+  check('sýrová položka dostupná ve fázi 3', itemAvailable({ phase: 3 }, syr) === true);
 }
 
 console.log(`behemot: ${pass} ok, ${fail} fail`);

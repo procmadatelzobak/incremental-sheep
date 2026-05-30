@@ -95,4 +95,13 @@ export const LINES = {
     'Vidíš, dyž chceš, umíš to. Skoro civilizovaný.',
     'Tobě bych prodal i to, co normálně schovávám dozadu.',
   ],
+  // Behemot komentuje, jak Emporio (a ty) přerostlo původní garáž (Etapa 4)
+  gameStageProgress: [
+    'Začínal si s loukó, teď řešíš kontinenty. Normální vývoj šílence.',
+    'Už to není farma, to je projekt, co měl někdo zarazit v první poradě.',
+    'Dřív si kupoval seno, teď kupuješ fyzikální výjimky. Hezký sešup.',
+    'Z pastýře se stal operátor katastrofy. Kariérní růst, no.',
+    'Čím dál postupuješ, tím víc věcí vyžaduje olovo, chlad a mlčení.',
+    'Tohle už není garáž, to je distribuovanej bordel přes půl reality.',
+  ],
 };

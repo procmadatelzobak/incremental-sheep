@@ -96,6 +96,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   empBtn.click();
   check('panel Emporio má obsah', panel().children.length > 0);
   check('Emporio: otevření vyvolá Behemotovu hlášku', !!(s.behemot.line && s.behemot.line.text));
+  check('Emporio: hlavička ukazuje fázi garáže', panel().textContent.includes('Behemot Emporio'));
   s.behemot.stock.wool = 5000;          // naplň bedny, ať jde bartrovat
   updateUI(s);
   const barterBtn = buttonsByText(panel(), 'Barter')[0];

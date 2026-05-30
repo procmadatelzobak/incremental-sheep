@@ -18,7 +18,7 @@ import { processFraction } from '../econ/processing.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
 import { ACHIEVEMENTS, unlockedTitles } from '../content/achievements.js';
-import { CATALOG, itemAvailable, canBarter, effectText, behemotSay, shopCount, restockEta, barterCost, relPriceMult, behemotMood } from '../content/behemot.js';
+import { CATALOG, itemAvailable, canBarter, effectText, behemotSay, shopCount, restockEta, barterCost, relPriceMult, behemotMood, emporioStage, emporioStageIndex } from '../content/behemot.js';
 import { drawHerd } from '../render/canvas.js';
 import { ICONS, PHASE_ICONS, RES_ICONS, KIND_ICONS } from '../icons.js';
 
@@ -731,8 +731,14 @@ function noteBarterClick() {
   if (barterClicks.length >= 5) { barterClicks = []; A.behemotSpam(S); }   // spam → Přetížení + rýpnutí
 }
 function openEmporio() {
-  const mood = behemotMood(S);                                              // uvítání dle nálady (Etapa 3)
-  behemotSay(S, mood === 'tense' ? 'tense' : mood === 'warm' ? 'warm' : (Object.keys(S.behemot.inv).length ? 'repeatVisit' : 'openShop'));
+  const stage = emporioStageIndex(S);
+  if (stage > (S.behemot.stageSeen || 0)) {                                 // Emporio přerostlo do nové fáze (Etapa 4)
+    S.behemot.stageSeen = stage;
+    behemotSay(S, 'gameStageProgress');
+  } else {
+    const mood = behemotMood(S);                                            // jinak uvítání dle nálady (Etapa 3)
+    behemotSay(S, mood === 'tense' ? 'tense' : mood === 'warm' ? 'warm' : (Object.keys(S.behemot.inv).length ? 'repeatVisit' : 'openShop'));
+  }
   noteEmporioActivity();
   activeTab = 'emporio';
   buildTabs(); rebuildPanel(); onAction();
@@ -789,7 +795,12 @@ function relSection(s) {
     liveSpan(() => `Kontrola ${Math.round(s.behemot.rel.control || 0)} · Autonomie ${Math.round(s.behemot.rel.autonomy != null ? s.behemot.rel.autonomy : 100)} (probudí se v pozdější etapě)`, 'dim small'));
 }
 function renderEmporio(s) {
-  const wrap = h('div', {});
+  const st = emporioStage(s);
+  const wrap = h('div', { class: 'emporio emporio-s' + emporioStageIndex(s) });
+  // fázová evoluce Emporia (Etapa 4): nadpis + popis aktuální podoby garáže
+  wrap.appendChild(h('div', { class: 'emporio-head' },
+    h('h3', { text: '🔧 Behemot Emporio — ' + st.name }),
+    h('div', { class: 'dim small', text: st.desc })));
   // živá Behemotova hláška (reaguje na akce)
   wrap.appendChild(liveSpan(() => (s.behemot.line && s.behemot.line.text) || 'no co je. dyž už si tady, ber.', 'beh-say'));
   wrap.appendChild(relSection(s));

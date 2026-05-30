@@ -75,6 +75,7 @@ export function newGame(carry = null) {
       shop: {},                  // Behemotův sklad per spotřební položka { n, t } — vyprodává/doplňuje (Etapa 2)
       line: null,                // poslední kontextová hláška { key, text } (Etapa 2)
       lineN: 0,                  // rotace hlášek
+      stageSeen: 0,              // nejvyšší dosažená "etapa Emporia", za kterou Behemot pogratuloval (Etapa 4)
       // --- scaffolding pro pozdější etapy (v Etapě 1 inertní, ale stabilní save shape) ---
       rel: { trust: 0, respect: 0, control: 0, autonomy: 100, overload: 0 },
       wisdom: carry?.behemot?.wisdom || 0,

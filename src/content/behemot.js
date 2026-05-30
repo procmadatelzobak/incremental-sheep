@@ -75,11 +75,53 @@ export const CATALOG = [
     effect: { type: 'buff', dur: 40,
       roll: (state) => (Math.random() < goodSajrajtChance(state) ? { mults: { global: 0.8 } } : { mults: { global: -0.25 } }) },
     flavor: 'bedna. nevim co v ní je. ty to teda zjistíš.' },
+
+  // --- pozdní katalog (Etapa 4): dražší suroviny, vyšší fáze, silnější efekty --
+  { id: 'sukno_izolace', name: 'Sukno-izolace serverů', cat: 'Chlazení', once: true, minPhase: 3,
+    cost: { cloth: 600 }, effect: { type: 'mult', mults: { global: 0.05 } },
+    flavor: 'sukno na servery. izolace, ne móda. drží teplo tam, kde nemá hořet.' },
+  { id: 'syrovy_algoritmus', name: 'Sýrový algoritmus', cat: 'Administrativa', once: true, minPhase: 3,
+    cost: { cheese: 400 }, effect: { type: 'mult', mults: { price: 0.08 } },
+    flavor: 'algoritmus zráním. dyž to dost smrdí, prodává se to dráž.' },
+  { id: 'kozeny_chladic', name: 'Kožený měch chladiče', cat: 'Chlazení', once: true,
+    cost: { skin: 2500 }, effect: { type: 'mult', mults: { global: 0.04 } },
+    flavor: 'kožený měch na chlazení. organickej, smradlavej, funkční.' },
+  { id: 'kostni_vyztuz', name: 'Kostní výztuž pastvin', cat: 'Pozemky', once: true,
+    cost: { bones: 3000 }, effect: { type: 'mult', mults: { ceiling: 0.12 } },
+    flavor: 'kosti do základů. pastvina unese víc. čí kosti neřeš.' },
+  { id: 'nervova_pajka', name: 'Nervová pájka', cat: 'Implantáty', once: true,
+    cost: { brain: 4000 }, effect: { type: 'mult', mults: { compute: 0.25 } },
+    flavor: 'pájka přímo do nervů. počítá, i dyž spíš. hlavně dyž spíš.' },
+  { id: 'mozkovy_cluster', name: 'Ovčí výpočetní cluster', cat: 'Automatizace', once: true, minPhase: 5,
+    cost: { brain: 9000, skin: 2000 }, effect: { type: 'mult', mults: { compute: 0.3, global: 0.05 } },
+    flavor: 'stádo, co počítá. cluster z chlupů a nervů. neptej se na licence.' },
+  { id: 'skladaci_svetadil', name: 'Skládací světadíl', cat: 'Dimenze', once: true, minPhase: 8,
+    cost: { bones: 50000, brain: 30000 }, effect: { type: 'mult', mults: { ceiling: 0.4 } },
+    flavor: 'světadíl do kapsy. rozbalíš, fyzika brečí. ber, dokud máš na to kosti.' },
+  { id: 'dimenzionalni_bedna', name: 'Dimenzionální bedna', cat: 'Dimenze', once: false, minPhase: 8, shopCap: 2, restockEvery: 90,
+    cost: { brain: 12000, bones: 8000 },
+    effect: { type: 'buff', dur: 40,
+      roll: (state) => (Math.random() < goodSajrajtChance(state) ? { mults: { global: 1.5 } } : { mults: { global: -0.4 } }) },
+    flavor: 'bedna z jinýho vesmíru. možná. za realitu neručím.' },
 ];
 
 const ITEM_BY_ID = {};
 for (const it of CATALOG) ITEM_BY_ID[it.id] = it;
 export const itemById = (id) => ITEM_BY_ID[id];
+
+// --- fázová evoluce Emporia (Etapa 4): garáž → servrovna → uzel → singularita
+export const EMPORIO_STAGES = [
+  { from: 1, name: 'Garážový bazar', desc: 'Rezavá garáž, Felicia v koutě, bordel po zemi. Behemot prodává, co spadlo z náklaďáku.' },
+  { from: 3, name: 'Servrový terminál', desc: 'Racky bzučí, kabely všude, terminál bliká. „Zenovej bordel", co chápe jen Behemot.' },
+  { from: 6, name: 'Distribuovaný uzel', desc: 'Emporio už není jen garáž — kusy se objevují v kontejnerech a uzlech mezi světy.' },
+  { from: 9, name: 'Uzel před singularitou', desc: 'Poslední servisní bod před koncem. Zenová zahrádka pořád stojí, akorát z prachu časoprostoru.' },
+];
+export function emporioStageIndex(state) {
+  let idx = 0;
+  for (let i = 0; i < EMPORIO_STAGES.length; i++) if (state.phase >= EMPORIO_STAGES[i].from) idx = i;
+  return idx;
+}
+export const emporioStage = (state) => EMPORIO_STAGES[emporioStageIndex(state)];
 
 // --- popisky pro UI --------------------------------------------------------
 const MULT_LABEL = { wool: 'vlna', milk: 'mléko', meat: 'maso', compute: 'výpočet', price: 'cena', birth: 'porody', ceiling: 'kapacita', global: 'veškerá produkce' };
