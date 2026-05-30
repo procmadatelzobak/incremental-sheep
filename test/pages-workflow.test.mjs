@@ -5,8 +5,8 @@ function check(name, cond) { if (cond) pass++; else { fail++; console.error('  F
 
 const workflow = readFileSync('.github/workflows/pages-previews.yml', 'utf8');
 
-check('Pages workflow běží při pushi do main', /branches:\s*\[[^\]]*\bmain\b[^\]]*\]/.test(workflow));
-check('Pages workflow běží při pushi do libovolné branche', /branches:\s*\[[^\]]*['"]\*\*['"][^\]]*\]/.test(workflow));
+check('push trigger Pages workflow běží na main', /push:\s*\n\s*branches:\s*\[[^\]]*\bmain\b[^\]]*\]/.test(workflow));
+check('Pages workflow se nespouští privileged deployem z libovolné branche (#61)', !/branches:\s*\[[^\]]*['"]\*\*['"][^\]]*\]/.test(workflow));
 check('Pages workflow běží při PR submission/update na main', /pull_request_target:\s*\n\s*types:\s*\[[^\]]*\bopened\b[^\]]*\bsynchronize\b[^\]]*\]\s*\n\s*branches:\s*\[[^\]]*\bmain\b[^\]]*\]/.test(workflow));
 check('checkout action používá Node 24 major', workflow.includes('uses: actions/checkout@v6'));
 check('upload-pages-artifact action používá Node 24 major', workflow.includes('uses: actions/upload-pages-artifact@v5'));
