@@ -166,7 +166,10 @@ function geneBar(key) {
 }
 
 // --- HUD (staví se jednou, aktualizuje na místě) ---------------------------
-let hudChips = {}, hudEp, hudPhase, hudHint, hudCap, hudGate, hudTools = {};
+let hudChips = {}, hudEp, hudPhase, hudHint, hudCap, hudGate, hudTools = {}, hudExtra;
+// Druhý řádek HUD chipů (#68): ostatní suroviny v pořadí, jak je odemyká fáze.
+// Vlna/mléko/maso jsou v hlavním řádku, kredity a stádo mají vlastní chip.
+const HUD_ROW2 = ['bobky', 'cloth', 'cheese', 'bones', 'skin', 'brain', 'compute', 'energy', 'knowledge'];
 function buildHud() {
   clear(hud);
   hudEp = h('b', {}); hudPhase = h('span', { class: 'dim', id: 'hud-phase' });
@@ -181,15 +184,24 @@ function buildHud() {
   const topRow = h('div', { class: 'hud-top' },
     h('div', { class: 'hud-title' }, hudEp, hudPhase),
     h('div', { class: 'hud-tools' }, empBtn, tipBtn, gearBtn, infoBtn));
-  const chips = h('div', { class: 'chips' });
+  // Dva řádky chipů (#68): hlavní (kredity, stádo, ovčí komodity) a „ostatní"
+  // suroviny, které se objevují, jak je odemyká fáze.
+  const chipsMain = h('div', { class: 'chips chips-main' });
+  const chipsExtra = h('div', { class: 'chips chips-extra' });
   hudChips = {};
-  for (const [k, lab] of [['credits', ICONS.credits + ' Kredity'], ['pop', ICONS.sheep + ' Ovce'], ['wool', ICONS.wool + ' Vlna/s'], ['milk', ICONS.milk + ' Mléko/s'], ['meat', ICONS.meat + ' Maso/s'], ['compute', ICONS.compute + ' Výpočet/s'], ['knowledge', ICONS.knowledge + ' Vědění']]) {
+  const mkChip = (k, lab) => {
     const val = h('span', { class: 'chip-v', text: '0' });
     const trend = h('span', { class: 'chip-t' });
     const delta = h('span', { class: 'chip-d' });           // delta flash po nákupu (#25)
     const chip = h('div', { class: 'chip' }, h('span', { class: 'chip-l', text: lab }), val, trend, delta);
-    hudChips[k] = { chip, val, trend, delta }; chips.appendChild(chip);
-  }
+    hudChips[k] = { chip, val, trend, delta };
+    return chip;
+  };
+  const resLabel = (k) => (RES_ICONS[k] || '') + ' ' + (RESOURCES[k] ? RESOURCES[k].label : k);
+  for (const [k, lab] of [['credits', ICONS.credits + ' Kredity'], ['pop', ICONS.sheep + ' Ovce'], ['wool', resLabel('wool')], ['milk', resLabel('milk')], ['meat', resLabel('meat')]])
+    chipsMain.appendChild(mkChip(k, lab));
+  for (const k of HUD_ROW2) chipsExtra.appendChild(mkChip(k, resLabel(k)));
+  hudExtra = chipsExtra;
   // Postup k další fázi (#26): vždy viditelná lišta cur / target.
   const gateFill = h('div', { class: 'barfill gate-fill', style: 'background:#c9a227' });
   const gateLab = h('span', { class: 'barlabel' });
@@ -201,7 +213,7 @@ function buildHud() {
   const capBar = h('div', { class: 'bar', title: 'Naplnění pastvin (ovce / kapacita)' }, capFill, capLab);
   hudCap = { fill: capFill, lab: capLab };
   hud.appendChild(topRow);
-  hud.appendChild(hudHint); hud.appendChild(chips); hud.appendChild(gateBar); hud.appendChild(capBar);
+  hud.appendChild(hudHint); hud.appendChild(chipsMain); hud.appendChild(chipsExtra); hud.appendChild(gateBar); hud.appendChild(capBar);
 }
 // Krátká delta bublina na kartě po akci (#25).
 function popDelta(key, text, good) {
@@ -220,14 +232,35 @@ function updateHud(s) {
   if (hudTools.tip) setClass(hudTools.tip, 'lit', stepActionable(s));   // žárovka svítí, když je co výhodně koupit
   if (hudTools.emporio) setClass(hudTools.emporio, 'active', emporioOpen);
   const r = s.rates || {};
-  const set = (k, txt, show) => { const c = hudChips[k]; if (!c) return; c.chip.style.display = show ? '' : 'none'; c.val.textContent = txt; };
-  set('credits', fmt(s.resources.credits || 0), true);
-  set('pop', `${fmtCount(r._pop || 0)} / ${fmtCount(herdCapacity(s))}`, true);
-  set('wool', fmt(r.wool || 0), true);
-  set('milk', fmt(r.milk || 0), s.phase >= 2);
-  set('meat', fmt(r.meat || 0), true);
-  set('compute', fmt(r.compute || 0), s.phase >= 5);
-  set('knowledge', fmt(s.prestige.knowledge || 0), (s.prestige.knowledge || 0) > 0 || s.phase >= 10);
+  const pm = getMults(s).priceMult;
+  const show = (k, vis) => { const c = hudChips[k]; if (c) c.chip.style.display = vis ? '' : 'none'; return vis; };
+  const setV = (k, txt) => { const c = hudChips[k]; if (c) c.val.textContent = txt; };
+  // Surovinový chip (#68): hlavní číslo = zásoba, pod ní „rychlost/s · cena/ks".
+  const setStockChip = (k, vis) => {
+    if (!show(k, vis)) return;
+    setV(k, fmt(s.resources[k] || 0));
+    const rate = r[k] || 0, def = RESOURCES[k] || {}, parts = [];
+    if (rate > 1e-9) parts.push(fmt(rate) + '/s');
+    if (def.sell) parts.push(fmt((def.value || 0) * pm) + ' kr/ks');
+    const c = hudChips[k]; if (c) c.trend.textContent = parts.join(' · ');
+  };
+  // Kredity a stádo: zásoba teď, vlastní trend (příjem /s, růst /min) níž.
+  setV('credits', fmt(s.resources.credits || 0)); show('credits', true);
+  setV('pop', `${fmtCount(r._pop || 0)} / ${fmtCount(herdCapacity(s))}`); show('pop', true);
+  setStockChip('wool', true);
+  setStockChip('milk', s.phase >= 2);
+  setStockChip('meat', true);
+  for (const k of HUD_ROW2) {
+    if (k === 'knowledge') continue;                         // prestižní měna, řeší se zvlášť
+    setStockChip(k, (RESOURCES[k].phase || 99) <= s.phase);
+  }
+  // Vědění je prestižní měna (mimo resources) — zásoba z prestige, bez /s a ceny.
+  if (show('knowledge', (s.prestige.knowledge || 0) > 0 || s.phase >= 10)) {
+    setV('knowledge', fmt(s.prestige.knowledge || 0));
+    const c = hudChips.knowledge; if (c) c.trend.textContent = '';
+  }
+  // Dokud nic z druhého řádku není odemčené (raná hra), schovej celý řádek (#68).
+  if (hudExtra) hudExtra.style.display = HUD_ROW2.some(k => hudChips[k] && hudChips[k].chip.style.display !== 'none') ? '' : 'none';
   // mini trend na kartách (#11): příjem kreditů /s a růst stáda /min
   if (hudChips.credits) hudChips.credits.trend.textContent = (r._income > 0.01) ? `+${fmt(r._income)}/s` : '';
   if (hudChips.pop) {
