@@ -1,0 +1,52 @@
+name: Mr. Crank
+
+# Periodická smyčka: Mr. Crank (Sonnet) bere nejstarší otevřené issue se
+# štítkem `mrcrank` bez PR a dotahuje ho do draft PR (viz mrcrank.md, /goal).
+#
+# Spouští se z TRUSTED kontextu — schedule a ruční dispatch běží z main, ne
+# z libovolné branche (lekce z #61: privilegovaný workflow nesmí jít spustit
+# z untrusted větve). Žádná práva na deploy Pages ani OIDC — jen co Mr. Crank
+# potřebuje pro commit větve, komentář a draft PR.
+#
+# INERTNÍ, dokud kamarád nenastaví:
+#   1) Claude GitHub App  (https://github.com/apps/claude, /install-github-app)
+#   2) secret CLAUDE_CODE_OAUTH_TOKEN  (lokálně `claude setup-token`)
+# Bez tokenu workflow jen spadne na auth kroku, nic nerozbije.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # každých 6 h; uprav podle chuti / rozpočtu
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: 'Číslo konkrétního mrcrank issue (prázdné = nejstarší ve frontě)'
+        required: false
+        type: string
+
+permissions:
+  contents: write        # commit + push větve mrcrank/issue-<č>-*
+  issues: write          # stavový komentář (in-progress + odkaz na PR)
+  pull-requests: write   # otevřít draft PR
+
+concurrency:
+  group: mrcrank
+  cancel-in-progress: false   # nech doběhnout rozdělanou práci
+
+jobs:
+  crank:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Run Mr. Crank
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Prázdný dispatch i schedule → '/goal' (nejstarší issue ve frontě).
+          # Ruční dispatch s číslem → '/goal <č>'.
+          prompt: ${{ github.event.inputs.issue && format('/goal {0}', github.event.inputs.issue) || '/goal' }}
+          claude_args: '--model claude-sonnet-4-6 --max-turns 40'

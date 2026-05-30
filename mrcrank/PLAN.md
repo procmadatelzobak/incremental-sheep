@@ -23,59 +23,37 @@ a napíšeš `/goal`. Fáze 1 jen tohle zautomatizuje.
 
 ---
 
-## Fáze 1 — Spuštění (orchestrace)
+## Fáze 1 — Spuštění (orchestrace) — HOTOVO
 
-Cíl: nové `mrcrank` issue se začne řešit bez ručního startu. Tři volby, dají
-se kombinovat:
+Zvolená cesta: **periodická smyčka přes `schedule`** + **autentizace přes
+Claude GitHub App / OAuth**. Živý workflow: `.github/workflows/mrcrank.yml`.
 
-### A) GitHub Action na `issues.labeled`
-Workflow se spustí, když někdo přidá štítek `mrcrank`, nastartuje Claude Code
-(Sonnet) a zavolá `/goal <číslo>`. Plně automatické, „bere si to samo".
+- Cron `0 */6 * * *` (každých 6 h) + ruční `workflow_dispatch` (volitelně s
+  číslem issue). Schedule i dispatch běží **z `main`** → trusted kontext, takže
+  privilegovaný běh nejde nastartovat z untrusted větve (lekce z #61).
+- **Least privilege:** `contents/issues/pull-requests: write`. Žádná práva na
+  deploy Pages ani OIDC token.
+- Model připnutý na `claude-sonnet-4-6`, strop `--max-turns` kvůli nákladům.
+- Prompt: prázdný běh → `/goal` (nejstarší issue ve frontě), dispatch s
+  číslem → `/goal <č>`.
+- Invariantu hlídá `test/mrcrank-workflow.test.mjs` (stejná filozofie jako
+  `pages-workflow` test: bezpečnostní vlastnosti workflow jsou testované).
 
-Pozor (lekce z #61): workflow drží jen **minimální práva** a běží z trusted
-kontextu. Žádný `pages: write`/`id-token: write`, žádný wildcard trigger.
+### Co musí kamarád donastavit (jednorázově)
 
-> **Ready-to-enable** — až bude tajný klíč k dispozici, ulož jako
-> `.github/workflows/mrcrank.yml`. Vyžaduje secret pro autentizaci Claude Code
-> (např. `ANTHROPIC_API_KEY` nebo OAuth token podle setupu kamaráda).
+Workflow je **inertní**, dokud nejsou splněné dvě věci — do té doby jen spadne
+na auth kroku, nic nerozbije:
 
-```yaml
-name: Mr. Crank
-on:
-  issues:
-    types: [labeled]
-permissions:
-  contents: write       # commit + push větve
-  issues: write         # stavové komentáře
-  pull-requests: write  # otevřít draft PR
-concurrency:
-  group: mrcrank-${{ github.event.issue.number }}
-  cancel-in-progress: false
-jobs:
-  crank:
-    if: github.event.label.name == 'mrcrank'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with: { fetch-depth: 0 }
-      - name: Run Mr. Crank
-        uses: anthropics/claude-code-action@v1   # ověř přesný název/verzi akce
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          model: claude-sonnet-4-6
-          # Mr. Crank se řídí mrcrank.md; jen ho navedeme na konkrétní issue:
-          prompt: "/goal ${{ github.event.issue.number }}"
-```
+1. Nainstalovat **Claude GitHub App** (`https://github.com/apps/claude`, příp.
+   přes `/install-github-app` z Claude Code).
+2. Vygenerovat OAuth token (`claude setup-token`) a uložit ho jako repo secret
+   **`CLAUDE_CODE_OAUTH_TOKEN`**.
 
-### B) Plánovač / `/loop`
-Periodicky (cron nebo skill `/loop`) zavolat `/goal` (bez čísla → vezme
-nejstarší nezpracované). Hodí se jako „uklízeč fronty" doplněk k A).
+### Alternativy (kdyby se hodily později)
 
-### C) Ruční (default, funguje teď)
-Člověk pustí `/goal`. Nic dalšího netřeba.
-
-**Rozhodnutí k review:** kterou cestou jet (A/B/C) a jaký secret/akci použít —
-závisí na prostředí kamarádova repa. Do té doby je C plně funkční.
+- **Reakce na štítek hned** (`issues.labeled`) místo cronu — rychlejší odezva,
+  ale spouští se z event kontextu; držet stejně minimální práva.
+- **Ruční default** — člověk prostě napíše `/goal`. Funguje bez čehokoli z výše.
 
 ---
 
@@ -106,12 +84,11 @@ goal + kostru testu), ať je krok 1 jedno spuštění.
 
 ---
 
-## Otevřené otázky (k doladění s kamarádem)
+## Rozhodnutí (zafixováno)
 
-1. **Trigger fáze 1:** A (issues.labeled), B (loop), nebo zatím jen C (ručně)?
-2. **Autentizace v CI:** `ANTHROPIC_API_KEY` secret, nebo OAuth/Claude GitHub
-   App? (Určuje přesný tvar `mrcrank.yml`.)
-3. **Verze akce/modelu:** ověřit přesný název Claude Code GitHub akce a
-   identifikátor Sonnet modelu platný v jeho prostředí.
+1. **Trigger:** periodická smyčka (`schedule` + `workflow_dispatch`). ✅
+2. **Autentizace:** Claude GitHub App / OAuth (`CLAUDE_CODE_OAUTH_TOKEN`). ✅
+3. **Akce/model:** `anthropics/claude-code-action@v1`, `claude-sonnet-4-6`. ✅
 
-Dokud nejsou zodpovězené, Mr. Crank je plně použitelný ručně přes `/goal`.
+Zbývá jen jednorázové nastavení appky + secretu (viz Fáze 1). Do té doby je
+Mr. Crank plně použitelný i ručně přes `/goal`.
