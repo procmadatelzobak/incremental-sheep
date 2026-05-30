@@ -12,8 +12,8 @@ function check(name, cond) { if (cond) pass++; else { fail++; console.error('  F
 check('rozpozná populační chip s ikonou ("🐑 Ovce")', isSheepChipLabel(ICONS.sheep + ' Ovce'));
 check('rozpozná i holý popisek "Ovce"', isSheepChipLabel('Ovce'));
 check('ignoruje Kredity', !isSheepChipLabel(ICONS.credits + ' Kredity'));
-check('ignoruje Vlnu', !isSheepChipLabel(ICONS.wool + ' Vlna/s'));
-check('ignoruje Maso', !isSheepChipLabel(ICONS.meat + ' Maso/s'));
+check('ignoruje Vlnu', !isSheepChipLabel(ICONS.wool + ' Vlna'));
+check('ignoruje Maso', !isSheepChipLabel(ICONS.meat + ' Maso'));
 check('ignoruje Vědění', !isSheepChipLabel(ICONS.knowledge + ' Vědění'));
 check('zvládne prázdný i undefined vstup', !isSheepChipLabel('') && !isSheepChipLabel(undefined));
 check('výchozí velikost oveček je stabilní', flockSheepScale() === 2);
