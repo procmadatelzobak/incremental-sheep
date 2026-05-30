@@ -172,6 +172,7 @@ branche — tedy kódoval tu zranitelnost. Splnění issue znamenalo test
 | Cesta | Účel |
 | --- | --- |
 | `mrcrank.md` | Tenhle manuál (závazný). |
+| `mrcrank/PLAN.md` | Plán vývoje a orchestrace (roadmapa, spuštění). |
 | `.claude/commands/goal.md` | Slash příkaz `/goal`. |
 | `mrcrank/status.mjs` | Upsert stavového komentáře (in-progress + PR odkaz). |
 | `mrcrank/goal.mjs` | Evaluator cíle (čte goal, pouští checky, exit 0/1). |
