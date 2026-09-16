@@ -1,3 +1,6 @@
+HISTORICAL DOCUMENT — version 2, not the current implementation.
+Current mechanics: REWRITE-SPEC.md; measured pacing: docs/balance-report.md.
+
 INCREMENTAL SHEEP — HERNÍ MECHANIKY
 ====================================
 Stav dokumentu: aktuální k verzi 2 (commit 76b7396)

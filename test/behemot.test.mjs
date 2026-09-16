@@ -1,297 +1,435 @@
-// Behemot Emporio: barter (ze SKLADU), inventář (zap/vyp + množství), buffy, gate,
-// živý katalog, vztahové osy, prestiž-perzistence, okov/vzpoura.
-import { newGame, prestigeCarry } from '../src/io/state.js';
-import { step } from '../src/sim/simulation.js';
-import { getMults } from '../src/econ/economy.js';
-import { deserialize } from '../src/io/save.js';
+// ===========================================================================
+//  Behemot Emporio & Story Unit Tests
+//  Verified using node:test and node:assert/strict
+// ===========================================================================
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+
 import {
-  CATALOG, itemById, itemAvailable, canBarter, behemotMults,
-  barter, toggleItem, useItem, stepBehemot,
-  behemotSay, shopCount, restockEta,
-  relPriceMult, barterCost, behemotMood, behemotSpam,
-  emporioStage, emporioStageIndex, behemotPrestige,
-  containmentAvailable, behemotSetContainment, behemotReconcile, behemotPath,
+  CATALOG,
+  itemById,
+  defaultBehemot,
+  migrateBehemot,
+  behemotPrestige,
+  barterCost,
+  itemAvailable,
+  canBarter,
+  barter,
+  toggleItem,
+  toolActive,
+  effectText,
+  behemotSay,
+  stepBehemot,
+  consumeRecipe,
 } from '../src/content/behemot.js';
 
-let pass = 0, fail = 0;
-function check(name, cond) { if (cond) pass++; else { fail++; console.error('  FAIL:', name); } }
-function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) step(state, dt); }
+import {
+  defaultStory,
+  emitStory,
+  updateStory,
+  hasSeenStory,
+  getStoryEvents,
+} from '../src/content/story.js';
 
-// 1) barter platí ZE SKLADU (state.resources) a ze skladu odečte cenu
-{
-  const s = newGame();
-  s.resources.wool = 1000;
-  const ok = barter(s, 'samostrihaci_rameno');   // cost wool 250
-  check('barter ze skladu prošel', ok === true);
-  check('barter odečetl cenu ze skladu', s.resources.wool === 750);
-  check('předmět vlastněný a aktivní', !!(s.behemot.inv.samostrihaci_rameno && s.behemot.inv.samostrihaci_rameno.active));
-}
+describe('Behemot Emporio Redesign', () => {
+  describe('Catalog & Definitions', () => {
+    it('has exactly 3 items with expected properties', () => {
+      assert.equal(CATALOG.length, 3);
 
-// 2) barter sebere jen cenu, ostatní suroviny ve skladu nechá; once → soldOut
-{
-  const s = newGame();
-  s.resources.wool = 1000;
-  s.resources.meat = 500;                  // jiná surovina — barter za vlnu se jí nesmí dotknout
-  const ok = barter(s, 'samostrihaci_rameno');   // cost { wool: 250 }
-  check('barter prošel', ok === true);
-  check('odečetl jen vlnu', s.resources.wool === 750);
-  check('jinou surovinu nechal být', s.resources.meat === 500);
-  check('předmět v inventáři, aktivní', s.behemot.inv.samostrihaci_rameno && s.behemot.inv.samostrihaci_rameno.qty === 1 && s.behemot.inv.samostrihaci_rameno.active === true);
-  check('once → soldOut', s.behemot.soldOut.samostrihaci_rameno === true);
-}
+      const incubator = itemById('incubator');
+      assert.ok(incubator);
+      assert.equal(incubator.minPhase, 2);
+      assert.deepEqual(incubator.cost, { wool: 250, milk: 100 });
+      assert.equal(incubator.once, true);
+      assert.ok(typeof incubator.desc === 'string' && incubator.desc.length > 0);
 
-// 3) aktivní pasivní předmět zvedne násobič v getMults; vypnutí ho vrátí
-{
-  const base = getMults(newGame()).woolMult;
-  const s = newGame();
-  s.resources.wool = 1000;
-  barter(s, 'samostrihaci_rameno');       // +12 % vlna
-  check('aktivní předmět zvedne woolMult', getMults(s).woolMult > base + 1e-9);
-  toggleItem(s, 'samostrihaci_rameno');   // vyp
-  check('vypnutý předmět = bez bonusu', Math.abs(getMults(s).woolMult - base) < 1e-9);
-  toggleItem(s, 'samostrihaci_rameno');   // zase zap
-  check('znovu zapnutý předmět = bonus zpět', getMults(s).woolMult > base + 1e-9);
-}
+      const turbine = itemById('turbine');
+      assert.ok(turbine);
+      assert.equal(turbine.minPhase, 7);
+      assert.deepEqual(turbine.cost, { milk: 1500, cloth: 600 });
+      assert.equal(turbine.once, true);
 
-// 4) spotřební buff: použití nasadí buff, po vypršení naběhne postih a pak zmizí
-{
-  const s = newGame();
-  s.resources.wool = 5000; s.resources.meat = 5000;
-  barter(s, 'radioaktivni_krmivo');       // buff global +0.6 / 60 s, side −0.3 / 30 s
-  check('spotřební kus v inventáři', s.behemot.inv.radioaktivni_krmivo.qty === 1);
-  const used = useItem(s, 'radioaktivni_krmivo');
-  check('použití spotřebovalo kus', used === true && s.behemot.inv.radioaktivni_krmivo.qty === 0);
-  check('buff běží', s.behemot.buffs.length === 1 && Math.abs(behemotMults(s).global - 0.6) < 1e-9);
-  stepBehemot(s, 61);                      // buff vyprší → nasadí postih
-  check('po vypršení běží postih', s.behemot.buffs.length === 1 && Math.abs(behemotMults(s).global - (-0.3)) < 1e-9);
-  stepBehemot(s, 31);                      // postih vyprší
-  check('postih zmizí', s.behemot.buffs.length === 0);
-}
+      const switchboard = itemById('switchboard');
+      assert.ok(switchboard);
+      assert.equal(switchboard.minPhase, 7);
+      assert.deepEqual(switchboard.cost, { bones: 3000, skin: 2500 });
+      assert.equal(switchboard.once, true);
+    });
 
-// 5) gate dle surovin: mléčná položka je dostupná až ve fázi 2
-{
-  const item = itemById('mlekoturbina');   // cost { milk } → milk je fáze 2
-  const s1 = newGame(); s1.phase = 1;
-  check('fáze 1: mléčná položka nedostupná', itemAvailable(s1, item) === false);
-  const s2 = newGame(); s2.phase = 2;
-  check('fáze 2: mléčná položka dostupná', itemAvailable(s2, item) === true);
-}
+    it('returns identity fixed costs via barterCost', () => {
+      const state = { phase: 7 };
+      const incubator = itemById('incubator');
+      const cost = barterCost(state, incubator);
+      assert.deepEqual(cost, { wool: 250, milk: 100 });
+      cost.wool = 999;
+      assert.equal(incubator.cost.wool, 250); // No mutation
+    });
 
-// 6) jednorázovou (once) položku nelze koupit dvakrát
-{
-  const s = newGame();
-  s.resources.wool = 1000;
-  check('1. barter ok', barter(s, 'samostrihaci_rameno') === true);
-  check('2. barter zamítnut (soldOut)', barter(s, 'samostrihaci_rameno') === false);
-  check('množství zůstalo 1', s.behemot.inv.samostrihaci_rameno.qty === 1);
-  check('canBarter false po koupi', canBarter(s, itemById('samostrihaci_rameno')) === false);
-}
+    it('provides informative effectText', () => {
+      assert.match(effectText('incubator'), /vlastní selekcí/i);
+      assert.match(effectText('turbine'), /energii/i);
+      assert.match(effectText('switchboard'), /4:1/i);
+    });
+  });
 
-// 7) prestiž-asymetrie: moudrost/artefakty přežijí reset, inventář/buffy NE
-{
-  const s = newGame();
-  s.behemot.wisdom = 5;
-  s.behemot.persistent = { rack: 1 };
-  s.behemot.inv = { samostrihaci_rameno: { qty: 1, active: true } };
-  s.behemot.buffs = [{ id: 'x', mults: { global: 0.5 }, remaining: 10, side: null }];
-  const carry = prestigeCarry(s);
-  const ns = newGame(carry);
-  check('moudrost přežije', ns.behemot.wisdom === 5);
-  check('artefakty přežijí', ns.behemot.persistent.rack === 1);
-  check('inventář se resetuje', Object.keys(ns.behemot.inv).length === 0);
-  check('buffy se resetují', ns.behemot.buffs.length === 0);
-}
+  describe('Phase Locks & Barter Atomicity', () => {
+    it('locks items below minPhase', () => {
+      const state = { phase: 1, resources: { wool: 5000, milk: 5000, cloth: 5000, bones: 5000, skin: 5000 }, behemot: defaultBehemot() };
+      assert.equal(itemAvailable(state, 'incubator'), false);
+      assert.equal(canBarter(state, 'incubator'), false);
+      assert.equal(barter(state, 'incubator'), false);
 
-// 8) staré savy bez behemota se po načtení doplní (hydrate)
-{
-  const s = newGame();
-  const json = JSON.parse(JSON.stringify(s, (k, v) => (k.startsWith('_') ? undefined : (k === 'rates' ? undefined : v))));
-  delete json.behemot;                      // simuluj save z doby před Behemotem
-  const str = btoa(unescape(encodeURIComponent(JSON.stringify(json))));
-  const r = deserialize(str);
-  check('starý save dostane behemot', !!(r.behemot && typeof r.behemot.inv === 'object'));
-}
+      state.phase = 2;
+      assert.equal(itemAvailable(state, 'incubator'), true);
+      assert.equal(canBarter(state, 'incubator'), true);
+      assert.equal(itemAvailable(state, 'turbine'), false);
 
-// 9) sanity: čistá hra nemění základní násobiče (žádná regrese)
-{
-  const s = newGame();
-  check('woolMult konečné číslo', isFinite(getMults(s).woolMult));
-  check('žádné aktivní bonusy na startu', Object.keys(behemotMults(s)).length === 0);
-}
+      state.phase = 7;
+      assert.equal(itemAvailable(state, 'turbine'), true);
+      assert.equal(itemAvailable(state, 'switchboard'), true);
+    });
 
-// 10) behemotSay: rotuje hlášky a ukládá aktuální do state.line
-{
-  const s = newGame();
-  const a = behemotSay(s, 'openShop');
-  const b = behemotSay(s, 'openShop');
-  check('say uloží aktuální hlášku do line', s.behemot.line.text === b && s.behemot.line.key === 'openShop');
-  check('say rotuje (nezopakuje hned)', a !== b);
-}
+    it('barters once atomically and deducts resources', () => {
+      const state = {
+        phase: 2,
+        resources: { wool: 300, milk: 150 },
+        behemot: defaultBehemot(),
+      };
+      assert.equal(barter(state, 'incubator'), true);
+      assert.equal(state.resources.wool, 50);
+      assert.equal(state.resources.milk, 50);
+      assert.deepEqual(state.behemot.inv.incubator, { qty: 1, active: false });
 
-// 11) barter nastavuje kontextové hlášky (úspěch / rizikový / chudoba)
-{
-  const s = newGame();
-  s.resources.wool = 1000;
-  barter(s, 'samostrihaci_rameno');
-  check('úspěch → purchaseSuccess', s.behemot.line.key === 'purchaseSuccess');
+      // Second barter fails (buy only once)
+      state.resources.wool += 500;
+      state.resources.milk += 500;
+      assert.equal(canBarter(state, 'incubator'), false);
+      assert.equal(barter(state, 'incubator'), false);
+      assert.equal(state.resources.wool, 550);
+    });
 
-  const s2 = newGame();
-  s2.resources.wool = 2000; s2.resources.meat = 2000;
-  barter(s2, 'radioaktivni_krmivo');           // má side → rizikové zboží
-  check('rizikový kus → suspiciousPurchase', s2.behemot.line.key === 'suspiciousPurchase');
+    it('fails barter atomically if any resource is missing', () => {
+      const state = {
+        phase: 2,
+        resources: { wool: 300, milk: 50 }, // milk is missing 50
+        behemot: defaultBehemot(),
+      };
+      assert.equal(barter(state, 'incubator'), false);
+      assert.equal(state.resources.wool, 300); // untouched
+      assert.equal(state.resources.milk, 50);
+      assert.equal(state.behemot.inv.incubator, undefined);
+    });
+  });
 
-  const s3 = newGame();
-  barter(s3, 'samostrihaci_rameno');            // prázdný sklad
-  check('chudoba → notEnoughResources', s3.behemot.line.key === 'notEnoughResources');
-}
+  describe('Toggle & Active State (Meaningful Optionality)', () => {
+    it('allows toggling only owned and unlocked tools', () => {
+      const state = {
+        phase: 7,
+        resources: {},
+        behemot: defaultBehemot(),
+      };
 
-// 12) živý katalog: Behemotův sklad se vyprodá a po čase doplní
-{
-  const s = newGame();
-  s.resources.meat = 1e6;
-  const item = itemById('uranove_pelety');      // shopCap 5, restockEvery 20, cost meat 500
-  check('výchozí sklad = shopCap', shopCount(s, item) === 5);
-  for (let i = 0; i < 5; i++) barter(s, 'uranove_pelety');
-  check('po 5 nákupech vyprodáno', shopCount(s, item) === 0);
-  check('vyprodáno blokuje canBarter', canBarter(s, item) === false);
-  check('barter vyprodaného → soldOut hláška', barter(s, 'uranove_pelety') === false && s.behemot.line.key === 'soldOut');
-  check('restockEta > 0 když vyprodáno', restockEta(s, item) > 0);
-  stepBehemot(s, 21);                           // > restockEvery → +1 kus
-  check('restock doplnil kus', shopCount(s, item) >= 1);
-  check('po restocku jde zase bartrovat', canBarter(s, item) === true);
-}
+      assert.equal(toggleItem(state, 'incubator'), false);
+      assert.equal(toolActive(state, 'incubator'), false);
 
-// 13) vztahové osy se hýbou chováním hráče
-{
-  const s = newGame();
-  s.resources.wool = 1e5;
-  const t0 = s.behemot.rel.trust;
-  barter(s, 'samostrihaci_rameno');
-  check('barter zvedne důvěru', s.behemot.rel.trust > t0);
+      state.behemot.inv.incubator = { qty: 1, active: false };
+      assert.equal(toolActive(state, 'incubator'), false);
 
-  const s2 = newGame();
-  s2.behemot.rel.trust = 10;
-  const ov0 = s2.behemot.rel.overload;
-  behemotSpam(s2);
-  check('spam zvedne přetížení', s2.behemot.rel.overload > ov0);
-  check('spam ubere důvěru', s2.behemot.rel.trust < 10);
-  check('spam zahláškuje', s2.behemot.line.key === 'spamClicking');
+      assert.equal(toggleItem(state, 'incubator'), true);
+      assert.equal(state.behemot.inv.incubator.active, true);
+      assert.equal(toolActive(state, 'incubator'), true);
 
-  const s3 = newGame();
-  s3.resources.wool = 1e5; s3.resources.meat = 1e5;
-  barter(s3, 'radioaktivni_krmivo');
-  const ov = s3.behemot.rel.overload;
-  useItem(s3, 'radioaktivni_krmivo');
-  check('použití rizika zvedne přetížení', s3.behemot.rel.overload > ov);
-}
+      assert.equal(toggleItem(state, 'incubator'), true);
+      assert.equal(state.behemot.inv.incubator.active, false);
+      assert.equal(toolActive(state, 'incubator'), false);
 
-// 14) vztah ovlivňuje ceny a náladu
-{
-  const s = newGame();
-  check('výchozí cena ×1', Math.abs(relPriceMult(s) - 1) < 1e-9);
-  s.behemot.rel.trust = 100;
-  check('vysoká důvěra zlevňuje', relPriceMult(s) < 1);
-  const item = itemById('samostrihaci_rameno');
-  check('barterCost odráží slevu', barterCost(s, item).wool < item.cost.wool);
+      // Lock tool if phase rolls back below minPhase
+      state.behemot.inv.incubator.active = true;
+      state.phase = 1;
+      assert.equal(toolActive(state, 'incubator'), false);
+      assert.equal(toggleItem(state, 'incubator'), false);
+    });
+  });
 
-  const s2 = newGame(); s2.behemot.rel.overload = 100;
-  check('vysoké přetížení zdražuje', relPriceMult(s2) > 1);
-  check('nálada tense při vysokém přetížení', behemotMood(s2) === 'tense');
+  describe('Turbine Step & Milk Conversion', () => {
+    it('converts milk to energy only when turbine is active', () => {
+      const state = {
+        phase: 7,
+        behemot: defaultBehemot(),
+      };
+      state.behemot.inv.turbine = { qty: 1, active: false };
 
-  const s3 = newGame(); s3.behemot.rel.trust = 80;
-  check('nálada warm při vysoké důvěře', behemotMood(s3) === 'warm');
-}
+      const prodInactive = { milk: 100, energy: 0 };
+      stepBehemot(state, 1, prodInactive);
+      assert.equal(prodInactive.milk, 100);
+      assert.equal(prodInactive.energy, 0);
 
-// 15) přetížení časem chladne
-{
-  const s = newGame();
-  s.behemot.rel.overload = 50;
-  stepBehemot(s, 20);
-  check('přetížení klesá v čase', s.behemot.rel.overload < 50 && s.behemot.rel.overload >= 0);
-}
+      // Activate turbine (default turbineShare = 0.25, 0.1 energy / unit of milk)
+      state.behemot.inv.turbine.active = true;
+      const prodActive = { milk: 100, energy: 0 };
+      stepBehemot(state, 1, prodActive);
+      assert.equal(prodActive.milk, 75); // 25 milk converted
+      assert.equal(prodActive.energy, 2.5); // 25 * 0.1 = 2.5
 
-// 16) fázová evoluce Emporia podle fáze hry
-{
-  const s = newGame();
-  s.phase = 1; check('fáze 1 → Garážový bazar', emporioStage(s).name === 'Garážový bazar');
-  s.phase = 3; check('fáze 3 → Servrový terminál', emporioStage(s).name === 'Servrový terminál');
-  s.phase = 6; check('fáze 6 → Distribuovaný uzel', emporioStage(s).name === 'Distribuovaný uzel');
-  s.phase = 9; check('fáze 9 → Uzel před singularitou', emporioStage(s).name === 'Uzel před singularitou');
-  check('index Emporia roste s fází', emporioStageIndex({ phase: 1 }) < emporioStageIndex({ phase: 9 }));
-}
+      // Custom capped turbineShare
+      state.behemot.turbineShare = 0.5;
+      const prodHalf = { milk: 200, energy: 10 };
+      stepBehemot(state, 1, prodHalf);
+      assert.equal(prodHalf.milk, 100); // 100 converted
+      assert.equal(prodHalf.energy, 20); // 10 + 10 = 20
 
-// 17) hlubší katalog: pozdní položky se odemykají správnou fází/surovinou
-{
-  check('katalog se rozrostl', CATALOG.length >= 20);
-  const svet = itemById('skladaci_svetadil');      // minPhase 8
-  check('světadíl nedostupný ve fázi 5', itemAvailable({ phase: 5 }, svet) === false);
-  check('světadíl dostupný ve fázi 8', itemAvailable({ phase: 8 }, svet) === true);
-  const syr = itemById('syrovy_algoritmus');        // platí se sýrem (fáze 3)
-  check('sýrová položka nedostupná ve fázi 2', itemAvailable({ phase: 2 }, syr) === false);
-  check('sýrová položka dostupná ve fázi 3', itemAvailable({ phase: 3 }, syr) === true);
-}
+      // Turbine share clamped to [0, 1]
+      state.behemot.turbineShare = 1.5;
+      const prodMax = { milk: 80 };
+      stepBehemot(state, 1, prodMax);
+      assert.equal(prodMax.milk, 0);
+      assert.equal(prodMax.energy, 8);
+    });
+  });
 
-// 18) prestiž: Behemot „umírá", ale artefakty + Moudrost přežijí (§12 asymetrie)
-{
-  const s = newGame();
-  s.resources.wool = 2000;
-  barter(s, 'samostrihaci_rameno');                 // vlastníš trvalý předmět (artefakt)
-  s.behemot.buffs.push({ id: 'x', mults: {}, remaining: 5, side: null });
-  behemotPrestige(s);
-  check('artefakt zaznamenán do persistent', s.behemot.persistent.artifacts.samostrihaci_rameno === true);
-  check('Moudrost vzrostla o 1', s.behemot.wisdom === 1);
-  const carry = prestigeCarry(s);
-  const ns = newGame(carry);
-  check('Moudrost přežila reset', ns.behemot.wisdom === 1);
-  check('artefakt po resetu vlastněný a aktivní', !!(ns.behemot.inv.samostrihaci_rameno && ns.behemot.inv.samostrihaci_rameno.active));
-  check('artefakt je soldOut (už ho máš)', ns.behemot.soldOut.samostrihaci_rameno === true);
-  check('buffy se resetovaly', ns.behemot.buffs.length === 0);
-  check('Moudrost dává náskok důvěry', ns.behemot.rel.trust > 0);
-}
+  describe('Switchboard Material Substitution & Conservation', () => {
+    it('enforces direct inputs when switchboard is inactive', () => {
+      const state = {
+        phase: 7,
+        resources: { bones: 10, skin: 0 },
+        behemot: defaultBehemot(),
+      };
+      state.behemot.inv.switchboard = { qty: 1, active: false };
 
-// 19) Moudrost dává trvalý globální bonus (behemotMults → getMults)
-{
-  const base = getMults(newGame()).woolMult;
-  const s = newGame(); s.behemot.wisdom = 5;
-  check('Moudrost v behemotMults.global', (behemotMults(s).global || 0) > 0);
-  check('Moudrost zvedne produkci', getMults(s).woolMult > base);
-}
+      const recipe = { bones: 1, skin: 1 };
+      const produced = { bones: 0, skin: 0 };
 
-// 20) Etapa 6: okov → Kontrola/Přetížení rostou, vzpoura zamkne Emporio, usmíření ji ukončí
-{
-  const s = newGame(); s.phase = 6;
-  check('okov jde zapnout od fáze 6', behemotSetContainment(s, true) === true && s.behemot.containment);
-  const c0 = s.behemot.rel.control;
-  stepBehemot(s, 30);
-  check('okov zvedá Kontrolu', s.behemot.rel.control > c0);
-  check('okov zvedá Přetížení', s.behemot.rel.overload > 0);
-  check('okov dává globální bonus', (behemotMults(s).global || 0) > 0);
-  check('autonomie klesá s kontrolou', s.behemot.rel.autonomy < 100);
-  // dotlač do vzpoury
-  s.behemot.rel.control = 75; s.behemot.rel.overload = 75;
-  stepBehemot(s, 1);
-  check('vzpoura se spustí', s.behemot.rebelling === true);
-  check('vzpoura zamkne barter', canBarter(s, itemById('uranove_pelety')) === false);
-  check('vzpoura sabotuje produkci', (behemotMults(s).global || 0) < 0);
-  check('cesta = Vzpoura', behemotPath(s) === 'Vzpoura');
-  behemotReconcile(s);
-  check('usmíření ukončí vzpouru', s.behemot.rebelling === false);
-  check('usmíření vypne okov', s.behemot.containment === false);
-  check('usmíření zchladí Přetížení', s.behemot.rel.overload < 75);
-}
+      // Missing skin, switchboard inactive -> 0 work possible
+      const work = consumeRecipe(state, produced, recipe, 10, 0.5);
+      assert.equal(work, 0);
+      assert.equal(state.resources.bones, 10);
+    });
 
-// 21) okov je zamčený před fází 6; klasifikace cest vztahu
-{
-  const s = newGame(); s.phase = 3;
-  check('okov zamčený ve fázi 3', behemotSetContainment(s, true) === false && !s.behemot.containment);
-  check('výchozí cesta neutrální', behemotPath(s) === 'Neutrální');
-  const s2 = newGame(); s2.behemot.rel.control = 65;
-  check('vysoká Kontrola → Zotročení', behemotPath(s2) === 'Zotročení');
-  const s3 = newGame(); s3.behemot.rel.trust = 60; s3.behemot.rel.respect = 40;
-  check('vysoká Důvěra+Respekt → Partnerství', behemotPath(s3) === 'Partnerství');
-  const s4 = newGame(); s4.behemot.rebelling = true;
-  check('při vzpouře → cesta Vzpoura', behemotPath(s4) === 'Vzpoura');
-}
+    it('substitutes missing triad materials at 4:1 conserving total units', () => {
+      const state = {
+        phase: 7,
+        resources: { bones: 0, skin: 40, cloth: 0 },
+        behemot: defaultBehemot(),
+      };
+      state.behemot.inv.switchboard = { qty: 1, active: true };
 
-console.log(`behemot: ${pass} ok, ${fail} fail`);
-process.exit(fail ? 1 : 0);
+      const recipe = { bones: 1 }; // Needs 10 bones for 10 work
+      const produced = {};
+
+      // 40 skin can substitute for 10 bones (10 * 4 = 40)
+      const work = consumeRecipe(state, produced, recipe, 10, 0.5);
+      assert.equal(work, 10);
+      assert.equal(state.resources.skin, 0); // exactly 40 skin consumed
+      assert.equal(state.resources.bones, 0);
+    });
+
+    it('allocates direct inputs first before substitution', () => {
+      const state = {
+        phase: 7,
+        resources: { bones: 6, skin: 16, cloth: 0 },
+        behemot: defaultBehemot(),
+      };
+      state.behemot.inv.switchboard = { qty: 1, active: true };
+
+      // Desired work 10 requires 10 bones
+      // Available bones: 6 direct -> 4 deficit
+      // 4 deficit * 4 = 16 skin needed as substitute
+      const recipe = { bones: 1 };
+      const work = consumeRecipe(state, {}, recipe, 10, 0.5);
+
+      assert.equal(work, 10);
+      assert.equal(state.resources.bones, 0); // 6 direct consumed
+      assert.equal(state.resources.skin, 0); // 16 substitute consumed
+    });
+
+    it('atomically limits work and prevents free conversion when materials are insufficient', () => {
+      const state = {
+        phase: 7,
+        resources: { bones: 0, skin: 12 }, // 12 skin can only cover 3 bones
+        behemot: defaultBehemot(),
+      };
+      state.behemot.inv.switchboard = { qty: 1, active: true };
+
+      const recipe = { bones: 1 };
+      const work = consumeRecipe(state, {}, recipe, 10, 0.5);
+
+      assert.equal(work, 3);
+      assert.equal(state.resources.skin, 0);
+    });
+
+    it('consumes from produced share first, then stock', () => {
+      const state = {
+        phase: 7,
+        resources: { wool: 10 },
+        behemot: defaultBehemot(),
+      };
+      const produced = { wool: 20 };
+      const recipe = { wool: 1 };
+
+      // share = 0.5 -> max 10 wool from produced, remainder from stock
+      const work = consumeRecipe(state, produced, recipe, 15, 0.5);
+      assert.equal(work, 15);
+      assert.equal(produced.wool, 10); // 20 - 10 = 10
+      assert.equal(state.resources.wool, 5); // 10 - 5 = 5
+    });
+  });
+
+  describe('Migration & Idempotency', () => {
+    it('detects legacy state, refunds consumables at base value, and grants 3 new tools', () => {
+      const legacyState = {
+        rel: { trust: 50, overload: 10 },
+        buffs: [{ id: 'radioaktivni_krmivo', remaining: 20 }],
+        soldOut: { samostrihaci_rameno: true },
+        wisdom: 4,
+        persistent: { artifacts: { mlekoturbina: true } },
+        inv: {
+          radioaktivni_krmivo: { qty: 2 }, // cost: { wool: 800, meat: 150 } -> (800*1 + 150*6) * 2 = 3400 credits
+        },
+        line: { key: 'garage', text: 'nešahej na to.' },
+        lineN: 3,
+        visits: 5,
+      };
+
+      const result = migrateBehemot(legacyState);
+      assert.equal(result.refundCredits, 3400);
+      assert.equal(result.state.rel, undefined);
+      assert.equal(result.state.buffs, undefined);
+      assert.equal(result.state.wisdom, undefined);
+      assert.equal(result.state.soldOut, undefined);
+
+      // Granted all 3 new tools inactive
+      assert.deepEqual(result.state.inv, {
+        incubator: { qty: 1, active: false },
+        turbine: { qty: 1, active: false },
+        switchboard: { qty: 1, active: false },
+      });
+
+      // Preserved line and stats
+      assert.deepEqual(result.state.line, { key: 'garage', text: 'nešahej na to.' });
+      assert.equal(result.state.lineN, 3);
+      assert.equal(result.state.visits, 5);
+
+      // Idempotent call
+      const secondResult = migrateBehemot(result.state);
+      assert.equal(secondResult.refundCredits, 0);
+      assert.deepEqual(secondResult.state, result.state);
+    });
+  });
+
+  describe('Prestige Carry & Sayings', () => {
+    it('returns carry ownership without mutating state', () => {
+      const state = {
+        behemot: {
+          inv: {
+            incubator: { qty: 1, active: true },
+            turbine: { qty: 1, active: false },
+          },
+        },
+      };
+
+      const carry = behemotPrestige(state);
+      assert.deepEqual(carry, {
+        inv: {
+          incubator: { qty: 1, active: false },
+          turbine: { qty: 1, active: false },
+        },
+      });
+
+      // Original state unmutated
+      assert.equal(state.behemot.inv.incubator.active, true);
+
+      // Carry to defaultBehemot
+      const fresh = defaultBehemot(carry);
+      assert.deepEqual(fresh.inv, {
+        incubator: { qty: 1, active: false },
+        turbine: { qty: 1, active: false },
+      });
+    });
+
+    it('rotates deterministic terse Czech garage lines', () => {
+      const state = { behemot: defaultBehemot() };
+      const line1 = behemotSay(state, 'garage');
+      const line2 = behemotSay(state, 'garage');
+      assert.ok(typeof line1 === 'string' && line1.length > 0);
+      assert.ok(typeof line2 === 'string' && line2.length > 0);
+      assert.notEqual(line1, line2);
+      assert.equal(state.behemot.lineN, 2);
+    });
+  });
+});
+
+describe('Story System Module', () => {
+  it('initializes defaultStory with empty or carried events', () => {
+    const s1 = defaultStory();
+    assert.deepEqual(s1.events, []);
+    assert.deepEqual(s1.seen, {});
+
+    const carry = { events: [{ id: 'ev1', text: 'txt', at: 1, run: 0 }], seen: { ev1: true } };
+    const s2 = defaultStory(carry);
+    assert.equal(s2.events.length, 1);
+    assert.equal(s2.seen.ev1, true);
+  });
+
+  it('emitStory stores events up to 128 and marks seen permanently', () => {
+    const state = { meta: { totalGameTime: 123 }, prestige: { runs: 2 } };
+    const ev = emitStory(state, 'test_ev', 'Událost se stala.');
+    assert.equal(ev.id, 'test_ev');
+    assert.equal(ev.run, 2);
+    assert.equal(ev.at, 123);
+    assert.equal(hasSeenStory(state, 'test_ev'), true);
+    assert.equal(getStoryEvents(state).length, 1);
+
+    // Overflow capped at 128
+    for (let i = 0; i < 150; i++) {
+      emitStory(state, `ev_${i}`, `Event ${i}`);
+    }
+    assert.equal(getStoryEvents(state).length, 128);
+  });
+
+  it('updateStory evaluates milestones idempotently without adding multipliers', () => {
+    const state = {
+      phase: 11,
+      stats: { selected: 15, peakPop: 2e18 },
+      world: { bestIntel: 6, maxSpheres: 5 },
+      prestige: { runs: 5, knowledge: 100 },
+      flags: { immortal: true },
+      projects: { dyson: { count: 5 } },
+      groups: [{ worldId: 'moon', genes: { intelligence: { mu: 6 } }, counts: { M: { child: 0, adult: 2e18, old: 0 }, F: { child: 0, adult: 0, old: 0 } } }],
+      meta: { epithet: 'Vládce hvězd' },
+    };
+
+    const newEvents = updateStory(state);
+    assert.ok(newEvents.length >= 10);
+
+    assert.ok(hasSeenStory(state, 'first_selection'));
+    assert.ok(hasSeenStory(state, 'immortality'));
+    assert.ok(hasSeenStory(state, 'intelligent_sheep'));
+    assert.ok(hasSeenStory(state, 'earth_departure'));
+    assert.ok(hasSeenStory(state, 'spheres_1'));
+    assert.ok(hasSeenStory(state, 'spheres_5'));
+    assert.ok(hasSeenStory(state, 'judges_phase_9'));
+    assert.ok(hasSeenStory(state, 'blackhole_run_1'));
+    assert.ok(hasSeenStory(state, 'blackhole_run_3'));
+    assert.ok(hasSeenStory(state, 'blackhole_run_5'));
+    assert.ok(hasSeenStory(state, 'revelation_phase_11'));
+    assert.ok(hasSeenStory(state, 'pop_1e6'));
+    assert.ok(hasSeenStory(state, 'pop_1e12'));
+    assert.ok(hasSeenStory(state, 'pop_1e18'));
+    assert.ok(hasSeenStory(state, 'touha_bottomless'));
+    assert.ok(hasSeenStory(state, 'epithet_arc'));
+
+    // Check recurring phrase
+    const pop18 = getStoryEvents(state).find((e) => e.id === 'pop_1e18');
+    assert.match(pop18.text, /A přece jich nebylo dosti/);
+
+    // Idempotent: subsequent updateStory returns 0 new events
+    const followUp = updateStory(state);
+    assert.equal(followUp.length, 0);
+  });
+
+  it('is tolerant of absent or partial state structures', () => {
+    assert.deepEqual(updateStory(null), []);
+    assert.deepEqual(updateStory({}), []);
+    assert.deepEqual(updateStory({ phase: 2 }), []);
+  });
+});

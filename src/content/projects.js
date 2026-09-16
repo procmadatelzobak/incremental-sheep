@@ -1,32 +1,18 @@
-// ===========================================================================
-//  Velké projekty: Dysonova sféra + stavitelé, energie, stroj času.
-// ===========================================================================
-import { BALANCE } from '../config.js';
+// Dyson construction consumes staffed work and materials in industry.js.
+import { INDUSTRY, projectMemory } from './industry-config.js';
 
-// Cíl rostoucí s počtem sfér (každá další větší dílo). Laser zrychluje stavbu.
-export const dysonTarget = (state) => BALANCE.dyson.target * (1 + BALANCE.dyson.targetGrowth * state.projects.dyson.count);
-
-export function stepProjects(state, dt, ctx) {
-  const d = state.projects.dyson;
-  const target = dysonTarget(state);
-  if (state.phase >= 7 && d.progress < target) {
-    const rate = (1 + d.builders * BALANCE.dyson.builderRate) * (1 + state.projects.laser.level * 0.5) * (ctx.globalProd || 1) * (ctx.spaceMult || 1);
-    d.progress = Math.min(target, d.progress + rate * dt);
-  }
-  if (d.count > 0) {
-    state.resources.energy = (state.resources.energy || 0) + d.count * BALANCE.dyson.energyPerSphere * 0.01 * dt;
-  }
-  if (state.phase >= 7) state.projects.timeMachine.progress += dt;
+export const dysonTarget = state => state.projects.dyson.count === 0
+  ? INDUSTRY.jobs.sphere.firstTarget
+  : INDUSTRY.jobs.sphere.subsequentBaseTarget * (1 + INDUSTRY.jobs.sphere.targetGrowth * state.projects.dyson.count);
+export function stepProjects(state, dt) {
+  if (state.projects.dyson.count > 0) state.resources.energy = (state.resources.energy || 0) + state.projects.dyson.count * INDUSTRY.jobs.sphere.energyPerSphere * projectMemory(state) * dt;
 }
-
-export const sphereReady = (state) => state.projects.dyson.progress >= dysonTarget(state);
-
+export const sphereReady = state => state.phase >= 7 && state.projects.dyson.progress >= dysonTarget(state);
 export function claimSphere(state) {
   if (!sphereReady(state)) return false;
-  const d = state.projects.dyson;
-  d.count++;
-  d.progress = 0;
-  const sw = state.land.worlds.sphere;
-  sw.counts[sw.tier] = (sw.counts[sw.tier] || 0) + 1;   // dokončená sféra = parcela sférového světa
+  state.projects.dyson.count++;
+  state.projects.dyson.progress = 0;
+  const world = state.land.worlds.sphere;
+  world.counts[world.tier] = (world.counts[world.tier] || 0) + 1;
   return true;
 }

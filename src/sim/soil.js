@@ -12,7 +12,7 @@
 // ===========================================================================
 import { SOIL } from '../config.js';
 import { totalCount } from './cohort.js';
-import { totalArea } from '../content/locations.js';
+import { worldArea } from '../content/locations.js';
 
 export function defaultSoil() {
   return { q: 0, input: SOIL.defaultInput, convert: true, useStock: true, fertMode: 'off', fertValue: 0 };
@@ -30,9 +30,11 @@ export const manureRate = (group) => SOIL.manurePerSheep * weightedSheep(group);
 // Podíl půdy připadající na skupinu = podíl na celkové rozloze dle populace
 // (jedno stádo = celá rozloha). Saturace tak souvisí s množstvím půdy v metrech.
 function soilAreaOf(group, state) {
-  const area = totalArea(state);
-  let pop = 0; for (const g of state.groups) pop += totalCount(g);
-  if (pop <= 0) return area / Math.max(1, state.groups.length);
+  const worldId = group.worldId || 'earth';
+  const area = worldArea(state, worldId);
+  const local = state.groups.filter(g => (g.worldId || 'earth') === worldId);
+  let pop = 0; for (const g of local) pop += totalCount(g);
+  if (pop <= 0) return area / Math.max(1, local.length);
   return area * (totalCount(group) / pop);
 }
 

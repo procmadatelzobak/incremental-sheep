@@ -74,19 +74,19 @@ export function births(group, headroom, dt, ctx) {
   b = Math.min(b, Math.max(0, headroom));
   let killed = 0;
   if (b > 0) {
-    const cull = group.policy && group.policy.cull;
+    const cull = ctx.phase < 2 ? null : group.policy && group.policy.cull;
     const p = (cull && cull.enabled && cull.cutFrac > 0) ? Math.min(BALANCE.maxCutFrac, cull.cutFrac) : 0;
     killed = b * p;
     const kept = b - killed;
     c.M.child += kept / 2;
     c.F.child += kept / 2;
     const ceil = ctx.ceilingMult || 1;
-    const nGenes = Object.keys(g).length;
+    const nGenes = Object.keys(g).filter(k => GENES[k] && GENES[k].phase <= (ctx.phase == null ? Infinity : ctx.phase)).length;
     for (const k in g) {
       const spec = GENES[k];
       if (!spec) continue;
       const sChild = Math.sqrt((g[k].sigma * g[k].sigma) / 2 + spec.mut * spec.mut);
-      const nb = selectedNewbornDist(k, g[k].mu, sChild, cull, ceil, nGenes);
+      const nb = selectedNewbornDist(k, g[k].mu, sChild, cull, ceil, nGenes, ctx.phase == null ? Infinity : ctx.phase);
       const mixed = mixNormal(total, g[k].mu, g[k].sigma, kept, nb.mu, nb.sigma);
       g[k].mu = clampGene(k, mixed.mu, ceil);
       g[k].sigma = mixed.sigma;

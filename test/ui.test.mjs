@@ -45,6 +45,8 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   const q10 = buttonsByText(panel(), '×10')[0];
   if (q10) q10.click();
   check('volba množství ×10', s.settings.buy.qty === 10);
+  // tržiště respektuje místní kapacitu; pro tento test pohlaví dej stádu prostor.
+  s.land.worlds.earth.counts[0] = 100;
   const m0 = s.groups[0].counts.M.adult, f0 = s.groups[0].counts.F.adult;
   buttonsByText(panel(), 'Koupit ovce')[0].click();
   check('koupě samic přidá jen samice', s.groups[0].counts.F.adult > f0 && s.groups[0].counts.M.adult === m0);
@@ -62,10 +64,11 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
 
 // --- rozšíření lokace ---
 {
+  s.land.worlds.earth.counts[0] = 5;
   s.phase = 2;   // Pozemky se odemykají od fáze 2 (#14)
   initUI(s, 'app', () => {});
   clickTab('Pozemky');
-  const b = buttonsByText(panel(), 'Zahrada')[0];
+  const b = buttonsByText(panel(), '+ Zahrada')[0];
   check('tlačítko koupě území existuje', !!b);
   const n0 = s.land.worlds.earth.counts[0] || 0;
   if (b) b.click();
@@ -100,22 +103,16 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   check('Emporio: popup má obsah', !!modal && modal.children.length > 0);
   check('Emporio: otevření vyvolá Behemotovu hlášku', !!(s.behemot.line && s.behemot.line.text));
   check('Emporio: popup ukazuje hlavičku fáze', app.textContent.includes('Behemot Emporio'));
-  // vnitřní záložky popupu: Vztah ukazuje osy/cestu, Nabídka katalog
-  const vztahTab = buttonsByText(app, 'Vztah')[0];
-  check('Emporio: má vnitřní záložku Vztah', !!vztahTab);
-  if (vztahTab) vztahTab.click();
-  check('Emporio: záložka Vztah ukazuje cestu', app.textContent.includes('cesta:'));
-  const nabidkaTab = buttonsByText(app, 'Nabídka')[0];
-  if (nabidkaTab) nabidkaTab.click();
-  s.resources.wool = 5000;              // sklad — barter se z něj platí
+  check('Emporio: ukazuje katalog tří strojů', app.textContent.includes('Inkubátor') && !app.textContent.includes('Vztah'));
+  s.resources.wool = 5000; s.resources.milk = 1000; // fyzické suroviny pro inkubátor
   updateUI(s);
-  const barterBtn = buttonsByText(app, 'Barter')[0];
-  check('Emporio: tlačítko Barter existuje', !!barterBtn);
+  const barterBtn = buttonsByText(app, 'Vyměnit')[0];
+  check('Emporio: tlačítko Vyměnit existuje', !!barterBtn);
   const inv0 = Object.keys(s.behemot.inv).length;
   if (barterBtn) barterBtn.click();
   check('Emporio: barter přidá předmět do inventáře', Object.keys(s.behemot.inv).length > inv0);
   check('Emporio: barter zaplatil ze skladu', s.resources.wool < 5000);
-  check('Emporio: barter vyvolá hlášku o úspěchu', s.behemot.line && s.behemot.line.key === 'purchaseSuccess');
+  check('Emporio: barter vyvolá hlášku o úspěchu', s.behemot.line && ['purchaseSuccess', 'barter_success', 'barter'].includes(s.behemot.line.key));
   const closeBtn = buttonsByText(app, '×')[0];
   if (closeBtn) closeBtn.click();
   check('Emporio: popup jde zavřít', app.querySelectorAll('.emporio-modal').length === 0);
@@ -124,12 +121,24 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   updateUI(s);
   clickTab('Unikátní předměty');
   check('panel Unikátní předměty má obsah', panel().children.length > 0);
-  const toggleBtn = buttonsByText(panel(), 'Zapnuto')[0];
+  const toggleBtn = buttonsByText(panel(), 'Aktivovat')[0];
   check('Inventář: přepínač aktivního předmětu existuje', !!toggleBtn);
   if (toggleBtn) {
     toggleBtn.click();
-    check('Inventář: vypnutí předmětu funguje', Object.values(s.behemot.inv).some(e => e.active) === false);
+    check('Inventář: zapnutí předmětu funguje', Object.values(s.behemot.inv).some(e => e.active) === true);
   }
+}
+
+// --- projekty od fáze 2: CTA, rezerva a lokální podpora -----------------
+{
+  const si = newGame(); si.phase = 2; si.resources.credits = 1e8;
+  initUI(si, 'app', () => {}); clickTab('Projekty');
+  check('Projekty: panel ukazuje navazující projekt', panel().textContent.includes('Navazující projekt'));
+  const start = buttonsByText(panel(), 'Zadat navazující projekty')[0];
+  check('Projekty: CTA existuje', !!start);
+  if (start) start.click();
+  check('Projekty: CTA zapne frontu', si.industry.enabled === true);
+  check('Projekty: podpora čeká na Exodus', !panel().textContent.includes('Místní podpora světů'));
 }
 
 // --- updateUI nespadne ---
@@ -208,10 +217,10 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   const s = newGame(); s.resources.credits = 1e6; s.phase = 2;
   initUI(s, 'app', () => {});
   clickTab('Genetika');
-  const vlna = buttonsByText(panel(), 'Vlna')[0];
-  check('preset Vlna existuje (v Genetice)', !!vlna);
+  const vlna = buttonsByText(panel(), 'Textil')[0];
+  check('profil Textil existuje (v Genetice)', !!vlna);
   if (vlna) vlna.click();
-  check('preset nastaví selekci na woolRate', s.groups[0].policy.cull.gene === 'woolRate' && s.groups[0].policy.cull.enabled);
+  check('profil nastaví selekci na textile', s.groups[0].policy.cull.gene === 'profile:textile' && s.groups[0].policy.cull.enabled);
   check('Genetika obsahuje geny + výběr při narození', panel().textContent.includes('Geny stáda') && panel().textContent.includes('Výběr při narození') && panel().textContent.includes('Přísnost výběru'));
   clickTab('Stáda');
   check('genom a šlechtění už nejsou na dashboardu Stáda (#30)', !panel().textContent.includes('Výběr při narození') && !panel().textContent.includes('Geny stáda'));
@@ -258,7 +267,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
   const a = newGame(); a.phase = 3; a.resources.credits = 1e7;
   initUI(a, 'app', () => {});
   const labHidden = !allButtons(tabs()).some(b => b.textContent.includes('Laboratoř') && b.style.display !== 'none');
-  check('Laboratoř skrytá bez městských pozemků', labHidden);
+  check('Laboratoř dostupná od Královské bez nákupu města', !labHidden);
 
   const b = newGame(); b.phase = 3; b.resources.credits = 1e7;
   b.land.worlds.earth.tier = 4;
@@ -483,7 +492,7 @@ check('Existují záložky', allButtons(tabs()).length >= 3);
 {
   const a = newGame(); a.phase = 3; a.resources.credits = 1e7;
   initUI(a, 'app', () => {});
-  check('Jatka skrytá bez městských pozemků', !allButtons(tabs()).some(b => b.textContent.includes('Jatka') && b.style.display !== 'none'));
+  check('Jatka dostupná od Množení bez nákupu města', allButtons(tabs()).some(b => b.textContent.includes('Jatka') && b.style.display !== 'none'));
 
   const s = newGame(); s.phase = 3; s.resources.credits = 1e7; s.land.worlds.earth.tier = 4;
   initUI(s, 'app', () => {});

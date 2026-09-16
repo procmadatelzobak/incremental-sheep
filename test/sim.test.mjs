@@ -45,6 +45,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 {
   const s = newGame();
   s.resources.credits = 1e6;
+  s.groups[0].counts.F.adult = 10; // expansion is useful at a full pasture
   setAutobuy(s, 'land', true);
   const cr0 = s.resources.credits, area0 = totalArea(s);
   runAutobuy(s);
@@ -80,7 +81,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 // 1e) doporučený krok je smysluplný řetězec
 {
   check('suggestStep fáze 1', typeof suggestStep(newGame()) === 'string' && suggestStep(newGame()).length > 0);
-  const sp = newGame(); sp.phase = 10; sp.prestige.singularity = true;
+  const sp = newGame(); sp.phase = 10; sp.prestige.singularity = true; sp.prestige.centralWarehouse = sp.prestige.threshold;
   check('suggestStep singularita', /singular/i.test(suggestStep(sp)));
 }
 
@@ -125,6 +126,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 {
   const s = newGame(); s.resources.credits = 1e6;
   const m0 = s.groups[0].counts.M.adult;
+  buyLand(s, 'earth');
   buyAddSheep(s, 'M', 3);
   check('nákup samců přidá jen samce', s.groups[0].counts.M.adult > m0 && s.groups[0].counts.F.adult === 2);
 }
@@ -190,6 +192,7 @@ function run(state, seconds, dt = 0.2) { for (let t = 0; t < seconds; t += dt) s
 {
   const s = newGame();
   const A = autoPlayer();
+  s.industry.enabled = true;
   let advanced = 1;
   for (let i = 0; i < 200000; i++) {
     step(s, 0.5);
@@ -384,6 +387,7 @@ function autoPlayer() {
   g.genes.woolRate.mu = 4; g.genes.woolRate.sigma = 1e-6;
   g.counts.M.adult = 2; g.counts.F.adult = 2;   // malé stádo → znatelný dopad nákupu
   const sig0 = g.genes.woolRate.sigma, mu0 = g.genes.woolRate.mu;
+  s.land.worlds.earth.counts[0] = 10;
   const ok = buyAddSheep(s, 'mix', 10);   // 10 jednotek × sheepPerUnit (4) = 40 ovcí do malého stáda
   check('#40 buyAddSheep proběhl', ok === true);
   check('#40 nákup rozšíří σ (obnova rozptylu po bottlenecku)', g.genes.woolRate.sigma > sig0);

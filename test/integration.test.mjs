@@ -34,7 +34,7 @@ try {
   for (let i = 1; i <= 80; i++) {       // 8 s herního času (přes práh autosave 5 s)
     globalThis.__clock = i * 100;       // +100 ms/frame
     if (i === 3) credBefore = hud() ? hud().textContent : '';
-    raf(i * 100);                        // frame() se sám přeplánuje (znovu nastaví raf)
+    await raf(i * 100);                        // frame() se sám přeplánuje (znovu nastaví raf)
   }
 } catch (e) { ok = false; console.error('  běh smyčky selhal:', e); }
 check('herní smyčka běží bez chyby', ok);
@@ -47,7 +47,7 @@ ok = true;
 try {
   const { deserialize } = await import('../src/io/save.js');
   const s2 = deserialize(store['incremental-sheep-v3']);
-  check('uložený stav jde načíst', s2 && s2.version === 3 && Array.isArray(s2.groups));
+  check('uložený stav jde načíst', s2 && s2.version === 4 && Array.isArray(s2.groups));
 } catch (e) { ok = false; console.error(e); check('uložený stav jde načíst', false); }
 
 console.log(`integration: ${pass} passed, ${fail} failed`);

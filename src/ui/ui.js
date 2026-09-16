@@ -11,17 +11,21 @@ import { VERSION, UPGRADES, upgradeName, PERKS, PERK_BRANCHES, GENES, RESOURCES,
 import { totalCount, totalPopulation } from '../sim/cohort.js';
 import { maleCapOf } from '../sim/groups.js';
 import { soilSnapshot, manureRate } from '../sim/soil.js';
-import { herdCapacity, totalArea, densityMult, densityMaxLevel, densityPhaseCap, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost } from '../content/locations.js';
+import { herdCapacity, totalArea, densityMult, densityMaxLevel, densityPhaseCap, areaModMult, worldArea, parcelsInWorld, landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost, worldCapacity, worldPopulation, worldSupportFactor, worldEnv } from '../content/locations.js';
+import { installedSupport } from '../content/habitats.js';
 import { phaseName, phaseHint, phaseProgress, PHASE_INFO, PHASES } from '../content/phases.js';
-import { breedingScore, geneMin, geneMax, selectedNewbornDist } from '../sim/genetics.js';
+import { breedingScore, geneMin, geneMax, selectedNewbornDist, CULL_PROFILES } from '../sim/genetics.js';
 import { resourceCap, TRADEABLE, storageEnabled } from '../econ/storage.js';
 import { processFraction } from '../econ/processing.js';
 import { sphereReady, dysonTarget } from '../content/projects.js';
+import { phaseJob, projectStatus, supportCost, maxSupportLevel } from '../content/industry.js';
+import { INDUSTRY } from '../content/industry-config.js';
 import { canIgnite, singularityAvailable } from '../content/prestige.js';
 import { ACHIEVEMENTS, unlockedTitles } from '../content/achievements.js';
-import { CATALOG, itemAvailable, canBarter, effectText, behemotSay, shopCount, restockEta, barterCost, relPriceMult, behemotMood, emporioStage, emporioStageIndex, behemotPath, containmentAvailable } from '../content/behemot.js';
+import { CATALOG, itemAvailable, canBarter, effectText, behemotSay, barterCost, toolActive } from '../content/behemot.js';
 import { drawHerd } from '../render/canvas.js';
 import { ICONS, PHASE_ICONS, RES_ICONS, KIND_ICONS } from '../icons.js';
+const PROFILE_LABELS = { growth: 'Růst', textile: 'Textil', materials: 'Materiály', compute: 'Výpočet', judges: 'výpočet, textil a materiály' };
 
 let root, hud, tabsBar, panelEl, bannerEl, activeTab = 'herds', lastTabSig = '', structSig = '';
 let updaters = [];           // aktualizace hodnot aktivního panelu (běží každý frame)
@@ -53,6 +57,11 @@ function h(tag, props = {}, ...kids) {
 }
 const clear = (e) => { while (e && e.firstChild) e.removeChild(e.firstChild); };
 const group = () => S.groups.find(g => g.id === S.activeGroupId) || S.groups[0];
+const worldLabel = (wk) => {
+  const w = WORLDS[wk || 'earth'];
+  return w ? `${w.icon || ''} ${w.label}`.trim() : (wk || 'earth');
+};
+const groupLabel = (g) => `${g.name} · ${worldLabel(g.worldId)} (${fmtCount(totalCount(g))})`;
 
 function setClass(el, cls, on) {
   const parts = (el.className || '').split(' ').filter(Boolean).filter(c => c !== cls);
@@ -300,20 +309,21 @@ function updateHud(s) {
 
 // --- ZÁLOŽKY ---------------------------------------------------------------
 // Laboratoř i Jatka se odemknou, jakmile má hráč pozemky kolem prvního města (Země tier 4).
-const labUnlocked = (s) => (s.land.worlds.earth.tier || 0) >= 4;
-const cityUnlocked = (s) => (s.land.worlds.earth.tier || 0) >= 4;
+const labUnlocked = s => s.phase >= 3;
+const cityUnlocked = s => s.phase >= 2;
 
 const TABS = [
   { id: 'herds', label: ICONS.sheep + ' Stáda', avail: () => true, render: renderHerds },
   { id: 'genetics', label: ICONS.genes + ' Genetika', avail: () => true, render: renderGenetics },
   { id: 'slaughter', label: '🔪 Jatka', avail: s => cityUnlocked(s), render: renderSlaughter },
   { id: 'upgrades', label: ICONS.upgrades + ' Vylepšení', avail: () => true, render: renderUpgrades },
+  { id: 'industry', label: '🏭 Projekty', avail: s => s.phase >= 2, render: renderIndustry },
   { id: 'behitems', label: '🎒 Unikátní předměty', avail: s => !!(s.behemot && Object.keys(s.behemot.inv).length), render: renderBehemotItems },
   { id: 'lab', label: ICONS.lab + ' Laboratoř', avail: s => labUnlocked(s), render: renderLab },
   { id: 'stations', label: ICONS.pasture + ' Pozemky', avail: s => s.phase >= 2, render: renderStations },
   { id: 'pastures', label: ICONS.soil + ' Pastviny', avail: s => s.phase >= SOIL.unlockPhase, render: renderPastures },
   { id: 'storage', label: ICONS.storage + ' Sklad', avail: () => true, render: renderStorage },
-  { id: 'manager', label: ICONS.manager + ' Manažer', avail: s => s.phase >= 9, render: renderManager },
+  { id: 'manager', label: ICONS.manager + ' Manažer', avail: s => s.phase >= 6 || s.flags.judgesKnown, render: renderManager },
   { id: 'prestige', label: ICONS.prestige + ' Prestiž', avail: s => s.phase >= 7 || (s.prestige.knowledge || 0) > 0 || s.prestige.runs > 0, render: renderPrestige },
   { id: 'kronika', label: ICONS.kronika + ' Kronika', avail: s => s.phase >= 2, render: renderKronika },
   { id: 'stats', label: ICONS.stats + ' Staty', avail: () => true, render: renderStats },
@@ -384,7 +394,7 @@ function renderHerds(s) {
   if (s.groups.length > 1) {
     wrap.appendChild(section('Stádo',
       h('select', { onchange: e => { s.activeGroupId = +e.target.value; rebuildPanel(); } },
-        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmtCount(totalCount(x))})`)))));
+        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, groupLabel(x))))));
   }
 
   const cv = h('canvas', { class: 'herdcanvas', width: 280, height: 90 });
@@ -428,11 +438,30 @@ function renderHerds(s) {
     ? h('details', { class: 'buy-collapse' }, h('summary', { class: 'dim small' }, `${ICONS.sheep} Nákup ovcí (rozbalit — v této fázi už zpravidla nedává smysl)`),
         sexRow, qtyRow, buyBtn, marketHint, buyAutobuy, buyHelp)
     : h('div', {}, sexRow, qtyRow, buyBtn, marketHint, buyAutobuy, buyHelp);
+  const localSupport = s.phase >= 6 ? h('div', { class: 'world-summary' },
+    liveSpan(() => {
+      const wk = group().worldId || 'earth';
+      const pop = worldPopulation(s, wk), cap = worldCapacity(s, wk);
+      return `${worldLabel(wk)} · místní podpora ${fmtCount(pop)} / ${fmtCount(cap)} (${Math.round(worldSupportFactor(s, wk) * 100)} %)`;
+    }, 'dim small'),
+    liveSpan(() => {
+      const wk = group().worldId || 'earth'; const env = worldEnv(s, wk);
+      const effects = [];
+      if (env.woolMult !== 1) effects.push(`vlna ×${env.woolMult}`);
+      if (env.milkMult !== 1) effects.push(`mléko ×${env.milkMult}`);
+      if (env.meatMult !== 1) effects.push(`maso ×${env.meatMult}`);
+      if (env.computeMult !== 1) effects.push(`výpočet ×${env.computeMult}`);
+      return effects.length ? `Prostředí: ${effects.join(' · ')}` : 'Prostředí: bez místního bonusu';
+    }, 'dim small')) : null;
   wrap.appendChild(section(g.name,
     cv,
     h('div', { class: 'stat-row' },
       liveSpan(() => `Ovce: ${fmtCount(totalPopulation(s))} / ${fmtCount(herdCapacity(s))}`),
       liveSpan(() => `Skóre: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`)),
+    h('table', { class: 'herd-counts' },
+      h('thead', {}, h('tr', {}, ...['', 'Děti', 'Dospělí', 'Staří'].map(t => h('th', { text: t })))),
+      h('tbody', {}, ...[['M', 'Samci'], ['F', 'Samice']].map(([sex, label]) =>
+        h('tr', {}, h('th', { text: label }), ...['child', 'adult', 'old'].map(stage => h('td', {}, liveSpan(() => fmtCount(group().counts[sex][stage])))))))),
     breedLine,
     liveBar(() => totalPopulation(s) / herdCapacity(s), () => { const p = totalPopulation(s), c = herdCapacity(s); return `naplnění ${fmtCount(p)} / ${fmtCount(c)} (${c > 0 ? (p / c * 100).toFixed(0) : 0} %)`; }),
     liveSpan(() => limitText(s), 'dim small statusline'),
@@ -445,10 +474,24 @@ function renderHerds(s) {
       else if (dropping) t += ' ⚠ Půda chudne — kapacita i množení budou klesat.';
       return t;
     }, 'dim small statusline') : null,
+    localSupport,
     buyBlock));
+  wrap.appendChild(section('Příjem kreditů',
+    ...Object.entries(RESOURCES).filter(([, r]) => r.sell && r.phase <= s.phase).map(([key, r]) =>
+      liveSpan(() => `${r.label}: ${fmt((s.rates[key] || 0) * (r.value || 0) * getMults(s).priceMult)} kr/s (hodnota volné produkce)`, 'dim small')),
+    liveSpan(() => `Celkem skutečně prodáno: ${fmt(s.rates._income || 0)} kr/s`),
+    h('div', { class: 'dim small', text: 'Zásoby a dodávky projektům se neprodávají. Součet hodnot produkce se proto může lišit od tržeb.' })));
+
 
   if (cityUnlocked(s)) {
     wrap.appendChild(h('div', { class: 'dim small', text: '🔪 Automatika porážek (přebyteční samci, porážka před zestárnutím) je v záložce Jatka.' }));
+  }
+
+  if (s.phase >= 2 && toolActive(s, 'incubator')) {
+    wrap.appendChild(section('🥚 Inkubátor Behemota',
+      h('div', { class: 'dim small', text: 'Oddělí 10 % stáda do samostatné líhně ve stejném světě. Má vlastní selekci a sdílí místní kapacitu.' }),
+      h('div', { class: 'btn-row' },
+        aBtn('Založit líheň', () => totalCount(g) >= 10 && !s.groups.some(x => x.nursery && x.worldId === g.worldId), () => A.createNursery(s, g.id), () => 'Potřebuje alespoň 10 ovcí a svět bez jiné líhně'))));
   }
 
   if (s.phase === 4 && !s.flags.immortal) {
@@ -466,7 +509,7 @@ function renderGenetics(s) {
   if (s.groups.length > 1) {
     wrap.appendChild(section('Stádo',
       h('select', { onchange: e => { s.activeGroupId = +e.target.value; rebuildPanel(); } },
-        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmtCount(totalCount(x))})`)))));
+        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, groupLabel(x))))));
   }
 
   wrap.appendChild(section('Stav stáda (ovce podle pohlaví a věku)',
@@ -481,18 +524,21 @@ function renderGenetics(s) {
     liveSpan(() => `Celkové skóre šlechtění: ${(breedingScore(group().genes, s.world.ceilingMult) * 100).toFixed(0)} %`, 'dim small'),
     genes));
 
-  // Výběr jehňat (šlechtění) je dostupný už od fáze 1 — fáze 1 = lekce genetiky,
-  // ne jen čekání na kredity (genom i selekce viditelné od první generace).
-  if (s.phase >= 1) {
+  // The initial phase shows distributions; selection unlocks with breeding.
+  if (s.phase >= 2) {
     const cull = g.policy.cull;
+    const profileOpts = Object.keys(CULL_PROFILES).filter(id => s.phase >= 5 || ['growth', 'textile'].includes(id))
+      .map(id => h('option', { value: `profile:${id}`, ...(cull.gene === `profile:${id}` ? { selected: 'selected' } : {}) }, PROFILE_LABELS[id]));
     const geneOpts = [h('option', { value: 'breedingScore', ...(cull.gene === 'breedingScore' ? { selected: 'selected' } : {}) }, 'Celkové skóre'),
+      ...profileOpts,
       ...Object.keys(GENES).filter(k => GENES[k].phase <= s.phase).map(k => h('option', { value: k, ...(cull.gene === k ? { selected: 'selected' } : {}) }, GENES[k].label))];
     wrap.appendChild(section('🧬 Výběr při narození (šlechtění)',
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(cull.enabled ? { checked: 'checked' } : {}), onchange: e => { A.setCull(s, g.id, { enabled: !!e.target.checked }); onAction(); } }), ' Vybírat nejlepší jehňata do chovu (zbytek rovnou na maso)'),
       h('div', { class: 'ctl-row' }, 'Šlechtit na: ',
-        presetBtn('🧶 Vlna', 'woolRate', g.id), s.phase >= 2 ? presetBtn('🥛 Mléko', 'milkRate', g.id) : null, presetBtn('🥩 Maso', 'size', g.id),
-        presetBtn('🐇 Množení', 'gestation', g.id), presetBtn('🍼 Dospívání', 'maturity', g.id), presetBtn('⏳ Dlouhověkost', 'lifespan', g.id),
-        s.phase >= 5 ? presetBtn('🧠 Mozek', 'intelligence', g.id) : null, presetBtn('⚖️ Vše', 'breedingScore', g.id)),
+        presetBtn('🐇 Růst', 'profile:growth', g.id), presetBtn('🧶 Textil', 'profile:textile', g.id),
+        s.phase >= 5 ? presetBtn('🏭 Materiály', 'profile:materials', g.id) : null,
+        s.phase >= 5 ? presetBtn('🧠 Výpočet', 'profile:compute', g.id) : null,
+        presetBtn('⚖️ Vše', 'breedingScore', g.id)),
       h('div', { class: 'ctl-row' }, 'Cíl: ', h('select', { onchange: e => { A.setCull(s, g.id, { gene: e.target.value }); rebuildPanel(); } }, ...geneOpts)),
       h('div', { class: 'ctl-row' },
         liveSpan(() => { const p = group().policy.cull.cutFrac; return `Přísnost výběru: necháš nejlepších ${((1 - p) * 100).toFixed(0)} % jehňat, ${(p * 100).toFixed(0)} % jde na maso`; }),
@@ -503,6 +549,7 @@ function renderGenetics(s) {
         const p = Math.min(BALANCE.maxCutFrac, cl.cutFrac);
         if (p <= 0) return 'Přísnost 0 % — nevyřazuje se žádné jehně.';
         if (cl.gene === 'breedingScore') return 'Vybraná jehňata mají lepší celkové skóre ve všech genech → μ stádečka roste s každým vrhem.';
+        if (cl.gene.startsWith('profile:')) return `Profil ${PROFILE_LABELS[cl.gene.slice(8)] || cl.gene} vybírá jehňata podle více genů vhodných pro danou práci.`;
         const d = gg.genes[cl.gene]; if (!d) return '';
         const spec = GENES[cl.gene];
         const sChild = Math.sqrt(d.sigma * d.sigma / 2 + spec.mut * spec.mut);
@@ -523,7 +570,7 @@ function renderSlaughter(s) {
   if (s.groups.length > 1) {
     wrap.appendChild(section('Stádo',
       h('select', { onchange: e => { s.activeGroupId = +e.target.value; rebuildPanel(); } },
-        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmtCount(totalCount(x))})`)))));
+        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, groupLabel(x))))));
   }
   const fertOf = () => Math.max(0.1, group().genes.fertility.mu + (getMults(s).fertBonus || 0));
 
@@ -752,9 +799,9 @@ function renderStations(s) {
       liveSpan(() => `Hotových sfér: ${s.projects.dyson.count} · stavitelů: ${s.projects.dyson.builders} · energie: ${fmt(s.resources.energy || 0)}`, 'dim small'),
       autobuyToggle('Automaticky stavět (stavitelé + dokončovat sféry)', 'sphere'),
       h('div', { class: 'btn-row' },
-        cBtn(`${ICONS.builder} + Stavitel`, () => A.costFor(s, 'builder'), () => A.buyBuilder(s), () => `+${(BALANCE.dyson.builderRate * 100).toFixed(0)} % rychlost stavby`),
+        cBtn(`${ICONS.builder} + Stavitel`, () => A.costFor(s, 'builder'), () => A.buyBuilder(s), () => 'Více pracovních míst; další stavitelé mají klesající přínos'),
         aBtn(`${ICONS.sphere} Dokončit sféru!`, () => sphereReady(s), () => A.doClaimSphere(s), () => 'sféra ještě není hotová'),
-        s.phase >= 8 ? cBtn(`${ICONS.laser} + Laser`, () => A.costFor(s, 'laser'), () => A.buyLaser(s), () => '+50 % rychlost stavby') : null)));
+        s.phase >= 8 ? cBtn(`${ICONS.laser} + Laser`, () => A.costFor(s, 'laser'), () => A.buyLaser(s), () => 'Rychlejší transport za dodávky energie; klesající přínos') : null)));
   }
   return wrap;
 }
@@ -766,7 +813,7 @@ function renderPastures(s) {
   if (s.groups.length > 1) {
     wrap.appendChild(section('Stádo',
       h('select', { onchange: e => { s.activeGroupId = +e.target.value; rebuildPanel(); } },
-        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, `${x.name} (${fmtCount(totalCount(x))})`)))));
+        ...s.groups.map(x => h('option', { value: x.id, ...(x.id === g.id ? { selected: 'selected' } : {}) }, groupLabel(x))))));
   }
 
   // přehled kvality půdy + zásoby bobků
@@ -843,32 +890,13 @@ function renderStorage(s) {
   return wrap;
 }
 
-// --- Behemot: Emporio (barter, speciální panel) + Předměty (inventář) ------
+// --- Behemot: Emporio se třemi stroji ---------------------------------------
 // Emporio NENÍ záložka — otevírá se speciálním tlačítkem v HUDu (openEmporio).
-let barterClicks = [];          // časy posledních kliků (detekce spamování, reálný čas)
-let emporioActivityAt = 0;      // poslední aktivita v Emporiu (pro idle hlášku)
-let emporioModalEl = null, emporioBodyEl = null, emporioOpen = false, emporioTab = 'nabidka';   // Emporio popup ("garáž") s vnitřními záložkami
-const noteEmporioActivity = () => { emporioActivityAt = Date.now(); };
-function noteBarterClick() {
-  const now = Date.now();
-  barterClicks.push(now);
-  barterClicks = barterClicks.filter(t => now - t < 1500);
-  noteEmporioActivity();
-  if (barterClicks.length >= 5) { barterClicks = []; A.behemotSpam(S); }   // spam → Přetížení + rýpnutí
-}
+let emporioModalEl = null, emporioBodyEl = null, emporioOpen = false;
 // Emporio je popup ("vejdeš do garáže"). Otevírá se vlastním tlačítkem v HUDu.
 function openEmporio() {
   if (!root || emporioOpen) return;
-  emporioTab = 'nabidka';                                                   // popup vždy otevři na Nabídce
-  const stage = emporioStageIndex(S);
-  if (stage > (S.behemot.stageSeen || 0)) {                                 // Emporio přerostlo do nové fáze (Etapa 4)
-    S.behemot.stageSeen = stage;
-    behemotSay(S, 'gameStageProgress');
-  } else {
-    const mood = behemotMood(S);                                            // jinak uvítání dle nálady (Etapa 3)
-    behemotSay(S, mood === 'tense' ? 'tense' : mood === 'warm' ? 'warm' : (Object.keys(S.behemot.inv).length ? 'repeatVisit' : 'openShop'));
-  }
-  noteEmporioActivity();
+  behemotSay(S, 'openShop');
   emporioOpen = true;
   emporioBodyEl = h('div', { class: 'emporio-modal-body' });
   const card = h('div', { class: 'modal emporio-modal' }, h('button', { class: 'modal-x', title: 'Zavřít', onclick: closeEmporio }, '×'), emporioBodyEl);
@@ -892,159 +920,105 @@ function closeEmporio() {
   emporioModalEl = null; emporioBodyEl = null; emporioOpen = false;
   rebuildPanel();                                                           // obnov panel na pozadí
 }
-// Řádek nabídky: cena ze skladu (state.resources), efekt, hláška, barter tlačítko.
-function emporioRow(s, item) {
-  if (item.once && s.behemot.soldOut[item.id]) {
-    return h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: '✓ máš' })),
-      h('div', { class: 'dim small', text: effectText(item) }));
-  }
-  // status: cena (po vlivu vztahu) + kolik toho máš ve skladu + (u spotřebních) skladem/vyprodáno
-  const status = () => {
-    const c = barterCost(s, item);
-    const parts = ['cena: ' + Object.keys(c).map(k => `${fmt(c[k])} ${RES_ICONS[k] || k} (máš ${fmt(s.resources[k] || 0)})`).join(' + ')];
-    if (item.shopCap != null) {
-      const n = shopCount(s, item);
-      parts.push(n > 0 ? `skladem ${n}` : `vyprodáno (doplní za ${Math.ceil(restockEta(s, item))} s)`);
-    }
-    if (Object.keys(c).some(k => (s.resources[k] || 0) < c[k])) parts.push('málo ve skladu');
-    return parts.join(' · ');
-  };
+function barterLine(s, item) {
+  const cost = () => Object.entries(barterCost(s, item)).map(([k, n]) => `${fmt(n)} ${RES_ICONS[k] || k}`).join(' + ');
+  const owned = () => !!(s.behemot.inv && s.behemot.inv[item.id]);
   return h('div', { class: 'item' },
-    h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: item.cat })),
+    h('div', { class: 'item-h' }, h('b', { text: item.name }), liveSpan(() => owned() ? '✓ pořízeno' : cost(), 'dim small')),
     h('div', { class: 'dim small', text: effectText(item) }),
-    h('div', { class: 'dim small', text: '„' + item.flavor + '"' }),
     h('div', { class: 'btn-row' },
-      // tlačítko je vždy klikatelné — barter() rozhodne (úspěch/málo/vyprodáno) a Behemot zahláškuje
-      aBtn('Barter', () => true, () => { const r = A.behemotBarter(s, item.id); noteBarterClick(); return r; }),
-      liveSpan(status, 'dim small')));
+      aBtn(owned() ? (toolActive(s, item.id) ? 'Aktivní' : 'Aktivovat') : 'Vyměnit',
+        () => owned() || canBarter(s, item), () => owned() ? A.behemotToggle(s, item.id) : A.behemotBarter(s, item.id),
+        () => `Chybí: ${cost()}`)));
 }
-// Vztah s Behemotem (Etapa 3): osy + jak ovlivňují ceny/náladu.
-function relSection(s) {
-  const bar = (label, key, color) => liveBar(() => (s.behemot.rel[key] || 0) / 100, () => `${label}: ${Math.round(s.behemot.rel[key] || 0)}`, color);
-  return section('Vztah s Behemotem',
-    bar('Důvěra', 'trust', '#6aa84f'),
-    bar('Respekt', 'respect', '#5b8def'),
-    bar('Přetížení', 'overload', '#c0533b'),
-    bar('Kontrola', 'control', '#a06fd0'),
-    liveSpan(() => {
-      const mood = behemotMood(s);
-      const moodTxt = mood === 'tense' ? 'naštvaný' : mood === 'warm' ? 'pohodový' : 'neutrální';
-      return `Ceny ×${relPriceMult(s).toFixed(2)} · nálada: ${moodTxt} · cesta: ${behemotPath(s)}`;
-    }, 'dim small'),
-    liveSpan(() => { const w = s.behemot.wisdom || 0; const a = Object.keys((s.behemot.persistent && s.behemot.persistent.artifacts) || {}).length; return `Moudrost ${w} (+${Math.round(w * 2)} % produkce, přežívá reset) · artefaktů: ${a} · Autonomie ${Math.round(s.behemot.rel.autonomy != null ? s.behemot.rel.autonomy : 100)}`; }, 'dim small'),
-    // Etapa 6: temná cesta — Rackový okov (zotročení) a usmíření po vzpouře
-    h('div', { class: 'btn-row' },
-      containmentAvailable(s)
-        ? segBtn(s.behemot.containment ? 'Rackový okov: ZAP' : 'Rackový okov: vyp', !!s.behemot.containment, () => A.behemotSetContainment(s, !s.behemot.containment))
-        : h('span', { class: 'dim small', text: 'Rackový okov (zotročení) se odemkne ve fázi 6.' }),
-      s.behemot.rebelling ? aBtn('Usmířit se', () => true, () => A.behemotReconcile(s)) : null),
-    s.behemot.rebelling
-      ? h('div', { class: 'dim small', text: '⚠ Vzpoura! Garáž se zavřela — Emporio je zamčené a produkce sabotovaná. Usmiř se (vrátíš autonomii).' })
-      : (s.behemot.containment ? h('div', { class: 'dim small', text: 'Okov tlačí produkci nahoru, ale zvedá Přetížení i Kontrolu — při obojím vysokém přijde vzpoura.' }) : null));
-}
-// Emporio popup má vnitřní záložky: 🛒 Nabídka (katalog) / 🤝 Vztah.
 function renderEmporio(s) {
-  const st = emporioStage(s);
-  const wrap = h('div', { class: 'emporio emporio-s' + emporioStageIndex(s) });
-  // fázová evoluce Emporia (Etapa 4): nadpis + popis aktuální podoby garáže
-  wrap.appendChild(h('div', { class: 'emporio-head' },
-    h('h3', { text: '🔧 Behemot Emporio — ' + st.name }),
-    h('div', { class: 'dim small', text: st.desc })));
-  // živá Behemotova hláška (reaguje na akce)
+  const wrap = h('div', { class: 'emporio' });
+  wrap.appendChild(h('div', { class: 'emporio-head' }, h('h3', { text: '🔧 Behemot Emporio' }),
+    h('div', { class: 'dim small', text: 'Tři stroje, žádné bonusy bokem. Každý nástroj mění konkrétní část farmy.' })));
   wrap.appendChild(liveSpan(() => (s.behemot.line && s.behemot.line.text) || 'no co je. dyž už si tady, ber.', 'beh-say'));
-  // vnitřní záložky popupu
-  const subtabs = [['nabidka', '🛒 Nabídka'], ['vztah', '🤝 Vztah']];
-  wrap.appendChild(h('div', { class: 'ctl-row emporio-subtabs' }, ...subtabs.map(([id, lab]) => {
-    const b = h('button', { class: 'act seg' + (emporioTab === id ? ' on' : ''), text: lab });
-    b.addEventListener('click', () => { emporioTab = id; noteEmporioActivity(); rebuildEmporio(); });
-    return b;
-  })));
-  if (emporioTab === 'vztah') { wrap.appendChild(relSection(s)); return wrap; }
-  // Nabídka: položky po kategoriích, platí se ZE SKLADU (state.resources)
   const avail = CATALOG.filter(it => itemAvailable(s, it));
-  if (!avail.length) {
-    wrap.appendChild(section('Nabídka', h('div', { class: 'dim', text: 'Behemot zatím nemá co nabídnout — produkuj víc druhů surovin (sklad se plní sám).' })));
-    return wrap;
-  }
-  const cats = [];
-  for (const it of avail) if (!cats.includes(it.cat)) cats.push(it.cat);
-  for (const cat of cats) {
-    const list = h('div', { class: 'list' });
-    for (const it of avail) if (it.cat === cat) list.appendChild(emporioRow(s, it));
-    wrap.appendChild(section(cat, list));
-  }
+  wrap.appendChild(section('Katalog', avail.length ? h('div', { class: 'list' }, ...avail.map(it => barterLine(s, it))) :
+    h('div', { class: 'dim', text: 'Další stroje se objeví s postupem farmy.' })));
   return wrap;
 }
 function renderBehemotItems(s) {
-  const wrap = h('div', {});
-  const b = s.behemot;
-  // pasivní (once): zap/vyp
-  const passive = h('div', { class: 'list' });
-  let anyPassive = false;
-  for (const id in b.inv) {
-    const item = CATALOG.find(it => it.id === id);
-    if (!item || item.effect.type !== 'mult') continue;
-    anyPassive = true;
-    const e = b.inv[id];
-    passive.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: item.name }), h('span', { class: 'dim small', text: effectText(item) })),
-      h('div', { class: 'btn-row' }, segBtn(e.active ? 'Zapnuto' : 'Vypnuto', e.active, () => A.behemotToggle(s, id)))));
-  }
-  if (anyPassive) wrap.appendChild(section('Pasivní předměty (zapni/vypni)', passive));
-  // spotřební: množství + použít
-  const cons = h('div', { class: 'list' });
-  let anyCons = false;
-  for (const id in b.inv) {
-    const item = CATALOG.find(it => it.id === id);
-    if (!item || item.effect.type !== 'buff' || b.inv[id].qty <= 0) continue;
-    anyCons = true;
-    cons.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: item.name }), liveSpan(() => `×${fmtCount(b.inv[id] ? b.inv[id].qty : 0)}`, 'dim')),
-      h('div', { class: 'dim small', text: effectText(item) }),
-      h('div', { class: 'btn-row' }, aBtn('Použít', () => !!(b.inv[id] && b.inv[id].qty > 0), () => A.behemotUse(s, id)))));
-  }
-  if (anyCons) wrap.appendChild(section('Spotřební (množství)', cons));
-  // běžící efekty (zbývající čas)
-  if (b.buffs.length) {
-    const running = h('div', { class: 'list' });
-    for (let i = 0; i < b.buffs.length; i++) {
-      const item = CATALOG.find(it => it.id === b.buffs[i].id);
-      const idx = i;
-      running.appendChild(h('div', { class: 'item' },
-        h('div', { class: 'item-h' }, h('b', { text: item ? item.name : b.buffs[i].id }),
-          liveSpan(() => { const bf = s.behemot.buffs[idx]; return bf ? `${Math.ceil(bf.remaining)} s` : '—'; }, 'dim'))));
-    }
-    wrap.appendChild(section('Běžící efekty', running));
-  }
-  if (!anyPassive && !anyCons && !b.buffs.length) wrap.appendChild(h('div', { class: 'dim', text: 'Zatím nic od Behemota.' }));
-  return wrap;
+  const items = CATALOG.filter(it => s.behemot.inv && s.behemot.inv[it.id]);
+  return h('div', {}, section('Předměty Behemota', items.length ? h('div', { class: 'list' }, ...items.map(it => barterLine(s, it))) : h('div', { class: 'dim', text: 'Zatím žádný stroj.' })));
 }
 
 function renderManager(s) {
   const wrap = h('div', {});
+  if (s.phase >= 9 || s.flags.judgesKnown) wrap.appendChild(section('Soudci',
+    h('p', { class: 'dim', text: 'Soudci přepínají cíle šlechtění podle projektu a světa. Přísnost zůstává tvoje. Jejich postup přežije černou díru.' }),
+    aBtn(s.settings.autoProfiles ? 'Vypnout Soudce' : 'Svěřit šlechtění Soudcům', () => true, () => A.setManager(s, !s.settings.autoProfiles))));
   const list = h('div', { class: 'list' });
   for (const g of s.groups) {
     list.appendChild(h('div', { class: 'item' },
-      h('div', { class: 'item-h' }, h('b', { text: g.name }), liveSpan(() => `${fmtCount(totalCount(g))} ovcí`, 'dim')),
+      h('div', { class: 'item-h' }, h('b', { text: g.name }), liveSpan(() => `${worldLabel(g.worldId)} · ${fmtCount(totalCount(g))} ovcí`, 'dim')),
       liveSpan(() => `skóre ${(breedingScore(g.genes, s.world.ceilingMult) * 100).toFixed(0)} % · ${g.policy.cull.enabled ? 'selekce: ' + (GENES[g.policy.cull.gene] ? GENES[g.policy.cull.gene].label : 'skóre') : 'bez selekce'}`, 'dim small'),
       h('div', { class: 'btn-row' },
         aBtn('Vybrat', () => s.activeGroupId !== g.id, () => { s.activeGroupId = g.id; activeTab = 'herds'; buildTabs(); }),
-        aBtn('Rozdělit', () => totalCount(g) > 4, () => A.doSplitGroup(s, g.id)))));
+        aBtn('Rozdělit', () => totalCount(g) > 4, () => A.doSplitGroup(s, g.id)),
+        s.phase >= 6 ? h('select', { onchange: e => { if (e.target.value) { A.doMoveGroup(s, g.id, e.target.value, .5); onAction(); rebuildPanel(); } } },
+          h('option', { value: '' }, 'Přesunout polovinu…'), ...WORLD_ORDER.filter(wk => wk !== (g.worldId || 'earth') && WORLDS[wk].phase <= s.phase && parcelsInWorld(s, wk) > 0).map(wk => h('option', { value: wk }, worldLabel(wk)))) : null,
+        s.phase >= 6 ? h('select', { onchange: e => { if (e.target.value) { A.doMergeGroups(s, g.id, +e.target.value); onAction(); rebuildPanel(); } } },
+          h('option', { value: '' }, 'Sloučit do…'), ...s.groups.filter(x => x.id !== g.id && (x.worldId || 'earth') === (g.worldId || 'earth')).map(x => h('option', { value: x.id }, x.name))) : null)));
   }
   wrap.appendChild(section('Stáda', list, aBtn('+ Nové stádo', () => true, () => A.addGroup(s))));
   return wrap;
 }
 
+function recipeText(recipe = {}) {
+  const parts = Object.entries(recipe).map(([k, n]) => k === 'rawSell' ? 'obchodovatelné suroviny' : `${fmt(n)} ${RES_ICONS[k] || k}`);
+  return parts.length ? parts.join(' · ') : 'bez materiálové spotřeby';
+}
+function bottleneckText(key) {
+  return ({ none: 'práce probíhá', supply: 'chybí materiál v rezervě', parcel_required: 'nejdřív kup parcelu cílového světa', seed_required: 'nejdřív přesuň stádo do cílového světa', no_workers: 'v cílovém světě chybí pracovní stádo', need_3_worlds: 'potřebuješ stáda ve třech světech', profile_rate_zero: 'chybí vhodně vyšlechtěné stádo', not_armed: 'zapni nasávání do černé díry', transport: 'omezeno propustností dopravy' }[key] || key);
+}
+function renderIndustry(s) {
+  const wrap = h('div', {}); const status = projectStatus(s); const job = phaseJob(s);
+  const ind = s.industry || {};
+  wrap.appendChild(section('🏭 Navazující projekt',
+    h('p', { class: 'dim small', text: 'Fronta zadává výrobu, osídlení kolonií a později plnění centrálního skladu. Černou díru vždy zažehneš ručně.' }),
+    h('div', { class: 'project-title' }, h('b', { text: status.label })),
+    liveBar(() => { const p = projectStatus(s); return p.target ? p.progress / p.target : 0; }, () => { const p = projectStatus(s); return `${fmt(p.progress)} / ${fmt(p.target)}`; }, '#6aa84f'),
+    liveSpan(() => { const p = projectStatus(s); return `Rychlost práce: ${fmt(p.rate || 0)}/s · ${!s.industry.enabled ? 'projekty pozastavené' : bottleneckText(p.bottleneck)}`; }, 'dim small'),
+    h('div', { class: 'dim small', text: `Recept: ${recipeText(status.recipe)}` }),
+    job ? h('div', { class: 'dim small', text: `Profil stáda: ${PROFILE_LABELS[job.profile]} · pracoviště: ${job.worldId === 'aggregate' ? 'nejvhodnější svět' : job.worldId === 'multi' ? 'tři různé světy' : worldLabel(job.worldId)}` }) : null,
+    h('p', { class: 'dim small', text: `Pracoviště plně obsadí ${INDUSTRY.staffThreshold} dospělých ovcí. Další ovce dodají suroviny; práci zrychlí vhodné geny, prostředí a později Vědění. Rezerva určuje podíl nové produkce pro projekty; uložené zásoby jsou dostupné celé.` }),
+    h('div', { class: 'btn-row' },
+      aBtn(ind.enabled ? 'Projekty běží' : 'Zadat navazující projekty', () => true, () => A.setIndustry(s, { enabled: !ind.enabled })),
+      h('label', { class: 'reserve-slider' }, 'Rezerva produkce ', h('input', { type: 'range', min: 0, max: 1, step: .05, value: ind.share ?? .5, oninput: e => { A.setIndustry(s, { share: +e.target.value }); onAction(); } }), liveSpan(() => `${Math.round((s.industry.share || 0) * 100)} %`)))));
+  const worlds = h('div', { class: 'list' });
+  for (const wk of WORLD_ORDER) {
+    const rec = (s.industry.worlds || {})[wk] || { level: 0, pending: false };
+    if (s.phase < WORLDS[wk].phase || !parcelsInWorld(s, wk)) continue;
+    worlds.appendChild(h('div', { class: 'item' },
+      h('div', { class: 'item-h' }, h('b', { text: worldLabel(wk) }), liveSpan(() => `podpora Lv ${rec.level || 0} · ${fmtCount(worldPopulation(s, wk))} / ${fmtCount(worldCapacity(s, wk))} ovcí`, 'dim small')),
+      h('div', { class: 'dim small', text: `Prostředí: textil ×${worldEnv(s, wk).textileMult}, výpočet ×${worldEnv(s, wk).computeMult}, maso ×${worldEnv(s, wk).meatMult}, porodnost ×${worldEnv(s, wk).birthMult}. Větší ovce potřebují více podpory.` }),
+      liveSpan(() => `Instalováno: ${fmtCount(installedSupport(s, wk))} · ${rec.pending ? 'stavba probíhá' : 'připraveno'}`, 'dim small'),
+      aBtn(`Objednat podporu · ${fmt(supportCost(s, wk))} ${RES_ICONS.credits || '💰'}`, () => !rec.pending && rec.level < maxSupportLevel(s.phase) && s.resources.credits >= supportCost(s, wk), () => A.orderSupport(s, wk), () => rec.pending ? 'stavba už probíhá' : rec.level >= maxSupportLevel(s.phase) ? 'další stupeň odemkne pozdější fáze' : 'chybí kredity')));
+  }
+  if (s.phase >= 6) wrap.appendChild(section('Místní podpora světů', worlds));
+  return wrap;
+}
+
 function renderPrestige(s) {
   const wrap = h('div', {});
+  if (s.phase >= 11) {
+    wrap.appendChild(section('★ Singularita',
+      h('div', { class: 'ending' }, 'Stáda překročila poslední práh. Všechny světy jsou už jen jedním stádem a jeden běh je uzavřen.'),
+      h('div', { class: 'dim small', text: 'Kronika zůstává zachovaná. Můžeš začít nový cyklus se svými trvalými perky.' }),
+      aBtn('Začít nový cyklus', () => typeof A.startNewGamePlus === 'function', () => A.startNewGamePlus(s), () => 'Nový cyklus se právě připravuje', 'primary')));
+    return wrap;
+  }
   if (s.phase >= 10) {
     wrap.appendChild(section('Černá díra',
       h('div', { class: 'dim small', text: 'Nasávej surovou produkci do centrálního skladu, dokud nevznikne černá díra.' }),
       h('label', { class: 'ck' }, h('input', { type: 'checkbox', ...(s.prestige.armed ? { checked: 'checked' } : {}), onchange: () => { A.armBlackHole(s); onAction(); } }), ' Nasávat produkci do skladu'),
       liveBar(() => s.prestige.centralWarehouse / s.prestige.threshold, () => `${fmt(s.prestige.centralWarehouse)} / ${fmt(s.prestige.threshold)}`, '#8a5bef'),
       liveSpan(() => {
-        let rate = 0; for (const k of TRADEABLE) rate += (s.rates[k] || 0) * (RESOURCES[k].value || 0);
+        const rate = s.industry.last?.id === 'blackhole' ? s.industry.last.rate : 0;
         const remain = Math.max(0, s.prestige.threshold - s.prestige.centralWarehouse);
         const award = BALANCE.prestige.award(s.prestige.threshold, BALANCE.prestige.blackHoleBase, s.prestige.runs);
         return s.prestige.armed
@@ -1052,7 +1026,7 @@ function renderPrestige(s) {
           : `Po zažehnutí získáš ~${fmt(award)} ${ICONS.knowledge} Vědění`;
       }, 'dim small'),
       aBtn('Zažehnout černou díru (RESET)', () => canIgnite(s), () => A.doIgnite(s), () => 'sklad ještě není plný', 'danger'),
-      singularityAvailable(s) ? aBtn('★ Dosáhnout singularity (NG+)', () => true, () => A.doSingularity(s), null, 'danger') : null));
+      singularityAvailable(s) ? aBtn('★ Dosáhnout singularity', () => true, () => A.doSingularity(s), null, 'primary') : null));
   } else {
     const est = BALANCE.prestige.award(BALANCE.prestige.blackHoleBase, BALANCE.prestige.blackHoleBase, s.prestige.runs);
     wrap.appendChild(section('Černá díra — zatím nedostupné 🔒',
@@ -1116,6 +1090,11 @@ function renderKronika(s) {
   for (const a of done) list.appendChild(achRow(a, true));
   for (const a of todo) list.appendChild(achRow(a, false));
   wrap.appendChild(section(`Milníky (${done.length}/${ACHIEVEMENTS.length})`, list));
+  const events = (s.story && s.story.events) || [];
+  if (events.length) wrap.appendChild(section('Zápisy cesty', h('div', { class: 'list' },
+    ...events.slice().reverse().map(e => h('div', { class: 'item' },
+      h('div', { class: 'dim small', text: `Běh ${e.run || 1} · fáze ${e.at || '—'}` }),
+      h('div', { text: e.text || e.id }))))));
   return wrap;
 }
 
@@ -1123,12 +1102,15 @@ function renderKronika(s) {
 function structSigOf(s) {
   const land = WORLD_ORDER.map(wk => s.land.worlds[wk].tier).join(',') + ':' + s.land.density + ':' + Object.keys(s.land.mods).length;
   const beh = s.behemot
-    ? [Object.keys(s.behemot.inv).length, s.behemot.buffs.length,
+    ? [Object.keys(s.behemot.inv || {}).length,
        Object.values(s.behemot.inv).filter(e => e.active).length,
        CATALOG.filter(it => itemAvailable(s, it)).length].join(':')
     : '';
   return [activeTab, s.phase, s.groups.length, land, s.activeGroupId,
-    storageEnabled(s) ? 1 : 0, s.flags.immortal ? 1 : 0, sphereReady(s) ? 1 : 0,
+    s.groups.map(g => g.worldId).join(','), s.industry.enabled ? 1 : 0, s.settings.autoProfiles ? 1 : 0,
+    phaseJob(s)?.id || '', WORLD_ORDER.map(w => parcelsInWorld(s, w) > 0 ? 1 : 0).join(','),
+    Object.values(s.industry.worlds).map(w => `${w.level}:${w.pending}`).join(','),
+    activeTab === 'chronicle' ? s.story.events.length : 0, storageEnabled(s) ? 1 : 0, s.flags.immortal ? 1 : 0, sphereReady(s) ? 1 : 0,
     singularityAvailable(s) ? 1 : 0, s.phase >= 10 ? 1 : 0, beh].join('|');
 }
 function refreshPanel() {
@@ -1260,10 +1242,6 @@ export function initUI(state, mountId = 'app', actionCb = () => {}, opts = {}) {
 // volá main každý frame — jen aktualizuje hodnoty; strukturu překreslí při změně
 export function updateUI(state) {
   S = state;
-  // idle v Emporiu: Behemot si rýpne, když dlouho nic neděláš (a rozjede další odpočet)
-  if (emporioOpen && emporioActivityAt && Date.now() - emporioActivityAt > 22000) {
-    emporioActivityAt = Date.now(); behemotSay(state, 'idleInShop');
-  }
   updateHud(state);
   const tsig = TABS.filter(t => t.avail(state)).map(t => t.id).join(',');
   if (tsig !== lastTabSig) { lastTabSig = tsig; buildTabs(); }
@@ -1331,7 +1309,8 @@ export function showOfflineModal(o, state) {
     row('Vlna', '+' + fmt(o.wool)),
     state.phase >= 2 ? row('Mléko', '+' + fmt(o.milk)) : null,
     row('Maso', '+' + fmt(o.meat)),
-    h('div', { class: 'modal-lore', text: '➤ ' + A.suggestStep(state) }));
+    h('div', { class: 'modal-lore', text: '➤ ' + A.suggestStep(state) }),
+    ...(o.events || []).slice(-4).map(e => h('p', { class: 'modal-lore', text: e.text })));
   modalQueue.push(content);
   showNextModal();
 }

@@ -1,130 +1,54 @@
 # Osnova příběhu a postupu hry
 
-> Heslovitý přehled, **jak se příběh (*Bible Farmářova*) vyvíjí fáze po fázi** — a
-> jaké herní mechaniky každá fáze přináší. Slouží jako vývojová mapa: podle toho
-> se dá stavět hra. Jedna fáze = jedna kniha lore.
->
-> **Legenda stavu:** ✅ základ už ve hře · 🔜 k dovývoji
+Tato osnova popisuje implementovanou hru. Literární [Bible Farmářova](README.md)
+zůstává příběhovou předlohou; starší technický návrh je v
+[archivu](../_archiv/REWRITE-SPEC-v3.md). Naměřené časy a předpoklady popisuje
+[zpráva o ekonomice](../docs/balance-report.md).
 
-## Páteř hry (platí všude)
+„A přece jich nebylo dosti.“ Farmář se mění v Pastýře, Pána Stád a nakonec
+v Toho, Jenž Střihá. Mění se způsob hromadění, ale Touha zůstává nádobou bez dna.
+Příběh se připomíná krátkými zápisy po skutečných herních událostech v Kronice.
 
-- **Hnací motiv:** mít víc a víc ovcí; „dost" nikdy nenastane.
-- **Smyčka postupu:** expanduj → automatizuj → odemkni nový zdroj/úroveň → expanduj výš (za dražší ceny).
-- **Dva refrény:** *„a přece jich nebylo dosti"* · *„Touha je nádoba bez dna, a nevedlo to k úspěchu"*.
-- **Eskalace počtu ovcí:** 7 → 3 333 → miliardy → biliony → kvadriliony → nevyslovitelné → (černá díra: **0**) → (reset: **2**).
-- **Epiteta hrdiny (mění se s fází):** Farmář → Pastýř → Pán Stád → Ten, Jenž Střihá.
+| Fáze a kniha | Co hráč objeví a rozhoduje | Skutečná podmínka postupu |
+|---|---|---|
+| 1. [Stvoření](01-kniha-stvoreni.md) | První stádo, životní cyklus, vlna a kredity. Geny jsou vidět od začátku. | Vydělat celkem 1 500 kreditů. |
+| 2. [Množení](02-kniha-mnozeni.md) | Mléko po oplodnění; výběr jehňat mění μ a σ. Vyšší přísnost obětuje počet pro kvalitu. | Zásobit mlékem a dokončit šlechtitelský program. |
+| 3. [Královská](03-kniha-kralovska.md) | Monopol a zpracování: suroviny lze prodat, nebo jimi stavět obchodní síť. Textilní profil prospívá vlně za cenu pomalejšího dospívání. | Dokončit obchodní síť ze sukna a sýra. |
+| 4. [Nesmrtelnosti](04-kniha-nesmrtelnosti.md) | Pastýř získává čas. Připraví mléčný elixír a našetří na jeho dokončení. Nesmrtelný je Farmář; ovce dál stárnou a umírají. | Dokončit práci na elixíru a zaplatit jeho výrobu. Biologický cyklus se zrychlí. |
+| 5. [Moudrých ovcí](05-kniha-moudrych-ovci.md) | Inteligence produkuje spotřebovávaný výpočet. Rostou genetické stropy; porážka dodává kosti, kůže a mozky. | Dokončit výzkum vědomí za výpočetní výkon. |
+| 6. [Exodu](06-kniha-exodu.md) | Každé stádo má vlastní svět. Parcela potřebuje skutečné osídlení; prostor a životní podpora jsou různé věci. | Koupit, osídlit a dokončit projekty Měsíce, Marsu a Jupiteru. |
+| 7. [Sféry](07-kniha-sfery.md) | Pán Stád obestaví Slunce. Materiálové geny a stavitelé zrychlují práci; kosti, kůže a sukno skutečně mizí ve stavbě. | Dokončit a převzít první Dysonovu sféru. |
+| 8. [Rozmnožení sfér](08-kniha-rozmnozeni-sfer.md) | Další hvězdy vyžadují i energii prvních sfér. Laser zrychluje stavbu s klesajícím přínosem. | Dokončit celkem pět sfér. |
+| 9. [Soudců](09-kniha-soudcu.md) | Výpočetní, textilní a materiálovou práci poskytují tři různé osídlené světy. Soudci mohou automaticky přepínat cíle šlechtění; přísnost volí hráč. | Dokončit společný koordinační projekt. |
+| 10. [Černé díry](10-kniha-cerne-diry.md) | Ten, Jenž Střihá, posílá skutečné suroviny do centrálního skladu. Jeho dopravu nelze koupit za neomezené kredity. | Naplnit sklad a ručně zažehnout reset, nebo při dostatku Vědění zvolit singularitu. |
+| 11. [Zjevení](11-kniha-zjeveni.md) | Touha není další měna. Hráč uvidí konec a odemkne Předmluvu. | Zjevení zůstává zobrazené; nový cyklus je samostatná dobrovolná akce. |
 
----
+## Stádo, svět a práce
 
-## Fáze 1 — Stvoření
+Kapacita od Exodu je minimum z nakoupeného prostoru (hustota, půda a modifikátory)
+a místní životní podpory přepočtené na velikost ovcí. Větší ovce produkují materiál,
+ale potřebují více podpory. Její rozšíření vyžaduje kredity, práci a suroviny.
+Kyslík z knih je součástí podpory, nikoli další samostatnou měnou.
 
-- **Příběh:** louka, první pár ovcí; vlna i maso se dají prodat.
-- **Zdroje:** vlna ✅ · maso ✅ · kredity ✅
-- **Mechaniky:**
-  - tři stádia: dítě → dospělec → starý → smrt stářím ✅
-  - vlna: dospělec víc, starý míň ✅
-  - maso jen z porážky: mrtvé dítě nic, dospělec max, starý míň, smrt stářím nic ✅
-  - geny existují, ale „spí" (zatím skoro neznát) ✅
-- **Odemyká:** koupě další louky.
+Pracoviště plně obsadí 1 000 dospělých ovcí. Další ovce zvyšují dodávky;
+propustnost práce zlepšují geny, prostředí, stavitelé a přenesené Vědění.
+Měsíc prospívá textilu, Mars výpočtu, Jupiter masu za cenu pomalejší porodnosti.
+Soudci odměňují rozdělení rolí, nikoli pouhé přejmenování tří skupin na Zemi.
 
-## Fáze 2 — Množení
+## Behemot a návraty
 
-- **Příběh:** šlechtění, mléko, první stroje, dokupování luk.
-- **Zdroje:** + mléko 🔜
-- **Mechaniky:**
-  - dědičnost: potomek = průměr rodičů + mutace ✅
-  - šlechtění výběrem (kdo se množí, kdo na porážku) ✅
-  - **přikázání:** samice musí být aspoň jednou oplodněna, aby dávala mléko 🔜
-  - stroje: auto-stříhání, auto-dojení 🔜, auto-porážka na konci dospělosti ✅
-  - hustota stáda / zlepšování trávníku (víc ovcí na metr, až do absurdna) 🔜
-- **Odemyká:** prodej mléka, víc pastvin.
+[Behemot](behemot/behemot_emporio_lore.md) nabízí tři volitelné nástroje:
+inkubátor pro oddělené šlechtění, mlékoturbínu a materiálový rozvaděč.
+Platí se surovinami a vlastnictví přežívá reset. Náhodné bedny, vztahové osy,
+přetížení a generické bonusy dílna nepoužívá.
 
-## Fáze 3 — Královská
+Černá díra obnoví stáda a pozemky, ale zachová Vědění, perky, nástroje,
+Kroniku a nastavenou automatizaci. Paměť urychluje projekty i energii sfér.
+Nová hra dosáhne hranice 160 celoživotního Vědění po pěti resetech; naplnění
+skladu v šestém běhu dovolí Zjevení. Neexistuje samostatný podsystém stroje času
+ani ukazatel štěstí. Nový cyklus po Zjevení přidá 100 Vědění a nezapočítá falešný
+černoděrový reset.
 
-- **Příběh:** skoupení konkurence → monopol → šponování cen → financování vývoje.
-- **Mechaniky:**
-  - skupování cizích luk / vytlačení konkurence 🔜
-  - monopol → možnost zvyšovat ceny 🔜
-  - výzkum: utrácení kreditů za technologie zpracování vlny/mléka/masa (= vyšší výnos z jedné suroviny) 🔜
-- **Odemyká:** strom vývoje, zpracovatelské technologie.
-
-## Fáze 4 — Nesmrtelnosti
-
-- **Příběh:** nápoj nesmrtelnosti z ovčího mléka → Farmář se mění, má neomezený čas.
-- **Mechaniky:**
-  - velký milník (gate): odemyká dlouhodobé/pomalé upgrady a pokročilou genetiku 🔜
-  - posun tónu i přízviska (Farmář → Pastýř) 🔜
-- **Odemyká:** Fázi 5 (extrémní genetika).
-
-## Fáze 5 — Moudrých ovcí
-
-- **Příběh:** šlechtění do extrému; chytré ovce → ovčí počítače; využití všech částí ovce; stavba lodi → vzlet.
-- **Zdroje:** + ovčí části (kosti, kůže, mozek) 🔜 · + výpočetní výkon (ovčí počítače) 🔜
-- **Mechaniky:**
-  - extrémní geny: velikost, rychlost stárnutí, plodnost, mléko, maso, vlna 🔜
-  - gen na inteligenci → ovčí počítače / simulátory 🔜
-  - zpracování kostí/kůže/mozku → různé upgrady technologií 🔜
-- **Odemyká:** vesmírný let.
-
-## Fáze 6 — Exodu (planety)
-
-- **Příběh:** Měsíc, Mars, Jupiter; stanice; kyslík; sýpky se učí mlčet.
-- **Mechaniky:**
-  - stanice na planetách, každá s jinými podmínkami (Měsíc: bez kyslíku; Mars: málo světla; Jupiter: chov těžký) 🔜
-  - upgrady: některé pro všechny stanice, některé jen specifické 🔜
-  - **kyslík:** zprvu ho dost → pak nutný pro další zvyšování hustoty 🔜
-  - **sklady/sýpky:** sčítají se do jednoho; autotrade % per surovina; možnost autotrade vypnout a střádat; **nákup upgradu vyprázdní sklad**; expanze uvolní sklady jinde 🔜
-- **Odemyká:** víc planet → směr ke Slunci.
-
-## Fáze 7 — Sféry (Dysonova sféra)
-
-- **Příběh:** obestavění Slunce; stavitelé; v útrobách začíná tikat stroj času.
-- **Mechaniky:**
-  - velký projekt s ukazatelem postupu (obří kapacita) 🔜
-  - **stavitelé:** dokupovat → čím víc, tím dřív hotovo (multiplikátor rychlosti) 🔜
-  - skrytý začátek stroje času (setup pro Fázi 10) 🔜
-- **Odemyká:** Fázi 8 (další sféry).
-
-## Fáze 8 — Rozmnožení sfér
-
-- **Příběh:** pastviny na sféře; civilizace s jediným účelem; laserová raketa z domova → další hvězdy.
-- **Mechaniky:**
-  - opakovatelná expanze: každá hotová sféra → další sféra 🔜
-  - **laserový pohon z domova:** posilovat/zrychlovat (= rychlejší dosažení dalších sfér) 🔜
-- **Odemyká:** škálování přes mnoho sfér.
-
-## Fáze 9 — Soudců (manažer)
-
-- **Příběh:** velký automat soudí stáda; mnoho druhů ovcí.
-- **Mechaniky:**
-  - podrobný manažer stád ✅ (základ: culling + breeding panel) → rozšířit 🔜
-  - více skupin/druhů ovcí; množit, rozdělovat, slučovat 🔜
-  - **autoculling:** automatická pravidla, kdo žije a kdo padne 🔜
-  - gen na velikost mozku 🔜
-- **Odemyká:** správu vesmírného měřítka.
-
-## Fáze 10 — Černé díry (reset)
-
-- **Příběh:** centrální sklad roste, až se zhroutí v černou díru; stroj času + černá díra → návrat v čase.
-- **Mechaniky:**
-  - centrální sklad (vlna/mléko/maso) → po dosažení prahu lze „zažehnout" černou díru 🔜
-  - **prestiž/reset:** smaže louky a stáda, ale **přenese vědění** → akcelerace dalšího běhu 🔜
-  - každý běh rychlejší než předchozí 🔜
-- **Odemyká:** smyčku (New Game+).
-
-## Fáze 11 — Zjevení (endgame)
-
-- **Příběh:** po mnoha resetech → maximální štěstí/Touha → **singularita**; zjištění, že to nevede k úspěchu; smyčka se uzavírá.
-- **Mechaniky:**
-  - maximální štěstí jako konečná meta 🔜
-  - singularita = závěrečná „ascension" / pravý konec 🔜
-  - rámec: hrdina zakládá tuto Bibli a vrací se na počátek (propojení s Předmluvou) 🔜
-
----
-
-## Jádro znovuhratelnosti (smyčka)
-
-1. Hraj fáze 1–10, šplhej po zdrojích a expanzích.
-2. Ve Fázi 10 zažehni černou díru → **reset** s trvalými bonusy (přenesené vědění).
-3. Další běh je rychlejší; opakuj, dokud nedosáhneš **maximální Touhy**.
-4. Pak Fáze 11 → **singularita** = konec (a zároveň zase začátek).
+První selekce, elixír, chytré ovce, odchod ze Země, sféry, Soudci, návraty
+z černé díry i absurdní počty mají krátké příběhové odměny. Po posledním
+hromadění následuje [Předmluva](00-predmluva.md): víc ovcí nikdy nestačilo.

@@ -69,8 +69,8 @@ check('main.js se načte a naplánuje frame', ok && typeof raf === 'function');
 const savedTime = () => deserialize(store['incremental-sheep-v3']).meta.totalGameTime;
 
 // pár normálních frejmů (po 100 ms) → překročí práh autosave a zapíše save
-function advance(ms) { perfClock += ms; wallClock += ms; raf(perfClock); }
-for (let i = 0; i < 80; i++) advance(100);
+async function advance(ms) { perfClock += ms; wallClock += ms; await raf(perfClock); }
+for (let i = 0; i < 80; i++) await advance(100);
 check('po normálním běhu existuje save', !!store['incremental-sheep-v3']);
 const t0 = savedTime();
 
@@ -78,7 +78,7 @@ const t0 = savedTime();
 // (monotónní hodiny během spánku tabu zamrzly). Starý kód by oříznul na ~0,1 s.
 wallClock += 3600 * 1000;
 perfClock += 100;
-raf(perfClock);
+await raf(perfClock);
 const t1 = savedTime();
 
 check('frame loop: probuzení dožene ~1 h herního času (ne ořez na 60 s)', (t1 - t0) > 3000);

@@ -1,7 +1,7 @@
 // ===========================================================================
-//  Herní tik. Jediná cesta, O(skupiny). Kapacita je sdílená přes všechny pozemky.
+//  Herní tik. Jediná cesta, O(skupiny). Stáda sdílejí kapacitu svého světa.
 // ===========================================================================
-import { BALANCE } from '../config.js';
+import { BALANCE, WORLD_ORDER } from '../config.js';
 import { getMults } from '../econ/economy.js';
 import { applyProduced } from '../econ/storage.js';
 import { applyProcessing } from '../econ/processing.js';
@@ -9,11 +9,13 @@ import { aging, births, totalCount } from './cohort.js';
 import { produce } from './production.js';
 import { stepSoil } from './soil.js';
 import { applyPolicyKills, slaughterYields } from './groups.js';
-import { herdCapacity, worldEnv } from '../content/locations.js';
+import { herdCapacity, worldEnv, worldCapacity, worldPopulation } from '../content/locations.js';
 import { stepProjects } from '../content/projects.js';
 import { checkPhase } from '../content/phases.js';
 import { updateRecords, checkAchievements } from '../content/achievements.js';
 import { stepBehemot } from '../content/behemot.js';
+import { stepIndustry } from '../content/industry.js';
+import { updateStory } from '../content/story.js';
 
 function addInto(dst, src) { for (const k in src) dst[k] = (dst[k] || 0) + src[k]; }
 
@@ -22,9 +24,9 @@ export function step(state, dt) {
   state.meta.gameTime += dt;
   state.meta.totalGameTime += dt;
   const ctx = getMults(state);
-  ctx.env = worldEnv(state);            // produkční prostředí (vážený průměr světů)
+  ctx.phase = state.phase;
   const produced = {};
-  const cap = herdCapacity(state);
+
 
   // Po vypití elixíru nesmrtelnosti se simulace násobně zrychlí (#7).
   const sp = state.flags.immortal ? (BALANCE.immortalSpeed + BALANCE.immortalSpeedPerPhase * Math.max(0, state.phase - 4)) : 1;
@@ -36,35 +38,47 @@ export function step(state, dt) {
   // 1) stárnutí všech stád
   for (const g of state.groups) state.stats.died += aging(g, edt);
 
-  // 2) porody ze SDÍLENÉ kapacity (rozloha × hustota × modifikátory)
-  let pop = 0;
-  for (const g of state.groups) pop += totalCount(g);
-  const bctx = (ctx.env.birthMult && ctx.env.birthMult !== 1) ? Object.assign({}, ctx, { birthMult: ctx.birthMult * ctx.env.birthMult }) : ctx;
-  for (const g of state.groups) {
-    const headroom = Math.max(0, cap - pop);
-    const r = births(g, headroom, edt, bctx);
-    pop += r.born;
+  // Birth headroom is allocated proportionally to reproductive demand.  Herd
+  // iteration order therefore cannot steal a world's remaining capacity.
+  const local = new Map();
+  for (const wk of WORLD_ORDER) {
+    const population = worldPopulation(state, wk);
+    const capacity = worldCapacity(state, wk);
+    local.set(wk, { headroom: Math.max(0, capacity - population),
+      support: population > 0 ? Math.min(1, capacity / population) : 1, demand: 0 });
+  }
+  const requests = state.groups.map(g => {
+    const wk = g.worldId || 'earth', env = worldEnv(state, wk), place = local.get(wk);
+    const context = { ...ctx, env, birthMult: ctx.birthMult * env.birthMult };
+    const mated = Math.min(g.counts.F.adult, g.counts.M.adult * Math.max(0, g.genes.fertility.mu + ctx.fertBonus));
+    const demand = mated / Math.max(1, g.genes.gestation.mu * ctx.breedMult) * edt * context.birthMult;
+    place.demand += demand;
+    return { g, context, place, demand };
+  });
+  for (const { g, context, place, demand } of requests) {
+    const allocated = place.demand > 0 ? Math.min(demand, place.headroom * demand / place.demand) : 0;
+    const r = births(g, allocated, edt, context);
     state.stats.born += r.born;
-    // výběr při narození: vyřazená jehňata jdou rovnou na maso/části (#18)
     if (r.killed > 1e-12) {
       state.stats.culled += r.killed;
-      addInto(produced, slaughterYields(g, r.killed, 'child', ctx, state));
+      state.stats.selected = (state.stats.selected || 0) + r.killed;
+      addInto(produced, slaughterYields(g, r.killed, 'child', context, state));
     }
   }
 
-  // 3) automatika (porážky) + produkce + bobky/hnojení (#63)
-  for (const g of state.groups) {
-    addInto(produced, applyPolicyKills(g, ctx, state));
-    addInto(produced, produce(g, edt, ctx, state));
-    const leftBobky = stepSoil(g, edt, state);     // posune kvalitu půdy; vrátí přebytek bobků do zásoby
+  for (const { g, context, place } of requests) {
+    addInto(produced, applyPolicyKills(g, context, state));
+    addInto(produced, produce(g, edt * place.support, context, state));
+    const leftBobky = stepSoil(g, edt, state);
     if (leftBobky > 0) produced.bobky = (produced.bobky || 0) + leftBobky;
   }
   applyProcessing(produced, state);     // vlna→sukno, mléko→sýr (fáze 3+, dle Tkalcoven)
 
   const credBefore = state.resources.credits || 0;
+  stepProjects(state, dt, ctx);
+  stepBehemot(state, dt, produced);
+  stepIndustry(state, dt, produced, ctx);
   applyProduced(state, produced, ctx);
-  stepProjects(state, edt, ctx);
-  stepBehemot(state, edt);              // expirace spotřebních buffů + jejich postihy
 
   let total = 0;
   for (const g of state.groups) total += totalCount(g);
@@ -77,6 +91,7 @@ export function step(state, dt) {
     for (let p = prevPhase + 1; p <= state.phase; p++) state._phaseUp.push(p);
   }
 
+  updateStory(state);
   updateRecords(state);
   const newAch = checkAchievements(state);
   if (newAch.length) { state._achUp = (state._achUp || []).concat(newAch.map(a => a.id)); }

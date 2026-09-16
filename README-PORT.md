@@ -1,5 +1,7 @@
 # Incremental Sheep — redesign port
 
+> Historical integration notes for the already-installed visual layer. Current game architecture is documented in [REWRITE-SPEC.md](REWRITE-SPEC.md).
+
 Přenesení redesignu (teplý pastorální vzhled, zelená + zlatá, proměna louka → vesmír
 podle fáze, „šťáva") do tvé **stávající** vanilla kódové základny. Nemění herní
 logiku — cílí na třídy, které už `src/ui/ui.js` vykresluje.

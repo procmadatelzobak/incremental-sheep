@@ -3,9 +3,8 @@
 // ===========================================================================
 import { TIME_SCALE, AUTOSAVE_MS } from './config.js';
 import { newGame } from './io/state.js';
-import { loadLocal, saveLocal, clearLocal, serialize, deserialize, applyOffline, resumeProgress } from './io/save.js';
-import { step } from './sim/simulation.js';
-import { runAutobuy } from './econ/actions.js';
+import { loadLocal, saveLocal, clearLocal, serialize, deserialize, applyOfflineAsync, resumeProgressAsync } from './io/save.js';
+import { advance } from './sim/advance.js';
 import { initUI, updateUI, showBanner, notifyPhase, notifyAchievement, showOfflineModal } from './ui/ui.js';
 
 const loaded = loadLocal();
@@ -22,13 +21,20 @@ const uiHooks = {
   },
 };
 
-let off = null;
-try { off = applyOffline(state); } catch (e) { /* ignore */ }
-
 initUI(state, 'app', save, uiHooks);
+let catchingUp = false;
+async function catchUp(run) {
+  catchingUp = true;
+  const app = document.getElementById('app');
+  if (app) app.inert = true;
+  try { return await run(p => showBanner(`Doháním stáda… ${Math.round(p * 100)} %`)); }
+  finally { catchingUp = false; if (app) app.inert = false; }
+}
+let off = null;
+if (loaded) off = await catchUp(progress => applyOfflineAsync(state, progress));
 if (!loaded) {
   showBanner('Vítej! Ovce dávají vlnu, ta se prodává za kredity. Kupuj ovce a vylepšení, rozšiřuj a zahušťuj pastviny; od fáze 2 šlechti stádo selekcí. Nahoře vždy vidíš cíl aktuální fáze.');
-} else if (off && off.seconds >= 60 && off.credits > 0) {
+} else if (off && off.seconds >= 60) {
   showOfflineModal(off, state);
 }
 
@@ -38,6 +44,7 @@ let prev = performance.now(), lastWall = Date.now(), saveAcc = 0;
 
 // Toasty fází a achievementů — sdílené normálním framem i doháněním po probuzení.
 function flushNotices() {
+  if (state._storyUp?.length) { showBanner(state._storyUp.at(-1).text); state._storyUp.length = 0; }
   if (state._phaseUp && state._phaseUp.length) { for (const p of state._phaseUp) notifyPhase(p); state._phaseUp.length = 0; }
   if (state._achUp && state._achUp.length) { for (const id of state._achUp.slice(0, 6)) notifyAchievement(id); state._achUp.length = 0; }
 }
@@ -54,7 +61,7 @@ function publishFlockSex() {
   if (typeof window !== 'undefined') window.__flockSex = { M, F };
 }
 
-function frame(now) {
+async function frame(now) {
   const wallNow = Date.now();
   let dt = (now - prev) / 1000; prev = now;
   const wallElapsed = (wallNow - lastWall) / 1000; lastWall = wallNow;
@@ -64,12 +71,12 @@ function frame(now) {
   // offline progres (stejný strop), ať se tiše nezahodí všechno nad 60 s. Řídíme
   // se wall-clockem: performance.now() může během spánku tabu zamrznout.
   if (wallElapsed > FRAME_CLAMP) {
-    const off = resumeProgress(state, wallElapsed);
-    runAutobuy(state);
+    const off = await catchUp(progress => resumeProgressAsync(state, wallElapsed, progress));
+    lastWall = Date.now(); prev = performance.now();
     updateUI(state);
     publishFlockSex();
     flushNotices();
-    if (off && off.seconds >= 60 && off.credits > 0) showOfflineModal(off, state);
+    if (off && off.seconds >= 60) showOfflineModal(off, state);
     save(); saveAcc = 0;
     requestAnimationFrame(frame);
     return;
@@ -77,9 +84,7 @@ function frame(now) {
 
   if (dt > FRAME_CLAMP) dt = FRAME_CLAMP;   // krátký zámrz bez skoku wall-clocku (clock skew)
   dt *= TIME_SCALE;
-  let rem = dt;
-  while (rem > 0) { const c = Math.min(0.1, rem); step(state, c); rem -= c; }
-  runAutobuy(state);               // automatické nákupy (zapnuté kategorie)
+  advance(state, dt);
   saveAcc += dt;
   updateUI(state);                 // jen aktualizuje hodnoty na místě (bez blikání)
   publishFlockSex();
@@ -88,5 +93,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.addEventListener('beforeunload', save);
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+window.addEventListener('beforeunload', () => { if (!catchingUp) save(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && !catchingUp) save(); });

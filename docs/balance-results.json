@@ -1,0 +1,400 @@
+{
+  "measuredAt": "2026-09-16",
+  "referenceStep": 0.1,
+  "matrixStep": 1,
+  "visitHours": 6,
+  "baselineTools": false,
+  "balancedReference": {
+    "totalHours": 91,
+    "runs": [
+      {
+        "runIndex": 0,
+        "durationHours": 54.1667,
+        "phases": [
+          {
+            "phase": 1,
+            "name": "Stvoření",
+            "durationHours": 0.05
+          },
+          {
+            "phase": 2,
+            "name": "Množení",
+            "durationHours": 1.4083
+          },
+          {
+            "phase": 3,
+            "name": "Královská",
+            "durationHours": 4.9611
+          },
+          {
+            "phase": 4,
+            "name": "Nesmrtelnosti",
+            "durationHours": 3.2139
+          },
+          {
+            "phase": 5,
+            "name": "Moudrých ovcí",
+            "durationHours": 3.6944
+          },
+          {
+            "phase": 6,
+            "name": "Exodu",
+            "durationHours": 8.7889
+          },
+          {
+            "phase": 7,
+            "name": "Sféry",
+            "durationHours": 8.425
+          },
+          {
+            "phase": 8,
+            "name": "Rozmnožení sfér",
+            "durationHours": 11.4306
+          },
+          {
+            "phase": 9,
+            "name": "Soudců",
+            "durationHours": 5.6333
+          },
+          {
+            "phase": 10,
+            "name": "Černé díry",
+            "durationHours": 6.5611
+          }
+        ]
+      },
+      {
+        "runIndex": 1,
+        "durationHours": 12.1667,
+        "phases": [
+          {
+            "phase": 1,
+            "name": "Stvoření",
+            "durationHours": 0.025
+          },
+          {
+            "phase": 2,
+            "name": "Množení",
+            "durationHours": 0.3444
+          },
+          {
+            "phase": 3,
+            "name": "Královská",
+            "durationHours": 0.4694
+          },
+          {
+            "phase": 4,
+            "name": "Nesmrtelnosti",
+            "durationHours": 0.3889
+          },
+          {
+            "phase": 5,
+            "name": "Moudrých ovcí",
+            "durationHours": 0.3833
+          },
+          {
+            "phase": 6,
+            "name": "Exodu",
+            "durationHours": 1.3444
+          },
+          {
+            "phase": 7,
+            "name": "Sféry",
+            "durationHours": 1.4722
+          },
+          {
+            "phase": 8,
+            "name": "Rozmnožení sfér",
+            "durationHours": 1.8417
+          },
+          {
+            "phase": 9,
+            "name": "Soudců",
+            "durationHours": 0.975
+          },
+          {
+            "phase": 10,
+            "name": "Černé díry",
+            "durationHours": 4.9222
+          }
+        ]
+      },
+      {
+        "runIndex": 2,
+        "durationHours": 6.1667,
+        "phases": [
+          {
+            "phase": 1,
+            "name": "Stvoření",
+            "durationHours": 0.0194
+          },
+          {
+            "phase": 2,
+            "name": "Množení",
+            "durationHours": 0.1917
+          },
+          {
+            "phase": 3,
+            "name": "Královská",
+            "durationHours": 0.225
+          },
+          {
+            "phase": 4,
+            "name": "Nesmrtelnosti",
+            "durationHours": 0.4333
+          },
+          {
+            "phase": 5,
+            "name": "Moudrých ovcí",
+            "durationHours": 0.1861
+          },
+          {
+            "phase": 6,
+            "name": "Exodu",
+            "durationHours": 0.6333
+          },
+          {
+            "phase": 7,
+            "name": "Sféry",
+            "durationHours": 0.7528
+          },
+          {
+            "phase": 8,
+            "name": "Rozmnožení sfér",
+            "durationHours": 0.9222
+          },
+          {
+            "phase": 9,
+            "name": "Soudců",
+            "durationHours": 0.5028
+          },
+          {
+            "phase": 10,
+            "name": "Černé díry",
+            "durationHours": 2.3
+          }
+        ]
+      },
+      {
+        "runIndex": 3,
+        "durationHours": 6.1667,
+        "phases": [
+          {
+            "phase": 1,
+            "name": "Stvoření",
+            "durationHours": 0.0139
+          },
+          {
+            "phase": 2,
+            "name": "Množení",
+            "durationHours": 0.1389
+          },
+          {
+            "phase": 3,
+            "name": "Královská",
+            "durationHours": 0.1333
+          },
+          {
+            "phase": 4,
+            "name": "Nesmrtelnosti",
+            "durationHours": 0.4889
+          },
+          {
+            "phase": 5,
+            "name": "Moudrých ovcí",
+            "durationHours": 0.1056
+          },
+          {
+            "phase": 6,
+            "name": "Exodu",
+            "durationHours": 0.375
+          },
+          {
+            "phase": 7,
+            "name": "Sféry",
+            "durationHours": 0.475
+          },
+          {
+            "phase": 8,
+            "name": "Rozmnožení sfér",
+            "durationHours": 0.575
+          },
+          {
+            "phase": 9,
+            "name": "Soudců",
+            "durationHours": 0.3222
+          },
+          {
+            "phase": 10,
+            "name": "Černé díry",
+            "durationHours": 3.5389
+          }
+        ]
+      },
+      {
+        "runIndex": 4,
+        "durationHours": 6.1667,
+        "phases": [
+          {
+            "phase": 1,
+            "name": "Stvoření",
+            "durationHours": 0.0139
+          },
+          {
+            "phase": 2,
+            "name": "Množení",
+            "durationHours": 0.1167
+          },
+          {
+            "phase": 3,
+            "name": "Královská",
+            "durationHours": 0.0917
+          },
+          {
+            "phase": 4,
+            "name": "Nesmrtelnosti",
+            "durationHours": 0.575
+          },
+          {
+            "phase": 5,
+            "name": "Moudrých ovcí",
+            "durationHours": 0.0722
+          },
+          {
+            "phase": 6,
+            "name": "Exodu",
+            "durationHours": 0.2556
+          },
+          {
+            "phase": 7,
+            "name": "Sféry",
+            "durationHours": 0.3306
+          },
+          {
+            "phase": 8,
+            "name": "Rozmnožení sfér",
+            "durationHours": 0.4028
+          },
+          {
+            "phase": 9,
+            "name": "Soudců",
+            "durationHours": 0.2278
+          },
+          {
+            "phase": 10,
+            "name": "Černé díry",
+            "durationHours": 4.0806
+          }
+        ]
+      },
+      {
+        "runIndex": 5,
+        "durationHours": 6.1667,
+        "phases": [
+          {
+            "phase": 1,
+            "name": "Stvoření",
+            "durationHours": 0.0111
+          },
+          {
+            "phase": 2,
+            "name": "Množení",
+            "durationHours": 0.1056
+          },
+          {
+            "phase": 3,
+            "name": "Královská",
+            "durationHours": 0.0722
+          },
+          {
+            "phase": 4,
+            "name": "Nesmrtelnosti",
+            "durationHours": 0.5361
+          },
+          {
+            "phase": 5,
+            "name": "Moudrých ovcí",
+            "durationHours": 0.0611
+          },
+          {
+            "phase": 6,
+            "name": "Exodu",
+            "durationHours": 0.2056
+          },
+          {
+            "phase": 7,
+            "name": "Sféry",
+            "durationHours": 0.2722
+          },
+          {
+            "phase": 8,
+            "name": "Rozmnožení sfér",
+            "durationHours": 0.3306
+          },
+          {
+            "phase": 9,
+            "name": "Soudců",
+            "durationHours": 0.1889
+          },
+          {
+            "phase": 10,
+            "name": "Černé díry",
+            "durationHours": 4.3833
+          },
+          {
+            "phase": 11,
+            "name": "Zjevení",
+            "durationHours": 0
+          }
+        ]
+      }
+    ]
+  },
+  "strategies": {
+    "balanced": {
+      "completed": true,
+      "totalHours": 91,
+      "bhIgnitions": 5,
+      "step": 1,
+      "visitHours": 6
+    },
+    "genetics": {
+      "completed": true,
+      "totalHours": 91,
+      "bhIgnitions": 5,
+      "step": 1,
+      "visitHours": 6
+    },
+    "industry": {
+      "completed": true,
+      "totalHours": 91,
+      "bhIgnitions": 5,
+      "step": 1,
+      "visitHours": 6
+    },
+    "capacity": {
+      "completed": true,
+      "totalHours": 97,
+      "bhIgnitions": 5,
+      "step": 1,
+      "visitHours": 6
+    },
+    "naive": {
+      "completed": true,
+      "totalHours": 151,
+      "bhIgnitions": 5,
+      "step": 1,
+      "visitHours": 6
+    }
+  },
+  "cadence": {
+    "4": {
+      "totalHours": 81
+    },
+    "8": {
+      "totalHours": 97
+    }
+  },
+  "manualWaitHoursAt6hCadence": 20.9028,
+  "maximumReferencePhaseExitDifferenceSec": 110
+}

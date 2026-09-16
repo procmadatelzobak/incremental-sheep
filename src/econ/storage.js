@@ -40,11 +40,6 @@ export function applyProduced(state, produced, mults) {
     if (amt <= 0 || !unlocked(state, k)) continue;
     const def = RESOURCES[k];
     if (def.sell) {
-      // černá díra (fáze 10): pokud nasává, surovou hodnotu sype do centrálního skladu
-      if (state.prestige.armed) {
-        state.prestige.centralWarehouse += amt * (def.value || 1);
-        continue;
-      }
       const frac = state.storage.autotrade[k] ?? 0;     // kolik prodat rovnou (default 0 = ukládat)
       const toSell = amt * frac;
       const toStore = amt - toSell;

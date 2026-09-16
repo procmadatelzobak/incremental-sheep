@@ -1,95 +1,97 @@
-// Balanc / pacing: auto-hráč projde hrou. Měříme TVAR KŘIVKY (čistý průchod bez
-// resetů, fáze po fázi) i celkovou cestu k singularitě (reset-loop). Sim je
-// deterministická, časy jsou reprodukovatelné. Cíl: ~100 h, plynulá eskalace.
-import { newGame } from '../src/io/state.js';
-import { step } from '../src/sim/simulation.js';
-import { perkCost } from '../src/econ/economy.js';
-import { totalArea } from '../src/content/locations.js';
-import { totalPopulation } from '../src/sim/cohort.js';
-import * as A from '../src/econ/actions.js';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import process from 'node:process';
+import assert from 'node:assert';
+import test from 'node:test';
 
-const H = (sec) => sec / 3600;
+import { runStrategy, runMatrix } from '../scripts/balance-harness.mjs';
 
-function setupSelection(s) {
-  for (const g of s.groups) {
-    const c = g.policy.cull;
-    c.enabled = true; c.gene = 'breedingScore'; c.cutFrac = 0.3; c.stage = 'adult';
-    if (s.phase >= 2) g.policy.killOld = true;
+const step = Number(process.env.SHEEP_SIM_STEP || 1);
+const runFullMatrix = process.env.SHEEP_BALANCE_FULL === '1';
+
+test('Incremental Sheep Balance Simulation Suite', async (t) => {
+  if (runFullMatrix) {
+    await t.test('Full Matrix Execution across all 6 strategies', () => {
+      const matrix = runMatrix({ step, maxHours: 180, visitHours: 6 });
+      for (const [name, res] of Object.entries(matrix)) {
+        console.log(`[Matrix] ${name.padEnd(14)}: completed=${res.completed}, totalHours=${res.totalHours}h, runs=${res.runsCount}, endReason=${res.endReason}`);
+        if (name !== 'capacity-only') {
+          assert(res.completed, `${name} must reach revelation`);
+          assert(res.totalHours <= 180);
+          assert(res.bhIgnitions >= 3 && res.bhIgnitions <= 6);
+        }
+        if (name === 'balanced') assert(res.totalHours >= 80 && res.totalHours <= 120);
+        if (name === 'capacity-only') {
+          assert.strictEqual(res.completed, false, 'capacity-only must stall');
+          const maxPhase = Math.max(...res.runs.flatMap(r => r.phases.map(p => p.phase)));
+          assert(maxPhase <= 2, `capacity-only cannot surpass phase 2, got ${maxPhase}`);
+        }
+      }
+      const lateTime = report => report.runs[0].phases.filter(p => p.phase >= 6 && p.phase <= 9).reduce((n, p) => n + p.durationHours, 0);
+      assert(lateTime(matrix.genetics) < lateTime(matrix.naive) * .8, 'Targeted genetics must materially improve the first late-game journey');
+      assert(matrix.capacity.totalHours >= matrix.balanced.totalHours * .85, 'Capacity purchases must not undercut the balanced journey dramatically');
+      const first = matrix.balanced.runs[0].phases;
+      assert(first.find(p => p.phase === 9).durationHours > .25, 'Judges must require real coordination work');
+      for (let phase = 6; phase < 9; phase++) {
+        assert(first.find(p => p.phase === phase).durationHours + first.find(p => p.phase === phase + 1).durationHours >= 2,
+          `Late phase pair ${phase}/${phase + 1} must not collapse into minutes`);
+      }
+    });
+    return;
   }
-}
-function buyCheapestPerk(s) {
-  let best = null, bc = Infinity;
-  for (const k of ['headstart', 'flock', 'vigor', 'foreknow', 'haste', 'geneCeiling', 'legacy', 'cosmos', 'voyage', 'foresight']) {
-    const c = perkCost(s, k);
-    if (c <= (s.prestige.knowledge || 0) && c < bc) { best = k; bc = c; }
-  }
-  if (best) A.buyPerk(s, best);
-}
-function play(s, allowPrestige) {
-  setupSelection(s);
-  buyCheapestPerk(s);
-  s.settings.autobuy = { sheep: true, land: true, upgrades: true, sphere: true };
-  if (s.phase === 4 && !s.flags.immortal) { A.craftImmortality(s); return; }   // střádej na nesmrtelnost
-  if (s.phase >= 10 && allowPrestige) {
-    s.prestige.armed = true;
-    if (A.singularityAvailable(s)) { A.doSingularity(s); return; }
-    if (A.canIgnite(s)) { A.doIgnite(s); return; }
-    return; // nasává do skladu
-  }
-  A.runAutobuy(s);
-}
 
-// --- 1) ČISTÝ PRŮCHOD (bez resetů): tvar křivky fáze po fázi ---------------
-const clean = newGame();
-const phaseAt = {};
-{
-  let lastPhase = 1; const dt = 2; const budget = 1.5e6;
-  for (let i = 0; i < budget; i++) {
-    step(clean, dt);
-    if ((i & 1) === 0) play(clean, false);
-    if (clean.phase > lastPhase) { for (let p = lastPhase + 1; p <= clean.phase; p++) if (!phaseAt[p]) phaseAt[p] = clean.meta.totalGameTime; lastPhase = clean.phase; }
-    if (clean.phase >= 10) break;
-  }
+  await t.test('Balanced Strategy structural progression to Singularity', () => {
+    const report = runStrategy('balanced', { step, maxHours: 180, visitHours: 6 });
+
+    // Print first run phases
+    console.log('\n=== Balanced Strategy: First Run Phases ===');
+    const firstRun = report.runs[0] || { phases: [] };
+    for (const p of firstRun.phases) {
+      console.log(`Phase ${String(p.phase).padStart(2)} [${p.name.padEnd(16)}]: ` +
+        `duration=${p.durationHours.toFixed(2)}h, pop=${p.population}, cap=${p.capacity}, bottleneck=${p.bottleneck}`);
+    }
+
+    // Print all runs summary
+    console.log('\n=== Balanced Strategy: Run Summary ===');
+    report.runs.forEach((r, idx) => {
+      const pSummary = r.phases.map(p => `P${p.phase}`).join('->');
+      console.log(`Run ${idx}: duration=${r.durationHours.toFixed(2)}h, phases=${pSummary}`);
+    });
+    console.log(`End Reason: ${report.endReason}`);
+    console.log(`Strategy Total: ${report.totalHours}h, BH Ignitions: ${report.bhIgnitions}, Completed: ${report.completed}\n`);
+
+    // Structural assertions
+    assert.strictEqual(report.completed, true, 'Balanced strategy should achieve Singularity');
+    assert(report.totalHours < 180, `Total time must be under 180h (got ${report.totalHours}h)`);
+    assert(report.totalHours >= 80 && report.totalHours <= 120, `Singularity expected in window 80-120h (got ${report.totalHours}h)`);
+    assert(report.bhIgnitions >= 3 && report.bhIgnitions <= 6, `Black Hole ignitions expected between 3 and 6 (got ${report.bhIgnitions})`);
+
+    // First run phase 9 duration > 0.25h
+    const phase9 = firstRun.phases.find(p => p.phase === 9);
+    assert(phase9, 'First run must reach phase 9');
+    assert(phase9.durationHours > 0.25, `First run phase 9 duration must exceed 0.25h (got ${phase9.durationHours.toFixed(2)}h)`);
+
+    // No consecutive late phases (6-9) below 1h on first run
+    const latePhases = firstRun.phases.filter(p => p.phase >= 6 && p.phase <= 9);
+    for (let i = 0; i < latePhases.length - 1; i++) {
+      const cur = latePhases[i];
+      const nxt = latePhases[i + 1];
+      assert(!(cur.durationHours < 1.0 && nxt.durationHours < 1.0),
+        `Consecutive late phases ${cur.phase} (${cur.durationHours}h) and ${nxt.phase} (${nxt.durationHours}h) are both under 1h`);
+    }
+  });
+
+  await t.test('Capacity-Only strategy stall check', () => {
+    const report = runStrategy('capacity-only', { step, maxHours: 24, visitHours: 6 });
+    assert.strictEqual(report.completed, false, 'Capacity-only must not complete Singularity');
+    assert.strictEqual(report.endReason, 'stalled', 'End reason should be stalled');
+
+    const maxPhase = Math.max(...report.runs.flatMap(r => r.phases.map(p => p.phase)));
+    assert(maxPhase <= 2, `Capacity-only cannot surpass phase 2 (reached phase ${maxPhase})`);
+    console.log(`Capacity-only verified: stalled at phase ${maxPhase} over ${report.totalHours}h.`);
+  });
+});
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  // Direct CLI invocation
 }
-
-// --- 2) RESET-LOOP k singularitě ------------------------------------------
-const s = newGame();
-let firstIgnite = null, singularityAt = null, igniteCount = 0, prevRuns = 0;
-const t0 = Date.now();
-{
-  const dt = 2; const budget = 1.5e6;
-  for (let i = 0; i < budget; i++) {
-    step(s, dt);
-    if ((i & 1) === 0) play(s, true);
-    if (s.prestige.runs > prevRuns) { igniteCount += (s.prestige.runs - prevRuns); if (firstIgnite == null) firstIgnite = s.meta.totalGameTime; prevRuns = s.prestige.runs; }
-    if (s.flags.preludeUnlocked && singularityAt == null) { singularityAt = s.meta.totalGameTime; break; }
-  }
-}
-const wall = ((Date.now() - t0) / 1000).toFixed(1);
-
-console.log('--- BALANC REPORT ---');
-console.log('  Tvar křivky (čistý 1. průchod, bez resetů):');
-const NAMES = { 2: 'Množení', 3: 'Královská', 4: 'Nesmrtelnosti', 5: 'Moudrých ovcí', 6: 'Exodu', 7: 'Sféry', 8: 'Rozmnožení sfér', 9: 'Soudců', 10: 'Černé díry' };
-let prev = 0;
-for (let p = 2; p <= 10; p++) if (phaseAt[p] != null) { console.log(`    fáze ${String(p).padStart(2)} ${(NAMES[p] || '').padEnd(16)} @ ${H(phaseAt[p]).toFixed(2).padStart(7)} h   (Δ ${(H(phaseAt[p]) - prev).toFixed(2)} h)`); prev = H(phaseAt[p]); }
-console.log(`  1. zažehnutí černé díry: ${firstIgnite != null ? H(firstIgnite).toFixed(1) + ' h' : '—'}`);
-console.log(`  zažehnutí celkem: ${igniteCount}, resetů: ${s.prestige.runs}`);
-console.log(`  singularita: ${singularityAt != null ? H(singularityAt).toFixed(1) + ' h' : 'NEDOSAŽENO'}`);
-console.log(`  (sim wall ${wall}s; vědění ${Math.round(s.prestige.knowledgeLifetime)})`);
-console.log(`  DIAG: fáze ${s.phase}, credLifetime ${s.stats.credLifetime.toExponential(2)}, pop ${Math.round(totalPopulation(s))}, rozloha ${totalArea(s).toExponential(2)}, sfér ${s.projects.dyson.count}, vědění ${Math.round(s.prestige.knowledge)}`);
-
-let pass = 0, fail = 0;
-const check = (n, c) => { if (c) pass++; else { fail++; console.error('  FAIL:', n); } };
-// Tvar křivky: rané fáze nesmí být „prosvištěné" (dřív 6 fází za 0,3 h), ani musí být dosažitelné.
-check('čistý průchod dosáhne fáze 10', phaseAt[10] != null);
-check('rané fáze mají náplň (fáze 5 až po >0,3 h)', phaseAt[5] != null && H(phaseAt[5]) > 0.3);
-check('kolonizace není zeď (fáze 7 do 80 h)', phaseAt[7] != null && H(phaseAt[7]) < 80);
-check('1. průchod k fázi 10 je dlouhý, ne absurdní (5–200 h)', phaseAt[10] != null && H(phaseAt[10]) > 5 && H(phaseAt[10]) < 200);
-// Cesta k singularitě
-check('dosažena fáze 10 / zažehnutí', firstIgnite != null);
-check('singularita dosažena', singularityAt != null);
-check('cesta k singularitě je dlouhá (>20 h)', singularityAt != null && H(singularityAt) > 20);
-check('a ne absurdně dlouhá (<600 h)', singularityAt != null && H(singularityAt) < 600);
-check('počet resetů k singularitě dle spec (3–6)', s.prestige.runs >= 3 && s.prestige.runs <= 6);
-console.log(`balance: ${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);

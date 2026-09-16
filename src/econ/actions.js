@@ -1,26 +1,31 @@
 // ===========================================================================
 //  Hráčské akce — jediné API, které volá UI. Každá vrací true/false (úspěch).
-//  Nákupy za kredity vyprázdní obchodovatelný sklad (pravidlo lore §9).
+//  Purchases spend credits; industrial projects and barter consume materials.
 // ===========================================================================
-import { BALANCE, UPGRADES, upgradeName, PERKS, WORLDS, WORLD_ORDER, AREA_MODS } from '../config.js';
+import { BALANCE, GENES, UPGRADES, upgradeName, PERKS, WORLDS, WORLD_ORDER, AREA_MODS } from '../config.js';
 import { fmt } from '../format.js';
 import { costOf, upgradeCost, perkCost } from './economy.js';
 import { groupById } from '../io/state.js';
-import { createGroup, splitGroup } from '../sim/groups.js';
+import { createGroup, splitGroup, moveGroup, mergeGroups } from '../sim/groups.js';
 import { defaultSoil } from '../sim/soil.js';
-import { seedGroupGenes } from '../sim/genetics.js';
+import { seedGroupGenes, CULL_PROFILES } from '../sim/genetics.js';
 import { mixNormal } from '../sim/distribution.js';
 import { totalCount } from '../sim/cohort.js';
 import { claimSphere, sphereReady } from '../content/projects.js';
-import { igniteBlackHole, triggerSingularity, canIgnite, singularityAvailable } from '../content/prestige.js';
-import { landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost, densityPhaseCap, worldsColonized } from '../content/locations.js';
-import { barter, toggleItem, useItem } from '../content/behemot.js';
+import { igniteBlackHole, triggerSingularity, canIgnite, singularityAvailable, startNewGamePlus } from '../content/prestige.js';
+import { landParcelCost, tierUnlockCost, canUnlockTier, densityCost, areaModCost, densityPhaseCap, worldsColonized, worldCapacity, worldPopulation, rawWorldCapacity, parcelsInWorld } from '../content/locations.js';
+import { barter, toggleItem, toolActive } from '../content/behemot.js';
+import { upgradeSupport, phaseJob, projectStatus } from '../content/industry.js';
+import { INDUSTRY } from '../content/industry-config.js';
 
 const credits = (s) => s.resources.credits || 0;
-function spend(state, amount) {
+function spend(state, amount, category = 'other') {
+  if (!Number.isFinite(amount) || amount < 0) return false;
   if (credits(state) < amount) return false;
   state.resources.credits -= amount;
-  return true;   // §9 zrušeno: nákup už NEvyprazdňuje sklad (Behemot bere ze skladu)
+  const spent = state.stats.spent || (state.stats.spent = {});
+  spent[category] = (spent[category] || 0) + amount;
+  return true;
 }
 
 // --- ceny pro UI (jednoduché úrovňové; rozloha/hustota mají vlastní fce) ----
@@ -46,7 +51,9 @@ export function addSheepCost(state, qty) {
 export function buyAddSheep(state, sex, qty) {
   sex = sex || (state.settings.buy && state.settings.buy.sex) || 'mix';
   qty = Math.max(1, (qty || (state.settings.buy && state.settings.buy.qty) || 1) | 0);
-  if (!spend(state, addSheepCost(state, qty))) return false;
+  const herd = groupById(state, state.activeGroupId) || state.groups[0];
+  if (worldPopulation(state, herd.worldId || 'earth') + qty * BALANCE.sheepPerUnit > worldCapacity(state, herd.worldId || 'earth')) return false;
+  if (!spend(state, addSheepCost(state, qty), 'sheep')) return false;
   const g = groupById(state, state.activeGroupId) || state.groups[0];
   const total = qty * BALANCE.sheepPerUnit;
   // Tržní ovce mají běžné (bazální) geny s přirozeným rozptylem. Přimícháme je do
@@ -74,7 +81,7 @@ export function setBuy(state, patch) {
 export function buyLand(state, wk) {
   const w = WORLDS[wk];
   if (!w || w.phase > state.phase || w.fromProject) return false;
-  if (!spend(state, landParcelCost(state, wk))) return false;
+  if (!spend(state, landParcelCost(state, wk), 'land')) return false;
   const t = state.land.worlds[wk];
   t.counts[t.tier] = (t.counts[t.tier] || 0) + 1;
   return true;
@@ -82,7 +89,7 @@ export function buyLand(state, wk) {
 export function unlockTier(state, wk) {
   const w = WORLDS[wk];
   if (!w || w.fromProject || !canUnlockTier(state, wk)) return false;
-  if (!spend(state, tierUnlockCost(state, wk))) return false;
+  if (!spend(state, tierUnlockCost(state, wk), 'land')) return false;
   const t = state.land.worlds[wk];
   t.tier++;
   t.counts[t.tier] = (t.counts[t.tier] || 0) + 1;   // první parcela nového tieru
@@ -90,14 +97,14 @@ export function unlockTier(state, wk) {
 }
 export function buyDensity(state) {
   if (state.land.density >= densityPhaseCap(state)) return false;   // fázová brána hustoty
-  if (!spend(state, densityCost(state))) return false;
+  if (!spend(state, densityCost(state), 'density')) return false;
   state.land.density++;
   return true;
 }
 export function buyAreaMod(state, key) {
   const mod = AREA_MODS.find(m => m.key === key);
   if (!mod || mod.phase > state.phase || state.land.mods[key]) return false;
-  if (!spend(state, areaModCost(state, key))) return false;
+  if (!spend(state, areaModCost(state, key), 'land')) return false;
   state.land.mods[key] = true;
   return true;
 }
@@ -106,7 +113,7 @@ export function buyAreaMod(state, key) {
 export function buyUpgrade(state, key) {
   const u = UPGRADES[key];
   if (!u || u.phase > state.phase) return false;
-  if (!spend(state, upgradeCost(state, key))) return false;
+  if (!spend(state, upgradeCost(state, key), 'upgrades')) return false;
   state.upgrades[key] = (state.upgrades[key] || 0) + 1;
   return true;
 }
@@ -122,19 +129,19 @@ export function buyPerk(state, key) {
 
 // --- fáze 6+: sklad; fáze 7+: stavitelé; fáze 8+: laser; sféra -------------
 export function buyWarehouse(state) {
-  if (!spend(state, costFor(state, 'warehouse'))) return false;   // sklad jde zlepšovat od začátku
+  if (!spend(state, costFor(state, 'warehouse'), 'storage')) return false;   // sklad jde zlepšovat od začátku
   state.storage.warehouseLevel++; state.buys.warehouse++;
   return true;
 }
 export function buyBuilder(state) {
   if (state.phase < 7) return false;
-  if (!spend(state, costFor(state, 'builder'))) return false;
+  if (!spend(state, costFor(state, 'builder'), 'builders')) return false;
   state.projects.dyson.builders++;
   return true;
 }
 export function buyLaser(state) {
   if (state.phase < 8) return false;
-  if (!spend(state, costFor(state, 'laser'))) return false;
+  if (!spend(state, costFor(state, 'laser'), 'laser')) return false;
   state.projects.laser.level++;
   return true;
 }
@@ -142,24 +149,26 @@ export function doClaimSphere(state) { return claimSphere(state); }
 
 // --- fáze 4: nápoj nesmrtelnosti ------------------------------------------
 export function craftImmortality(state) {
-  if (state.phase < 4 || state.flags.immortal) return false;
-  if (!spend(state, costFor(state, 'immortality'))) return false;
+  if (state.phase < 4 || state.flags.immortal || !state.industry.completed.elixir) return false;
+  if (!spend(state, costFor(state, 'immortality'), 'elixir')) return false;
   state.flags.immortal = true;
   return true;
 }
 
 // --- fáze 9: manažer skupin ------------------------------------------------
 export function addGroup(state) {
-  if (state.phase < 9) return false;
+  if (state.phase < 6) return false;
   return !!createGroup(state);
 }
 export function doSplitGroup(state, groupId) {
-  if (state.phase < 9) return false;
+  if (state.phase < 6) return false;
   return !!splitGroup(state, groupId);
 }
 
 // --- selekce / pravidla ----------------------------------------------------
 export function setCull(state, groupId, patch) {
+  if (patch.gene && patch.gene !== 'breedingScore' && !GENES[patch.gene] && !CULL_PROFILES[patch.gene.replace('profile:', '')]) return false;
+  if (patch.cutFrac != null && (!Number.isFinite(patch.cutFrac) || patch.cutFrac < 0 || patch.cutFrac > BALANCE.maxCutFrac)) return false;
   const g = groupById(state, groupId); if (!g) return false;
   Object.assign(g.policy.cull, patch);
   return true;
@@ -184,11 +193,38 @@ export function setAutotrade(state, res, frac) {
   return true;
 }
 
-// --- Behemot Emporio: barter za suroviny (NE kredity → NEvyprázdní sklad, §9 výjimka) ---
+// --- Behemot Emporio: physical barter and independent breeding nursery ---
 export function behemotBarter(state, id) { return barter(state, id); }
 export function behemotToggle(state, id) { return toggleItem(state, id); }
-export function behemotUse(state, id) { return useItem(state, id); }
-export { behemotSpam, behemotSetContainment, behemotReconcile } from '../content/behemot.js';   // spam (E3) + okov/usmíření (E6)
+export function createNursery(state, groupId) {
+  if (state.phase < 2 || !toolActive(state, 'incubator')) return false;
+  const src = groupById(state, groupId);
+  if (!src || src.nursery || state.groups.some(g => g.nursery && g.worldId === src.worldId)) return false;
+  const dst = splitGroup(state, groupId);
+  if (!dst) return false;
+  // Split starts at half. Return four fifths of the split: reserve is 10%.
+  for (const sex of ['M', 'F']) for (const stage of ['child', 'adult', 'old']) {
+    const back = dst.counts[sex][stage] * .8;
+    dst.counts[sex][stage] -= back; src.counts[sex][stage] += back;
+  }
+  dst.nursery = true; dst.name = 'Líheň · ' + src.name;
+  dst.policy.cull = { enabled: true, gene: src.policy.cull.gene, cutFrac: .6 };
+  return true;
+}
+export const doMoveGroup = (state, id, world, fraction = .5) => !!moveGroup(state, id, world, fraction);
+export const doMergeGroups = (state, from, to) => !!mergeGroups(state, from, to);
+export function setIndustry(state, patch) {
+  if ('enabled' in patch) state.industry.enabled = !!patch.enabled;
+  if ('enabled' in patch && state.phase === 10) state.prestige.armed = state.industry.enabled;
+  if ('share' in patch && Number.isFinite(+patch.share)) state.industry.share = Math.max(0, Math.min(1, +patch.share));
+  return true;
+}
+export function setManager(state, enabled) {
+  if (state.phase < 9 && !state.flags.judgesKnown) return false;
+  state.settings.autoProfiles = !!enabled;
+  return true;
+}
+export const orderSupport = (state, world) => upgradeSupport(state, world);
 
 // --- bobky / hnojení (#63) — kvalita půdy je per stádo ---------------------
 export function setSoil(state, groupId, patch) {
@@ -210,8 +246,9 @@ export function toggleSoil(state, groupId, key) {
 
 // --- prestiž ---------------------------------------------------------------
 export function armBlackHole(state) {
-  if (state.phase < 10) return false;
+  if (state.phase !== 10) return false;
   state.prestige.armed = !state.prestige.armed;
+  state.industry.enabled = state.prestige.armed;
   return true;
 }
 export function doIgnite(state) { return igniteBlackHole(state) > 0; }
@@ -227,30 +264,54 @@ export function setAutobuy(state, key, on) {
 // Kupuje nejlevnější dostupnou věc v zapnutých kategoriích, dokud je z čeho.
 // Pozastaveno při nasávání do černé díry (ať jde střádat).
 export function runAutobuy(state) {
+  if (state.settings.autoProfiles && (state.phase >= 9 || state.flags.judgesKnown) && state.phase >= 2) {
+    for (const g of state.groups) {
+      const profile = state.phase <= 2 ? 'growth' : state.phase <= 4 ? 'textile' : state.phase === 5 ? 'compute'
+        : g.worldId === 'moon' ? 'textile' : g.worldId === 'mars' ? 'compute' : 'materials';
+      g.policy.cull.enabled = true;
+      g.policy.cull.gene = 'profile:' + profile;
+    }
+  }
   const ab = state.settings.autobuy;
   if (!ab || state.prestige.armed) return;
+  if (state.phase === 4 && state.industry.enabled) { craftImmortality(state); return; }
+  // A commissioned queue may seed newly bought colonies, never invent sheep.
+  if (state.phase >= 6 && state.industry.enabled && ab.land) {
+    for (const wk of ['moon', 'mars', 'jupiter', 'sphere']) {
+      if (!parcelsInWorld(state, wk) || state.groups.some(g => g.worldId === wk)) continue;
+      const source = [...state.groups].sort((a, b) => totalCount(b) - totalCount(a))[0];
+      if (source && totalCount(source) >= 100) moveGroup(state, source.id, wk, .1);
+    }
+    for (const wk of WORLD_ORDER) {
+      if (worldPopulation(state, wk) > .8 * worldCapacity(state, wk) && rawWorldCapacity(state, wk) > worldCapacity(state, wk) * 1.1) upgradeSupport(state, wk);
+    }
+  }
   let guard = 0;
-  while (guard++ < 80) {
+  while (guard++ < 40) {
     const opts = [];
-    if (ab.sheep) opts.push([costFor(state, 'addSheep'), () => buyAddSheep(state, 'mix', 1)]);
+    if (ab.sheep && state.phase < 2 && worldPopulation(state, 'earth') + BALANCE.sheepPerUnit <= worldCapacity(state, 'earth')) opts.push([costFor(state, 'addSheep'), () => buyAddSheep(state, 'mix', 1)]);
     if (ab.land) {
       for (const wk of WORLD_ORDER) {
+        const useful = (worldPopulation(state, wk) > .8 * worldCapacity(state, wk) && rawWorldCapacity(state, wk) <= worldCapacity(state, wk) * 1.05) || (state.phase >= 6 && !parcelsInWorld(state, wk));
+        if (!useful) continue;
         if (WORLDS[wk].phase <= state.phase && !WORLDS[wk].fromProject) {
           opts.push([landParcelCost(state, wk), () => buyLand(state, wk)]);
           if (canUnlockTier(state, wk)) opts.push([tierUnlockCost(state, wk), () => unlockTier(state, wk)]);
         }
       }
-      if (state.land.density < densityPhaseCap(state)) opts.push([densityCost(state), () => buyDensity(state)]);
+      if (WORLD_ORDER.some(w => worldPopulation(state, w) > .8 * worldCapacity(state, w) && rawWorldCapacity(state, w) <= worldCapacity(state, w) * 1.05) && state.land.density < densityPhaseCap(state)) opts.push([densityCost(state), () => buyDensity(state)]);
       for (const m of AREA_MODS) if (m.phase <= state.phase && !state.land.mods[m.key]) opts.push([areaModCost(state, m.key), () => buyAreaMod(state, m.key)]);
       if (state.phase >= 6) opts.push([costFor(state, 'warehouse'), () => buyWarehouse(state)]);
     }
     if (ab.upgrades) for (const k in UPGRADES) if (UPGRADES[k].phase <= state.phase) opts.push([upgradeCost(state, k), () => buyUpgrade(state, k)]);
+    if (ab.sphere && state.phase >= 8) opts.push([costFor(state, 'laser'), () => buyLaser(state)]);
     if (ab.sphere && state.phase >= 7) opts.push([costFor(state, 'builder'), () => buyBuilder(state)]);
 
     let best = null;
     const cr = credits(state);
     for (const o of opts) if (o[0] <= cr && (!best || o[0] < best[0])) best = o;
-    if (!best || best[1]() === false) break;
+    if (!best) break;
+    if (best[1]() === false) break;
   }
   if (ab.sphere && state.phase >= 7) doClaimSphere(state);
 }
@@ -271,6 +332,7 @@ function cheapestUseful(s) {
 // Vrací { kind, key, cost } nebo null, jen pokud doporučení míří na konkrétní nákup.
 export function suggestedAction(s) {
   if (singularityAvailable(s) || s.phase >= 10) return null;
+  if (phaseJob(s)) return null;
   if (s.phase === 4 && !s.flags.immortal) return { kind: 'immortality', key: null };
   if (s.phase === 6 && worldsColonized(s) < 3) return null;
   if ((s.phase === 7 || s.phase === 8) && (s.phase === 7 ? s.projects.dyson.count < 1 : s.projects.dyson.count < 5)) return null;
@@ -279,11 +341,23 @@ export function suggestedAction(s) {
 
 export function suggestStep(s) {
   const cr = credits(s);
+  if (s.phase === 11) return 'Cesta je uzavřená. Přečti Zjevení; nový cyklus může počkat.';
   if (singularityAvailable(s)) return '★ Dosáhni singularity! (záložka Prestiž)';
   if (s.phase >= 10) {
     if (canIgnite(s)) return 'Zažehni černou díru! (Prestiž)';
     if (s.prestige.armed) return 'Sklad se plní k černé díře… vyčkej';
     return 'Zapni „Nasávat produkci" (Prestiž) a střádej';
+  }
+  const job = phaseJob(s);
+  if (job) {
+    if (!s.industry.enabled) return `Zadej projekt „${job.label}“ (Projekty). Zvol, kolik nové produkce mu vyhradíš.`;
+    if ((s.phase === 7 || s.phase === 8) && sphereReady(s)) return 'Dokonči připravenou sféru! (Pozemky)';
+    if (s.phase === 6 && !parcelsInWorld(s, job.worldId)) return `Kup první pozemek: ${WORLDS[job.worldId].label}. Pak sem přesuň stádo (Manažer).`;
+    if (s.phase === 6 && worldPopulation(s, job.worldId) < 1) return `Přesuň stádo do světa ${WORLDS[job.worldId].label} (Manažer). Prázdná kolonie nemá pracovníky.`;
+    const status = projectStatus(s);
+    if (status.bottleneck === 'need_3_worlds') return 'Soudci potřebují výpočetní, textilní a materiálovou práci ze tří různých osídlených světů.';
+    if (status.bottleneck === 'supply') return `Projekt „${job.label}“ čeká na materiál. Zkontroluj recept a rezervu v Projektech.`;
+    return `Projekt „${job.label}“ potřebuje vhodně vyšlechtěné stádo. Pracoviště obsadí ${INDUSTRY.staffThreshold} dospělých; práci dál zrychlují geny.`;
   }
   if (s.phase === 4 && !s.flags.immortal) {
     const c = costFor(s, 'immortality');
@@ -297,4 +371,4 @@ export function suggestStep(s) {
   return cr >= best.cost ? `Kup: ${best.label} (${fmt(best.cost)})` : `Našetři na ${best.label} (${fmt(best.cost)})`;
 }
 
-export { canIgnite, singularityAvailable, sphereReady };
+export { canIgnite, singularityAvailable, sphereReady, startNewGamePlus };

@@ -1,9 +1,10 @@
 // ===========================================================================
 //  Incremental Sheep — konfigurace (laditelné konstanty)
-//  Vše, co se ladí, žije zde. Jádro hry čte jen tato data.
+//  Core tuning; structural work and habitats live in content/industry-config.js
+//  and content/habitats.js.
 // ===========================================================================
 
-export const VERSION = 3;
+export const VERSION = 4;
 import { storageKey } from './io/storage-key.js';
 
 export const SAVE_KEY_BASE = 'incremental-sheep-v3';
@@ -111,7 +112,7 @@ export const PERKS = {
   legacy:      { branch: 'genetics', label: 'Dědictví genů',      base: 4,  growth: 1.85, per: 0.10, kind: 'startGenes',   desc: 'lepší startovní geny' },
   vigor:       { branch: 'industry', label: 'Plodná krev',        base: 2,  growth: 1.7,  per: 0.15, kind: 'globalProd',   desc: '+15 % veškerá produkce / lvl' },
   foreknow:    { branch: 'industry', label: 'Předvídání',         base: 3,  growth: 1.8,  per: 0.20, kind: 'cheaper',      desc: '−20 % ceny vylepšení / lvl' },
-  cosmos:      { branch: 'cosmos',   label: 'Hvězdné inženýrství',base: 6,  growth: 1.9,  per: 0.25, kind: 'spaceMult',    desc: '+25 % rychlost stavby sfér / lvl' },
+  cosmos:      { branch: 'cosmos',   label: 'Hvězdné inženýrství',base: 6,  growth: 1.9,  per: 0.25, kind: 'spaceMult',    desc: '+25 % práce projektů a energie sfér / lvl' },
   voyage:      { branch: 'cosmos',   label: 'Laserový dosah',     base: 6,  growth: 1.9,  per: 0.15, kind: 'cheaperSpace', desc: '−15 % cena stavitelů a stanic / lvl' },
   haste:       { branch: 'prophecy', label: 'Spěch',              base: 4,  growth: 1.8,  per: 0.12, kind: 'globalSpeed',  desc: '+12 % rychlost cyklu / lvl' },
   foresight:   { branch: 'prophecy', label: 'Prozřetelnost',      base: 10, growth: 2.2,  per: 1,    kind: 'autostart',    desc: 'každý běh začíná se zapnutými autobuyery' },
@@ -158,44 +159,21 @@ export const BALANCE = {
   warehouse: { capInc: 5000, base0: 300 },   // strop na surovinu = base0 + úroveň × capInc (sklad běží od začátku, #38)
   // zpracování (fáze 3+): poměr raw → processed
   processing: { wool: { to: 'cloth', ratio: 1 }, milk: { to: 'cheese', ratio: 1 } },
-  // projekty
-  dyson: { target: 2.6e6, targetGrowth: 0.5, builderRate: 0.8, energyPerSphere: 1e4 },  // targetGrowth = o kolik roste cíl s každou další sférou (nižší = svižnější stavba sfér 2–5)
-  laser: { rangePerLevel: 1 },
   // prestiž
   prestige: {
     blackHoleBase: 5e12,    // strop centrálního skladu pro 1. zažehnutí
     thresholdGrowth: 1.3,   // mírný růst stropu každý reset
     // odměna roste s počtem běhů (+ log z velikosti běhu) → ~3–6 smyček k singularitě
     award: (cw, base, runs) => Math.max(1, Math.floor(8 * (runs + 1) + 4 * Math.log10(Math.max(10, cw / (base / 100))))),
-    singularityKnowledge: 380, // kumulativní Vědění pro odemčení singularity (spec: 3–6 resetů)
+    singularityKnowledge: 160, // kumulativní Vědění pro odemčení singularity (spec: 3–6 resetů)
   },
   // ceny extrémních genů: strop genu × ceilingMult (fáze 5 + perky)
   ceiling: { phase5: 3, perPerk: 1 },
-  // Behemot Emporio — vyladitelné páky (ceny/efekty položek jsou inline v CATALOG)
-  behemot: {
-    stockCap: 0,                  // 0 = bez stropu zásoby v bednách
-    // ceny dle vztahu (relPriceMult): Důvěra zlevňuje, Přetížení zdražuje
-    trustDiscount: 0.0025, overloadSurcharge: 0.0035, priceMin: 0.7, priceMax: 1.6,
-    // osy: posuny událostmi + chladnutí Přetížení
-    overloadCool: 0.25,
-    barterTrust: 1.2, barterRespect: 0.4, barterCool: 0.5,
-    useOverload: 1.5, useOverloadRisky: 3,
-    spamOverload: 5, spamTrust: 3,
-    // restock dle vztahu (Přetížení zpomaluje, Respekt zrychluje)
-    restockOverloadSlow: 0.01, restockRespectFast: 0.005,
-    // "sajrajt": šance na dobrý výsledek klesá s Přetížením
-    sajrajtBase: 0.6, sajrajtOverloadPenalty: 0.003, sajrajtMin: 0.25,
-    // Moudrost (přežívá reset): bonus produkce + náskok ve vztahu
-    wisdomPerReset: 1, wisdomBonus: 0.02, wisdomBonusCap: 0.3, wisdomTrustHead: 5, wisdomRespectHead: 3,
-    // okov / vzpoura (Etapa 6)
-    containmentPhase: 6, controlGain: 0.5, containOverload: 0.5, containTrustDrop: 0.15, controlDecay: 0.2,
-    controlBonus: 0.003, rebellionPenalty: 0.3, rebelControl: 70, rebelOverload: 70,
-    reconcileOverload: 40, reconcileControl: 40, reconcileTrust: 8,
-  },
+
 };
 
 // --- SVĚTY (per-svět žebříček rozlohy; sdílí globální hustotu) --------------
-// env = produkční modifikátory (vážený průměr dle podílu rozlohy). costMult škáluje
+// env = místní produkční modifikátory pro přiřazené stádo. costMult škáluje
 // cenu parcel. fromProject: sféra se "kupuje" jen dokončováním Dysonova projektu.
 export const WORLDS = {
   earth: {

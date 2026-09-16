@@ -15,7 +15,7 @@ export function produce(group, dt, ctx, state) {
   // Pomalejší dospívání (delší dětství) = vyšší kvalita vlny → tradeoff s rychlostí dospívání.
   const woolPop = adults + olds * 0.5;
   const quality = g.woolQuality.mu * (0.75 + childFracOf(g));
-  out.wool = woolPop * g.woolRate.mu * quality * ctx.woolMult * (env.woolMult || 1) * dt;
+  out.wool = woolPop * g.woolRate.mu * quality * ctx.woolMult * (env.woolMult || 1) * (env.textileMult || 1) * dt;
 
   // MLÉKO (fáze 2+): jen laktující samice (po prvním oplodnění).
   if (state.phase >= 2) {
@@ -25,7 +25,7 @@ export function produce(group, dt, ctx, state) {
 
   // VÝPOČET (fáze 5+): chytré ovce.
   if (state.phase >= 5) {
-    out.compute = adults * g.intelligence.mu * ctx.computeMult * 0.05 * dt;
+    out.compute = adults * g.intelligence.mu * ctx.computeMult * (env.computeMult || 1) * 0.05 * dt;
   }
   return out;
 }
